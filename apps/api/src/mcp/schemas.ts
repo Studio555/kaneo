@@ -27,12 +27,33 @@ const redirectUriSchema = z
   .max(2048)
   .refine(isValidRedirectUri, "Invalid redirect URI");
 
+// The single source of truth for what this endpoint supports: the registration schema below, the
+// metadata a registered client is handed back, and the advertised authorization server metadata all
+// read from here, so a client can never be accepted for a grant the server does not implement.
+export const SUPPORTED_GRANT_TYPES = ["authorization_code"] as const;
+export const SUPPORTED_RESPONSE_TYPES = ["code"] as const;
+
+// A client may ask for more than the server implements -- Claude Code requests refresh_token
+// alongside authorization_code -- so extra values are tolerated here and dropped from the
+// registered metadata rather than failing the registration (RFC 7591 section 3.2.1).
 export const clientRegistrationSchema = z.object({
   redirect_uris: z.array(redirectUriSchema).min(1),
   client_name: z.string().max(100).optional(),
   token_endpoint_auth_method: z.literal("none").optional(),
-  grant_types: z.tuple([z.literal("authorization_code")]).optional(),
-  response_types: z.tuple([z.literal("code")]).optional(),
+  grant_types: z
+    .array(z.string())
+    .min(1)
+    .refine((values) => values.includes("authorization_code"), {
+      message: "grant_types must include authorization_code",
+    })
+    .optional(),
+  response_types: z
+    .array(z.string())
+    .min(1)
+    .refine((values) => values.includes("code"), {
+      message: "response_types must include code",
+    })
+    .optional(),
 });
 
 export const authorizationQuerySchema = z.object({
@@ -65,8 +86,8 @@ export const clientRegistrationResponseSchema = z
     redirect_uris: z.array(z.string()),
     client_name: z.string().optional(),
     token_endpoint_auth_method: z.literal("none"),
-    grant_types: z.array(z.literal("authorization_code")),
-    response_types: z.array(z.literal("code")),
+    grant_types: z.array(z.enum(SUPPORTED_GRANT_TYPES)),
+    response_types: z.array(z.enum(SUPPORTED_RESPONSE_TYPES)),
   })
   .openapi("McpClientRegistration");
 

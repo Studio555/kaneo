@@ -10,6 +10,7 @@ import {
   getClient,
   registerClient,
 } from "../oauth";
+import { SUPPORTED_GRANT_TYPES, SUPPORTED_RESPONSE_TYPES } from "../schemas";
 import type {
   authorizationDecisionSchema,
   authorizationQuerySchema,
@@ -66,8 +67,10 @@ export async function registerMcpClient(input: ClientRegistrationInput) {
     redirect_uris: client.redirectUris,
     client_name: client.clientName,
     token_endpoint_auth_method: input.token_endpoint_auth_method ?? "none",
-    grant_types: input.grant_types ?? ["authorization_code"],
-    response_types: input.response_types ?? ["code"],
+    // What was registered, not what was requested: a client asking for refresh_token is registered
+    // for authorization_code alone and must be told so.
+    grant_types: [...SUPPORTED_GRANT_TYPES],
+    response_types: [...SUPPORTED_RESPONSE_TYPES],
   } as const;
 }
 
