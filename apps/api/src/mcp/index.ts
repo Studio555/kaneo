@@ -17,6 +17,8 @@ import {
 import { createModernMcpHandler } from "./modern";
 import { exchangeCode } from "./oauth";
 import {
+  SUPPORTED_GRANT_TYPES,
+  SUPPORTED_RESPONSE_TYPES,
   authorizationDecisionResponseSchema,
   authorizationDecisionSchema,
   authorizationQuerySchema,
@@ -298,8 +300,8 @@ mcp.get("/.well-known/oauth-authorization-server/api", (c) =>
     authorization_endpoint: `${publicApiUrl}/api/mcp/authorize`,
     token_endpoint: `${publicApiUrl}/api/mcp/token`,
     registration_endpoint: `${publicApiUrl}/api/mcp/register`,
-    response_types_supported: ["code"],
-    grant_types_supported: ["authorization_code"],
+    response_types_supported: [...SUPPORTED_RESPONSE_TYPES],
+    grant_types_supported: [...SUPPORTED_GRANT_TYPES],
     code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: ["none"],
   }),
@@ -386,8 +388,8 @@ export function mcpWellKnownRoutes(baseUrl: string) {
       authorization_endpoint: `${baseUrl}/api/mcp/authorize`,
       token_endpoint: `${baseUrl}/api/mcp/token`,
       registration_endpoint: `${baseUrl}/api/mcp/register`,
-      response_types_supported: ["code"],
-      grant_types_supported: ["authorization_code"],
+      response_types_supported: [...SUPPORTED_RESPONSE_TYPES],
+      grant_types_supported: [...SUPPORTED_GRANT_TYPES],
       code_challenge_methods_supported: ["S256"],
       token_endpoint_auth_methods_supported: ["none"],
     }),

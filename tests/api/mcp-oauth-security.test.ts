@@ -168,6 +168,40 @@ describe("MCP OAuth security", () => {
     expect(remoteHttp.status).toBe(400);
   });
 
+  it("registers a client that also asks for unsupported grant types", async () => {
+    const response = await mcpRoutes.request("/mcp/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        client_name: "Test MCP client",
+        redirect_uris: ["https://client.example/callback"],
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      grant_types: string[];
+      response_types: string[];
+    };
+    // Registered metadata must state what the server actually supports, not what was asked for.
+    expect(body.grant_types).toEqual(["authorization_code"]);
+    expect(body.response_types).toEqual(["code"]);
+  });
+
+  it("rejects a client that cannot use authorization_code", async () => {
+    const response = await mcpRoutes.request("/mcp/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        redirect_uris: ["https://client.example/callback"],
+        grant_types: ["client_credentials"],
+      }),
+    });
+    expect(response.status).toBe(400);
+  });
+
   it("requires an exact registered redirect URI", async () => {
     const registeredRedirect = "https://client.example/callback";
     const client = await registerClient(registeredRedirect);
