@@ -7,6 +7,8 @@ import {
   findAllIntegrationsByRepo,
   updateTaskStatus,
 } from "../services/task-service";
+import { shouldSkipInboundStateSync } from "../utils/outbound-echo";
+import { parseLinkMetadata } from "../utils/parse-link-metadata";
 import { resolveTargetStatus } from "../utils/resolve-column";
 
 type IssueReopenedPayload = {
@@ -16,6 +18,7 @@ type IssueReopenedPayload = {
     title: string;
     html_url: string;
     state: string;
+    updated_at?: string;
   };
   repository: {
     owner: { login: string };
@@ -53,23 +56,12 @@ export async function handleIssueReopened(payload: IssueReopenedPayload) {
       continue;
     }
 
-    let existingMetadata: Record<string, unknown> = {};
-    if (externalLink.metadata) {
-      try {
-        existingMetadata = JSON.parse(externalLink.metadata) as Record<
-          string,
-          unknown
-        >;
-      } catch (error) {
-        console.warn("Failed to parse GitHub issue metadata for reopen sync", {
-          externalLinkId: externalLink.id,
-          metadata: externalLink.metadata,
-          error,
-        });
-      }
-    }
+    const existingMetadata = parseLinkMetadata(externalLink.metadata, {
+      externalLinkId: externalLink.id,
+      source: "issue_reopened",
+    });
 
-    if (existingMetadata.createdFrom === "kaneo") {
+    if (shouldSkipInboundStateSync(existingMetadata, issue, "open")) {
       continue;
     }
 

@@ -262,8 +262,17 @@ Customize when tasks automatically change status:
 | Branch Push | `in-progress` | ✅ |
 | PR Opened | `in-review` | ✅ |
 | PR Merged | `done` | ✅ |
+| Issue Closed | `done` | ✅ |
+| Issue Reopened | `to-do` | ❌ |
 
 Configure these in your project's GitHub integration settings to match your workflow.
+
+<Note>
+Closing or reopening an issue on GitHub syncs to the linked task regardless of
+where the issue came from, including issues Kaneo opened itself from a task.
+When Kaneo is the one closing the issue, the webhook GitHub sends back is
+recognised as Kaneo's own update and is not applied twice.
+</Note>
 
 <Warning>
 Status transitions only apply if the task is not already in "done" status. This prevents accidentally reopening completed tasks.
