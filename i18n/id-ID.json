@@ -1100,7 +1100,8 @@
 				"pr_opened": "PR Dibuka",
 				"pr_merged": "PR Digabung",
 				"issue_opened": "Issue Dibuka",
-				"issue_closed": "Issue Ditutup"
+				"issue_closed": "Issue Ditutup",
+				"issue_reopened": "Issue Dibuka Kembali"
 			}
 		},
 		"externalLinks": {

@@ -1261,7 +1261,8 @@
 				"pr_opened": "Mở PR",
 				"pr_merged": "Gộp PR",
 				"issue_opened": "Mở issue",
-				"issue_closed": "Đóng issue"
+				"issue_closed": "Đóng issue",
+				"issue_reopened": "Mở lại issue"
 			}
 		},
 		"externalLinks": {

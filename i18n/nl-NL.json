@@ -873,7 +873,8 @@
 				"pr_opened": "PR Geopend",
 				"pr_merged": "PR Samengevoegd",
 				"issue_opened": "Issue Geopend",
-				"issue_closed": "Issue Gesloten"
+				"issue_closed": "Issue Gesloten",
+				"issue_reopened": "Issue Heropend"
 			},
 			"giteaHeading": "Gitea",
 			"giteaHint": "Wanneer een Gitea-webhookgebeurtenis plaatsvindt, verplaats de gekoppelde taak naar een kolom."

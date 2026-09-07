@@ -1100,7 +1100,8 @@
 				"pr_opened": "PR Açıldı",
 				"pr_merged": "PR Birleştirildi",
 				"issue_opened": "Sorun Açıldı",
-				"issue_closed": "Sorun Kapatıldı"
+				"issue_closed": "Sorun Kapatıldı",
+				"issue_reopened": "Sorun Yeniden Açıldı"
 			}
 		},
 		"externalLinks": {

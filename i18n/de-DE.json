@@ -1100,7 +1100,8 @@
 				"pr_opened": "PR geöffnet",
 				"pr_merged": "PR zusammengeführt",
 				"issue_opened": "Issue geöffnet",
-				"issue_closed": "Issue geschlossen"
+				"issue_closed": "Issue geschlossen",
+				"issue_reopened": "Issue wieder geöffnet"
 			}
 		},
 		"externalLinks": {

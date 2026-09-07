@@ -1100,7 +1100,8 @@
 				"pr_opened": "PR відкрито",
 				"pr_merged": "PR змерджено",
 				"issue_opened": "Issue відкрито",
-				"issue_closed": "Issue закрито"
+				"issue_closed": "Issue закрито",
+				"issue_reopened": "Issue знову відкрито"
 			}
 		},
 		"externalLinks": {

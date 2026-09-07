@@ -1100,7 +1100,8 @@
 				"pr_opened": "PR Ouverte",
 				"pr_merged": "PR Fusionné",
 				"issue_opened": "Problème Ouvert",
-				"issue_closed": "Problème Fermé"
+				"issue_closed": "Problème Fermé",
+				"issue_reopened": "Problème Réouvert"
 			}
 		},
 		"externalLinks": {

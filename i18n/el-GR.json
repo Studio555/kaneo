@@ -1098,7 +1098,8 @@
 				"pr_opened": "Άνοιγμα PR",
 				"pr_merged": "Συγχώνευση PR",
 				"issue_opened": "Άνοιγμα issue",
-				"issue_closed": "Κλείσιμο issue"
+				"issue_closed": "Κλείσιμο issue",
+				"issue_reopened": "Επανάνοιγμα issue"
 			},
 			"giteaHeading": "Gitea",
 			"giteaHint": "Όταν συμβαίνει ένα γεγονός webhook του Gitea, μετακινήστε τη συνδεδεμένη εργασία σε μια στήλη."

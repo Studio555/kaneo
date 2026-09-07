@@ -1098,7 +1098,8 @@
 				"pr_opened": "PR отворен",
 				"pr_merged": "PR спoен",
 				"issue_opened": "Issue отворен",
-				"issue_closed": "Issue затворен"
+				"issue_closed": "Issue затворен",
+				"issue_reopened": "Issue повторно отворен"
 			},
 			"giteaHeading": "Gitea",
 			"giteaHint": "Кога ќе се случи Gitea webhook настан, премести ја поврзаната задача во колона."
