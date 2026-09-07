@@ -13,9 +13,10 @@ git fetch upstream
 git merge upstream/main        # or: git merge v2.24.0
 ```
 
-Upstream's own CI (`.github/workflows/`) is deliberately absent — it published images to
-`ghcr.io/usekaneo`, ran semantic-release, and automated upstream's issue tracker, none of which
-applies here. A merge that reintroduces those files should drop them again.
+Upstream's CI (`.github/workflows/`) and Dependabot config (`.github/dependabot.yml`) are
+deliberately absent: the workflows published images to `ghcr.io/usekaneo`, ran semantic-release and
+automated upstream's issue tracker, and Dependabot would open weekly dependency pull requests
+against this fork. A merge that reintroduces those files should drop them again.
 
 ## Deploying
 
