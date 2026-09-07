@@ -1108,7 +1108,8 @@
 				"pr_opened": "PR открыт",
 				"pr_merged": "PR влит",
 				"issue_opened": "Issue открыт",
-				"issue_closed": "Issue закрыт"
+				"issue_closed": "Issue закрыт",
+				"issue_reopened": "Issue переоткрыт"
 			}
 		},
 		"externalLinks": {

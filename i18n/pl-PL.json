@@ -1532,6 +1532,7 @@
 				"branch_push": "Wypchnięcie gałęzi",
 				"issue_closed": "Zamknięto zgłoszenie",
 				"issue_opened": "Otwarto zgłoszenie",
+				"issue_reopened": "Ponownie otwarto zgłoszenie",
 				"pr_merged": "Scalono pull request",
 				"pr_opened": "Otwarto pull request"
 			},

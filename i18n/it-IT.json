@@ -1263,7 +1263,8 @@
 				"pr_opened": "PR Aperta",
 				"pr_merged": "PR Unita",
 				"issue_opened": "Issue Aperta",
-				"issue_closed": "Issue Chiusa"
+				"issue_closed": "Issue Chiusa",
+				"issue_reopened": "Issue Riaperta"
 			}
 		},
 		"externalLinks": {

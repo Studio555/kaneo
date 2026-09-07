@@ -6,6 +6,7 @@ import {
 } from "../services/link-manager";
 import { getGithubApp, getInstallationIdForRepo } from "../utils/github-app";
 import { addLabelsToIssue, removeLabel } from "../utils/labels";
+import { parseLinkMetadata } from "../utils/parse-link-metadata";
 
 export async function handleTaskStatusChanged(
   event: TaskStatusChangedEvent,
@@ -41,6 +42,10 @@ export async function handleTaskStatusChanged(
 
     const octokit = await githubApp.getInstallationOctokit(installationId);
     const issueNumber = Number.parseInt(issueLink.externalId, 10);
+    const existingMetadata = parseLinkMetadata(issueLink.metadata, {
+      externalLinkId: issueLink.id,
+      source: "task_status_changed",
+    });
 
     await removeLabel(
       octokit,
@@ -68,8 +73,9 @@ export async function handleTaskStatusChanged(
 
       await updateExternalLink(issueLink.id, {
         metadata: {
-          ...(issueLink.metadata ? JSON.parse(issueLink.metadata) : {}),
+          ...existingMetadata,
           state: "closed",
+          lastOutboundStateSyncAt: Date.now(),
         },
       });
     } else if (event.oldStatus === "done" && event.newStatus !== "done") {
@@ -82,8 +88,9 @@ export async function handleTaskStatusChanged(
 
       await updateExternalLink(issueLink.id, {
         metadata: {
-          ...(issueLink.metadata ? JSON.parse(issueLink.metadata) : {}),
+          ...existingMetadata,
           state: "open",
+          lastOutboundStateSyncAt: Date.now(),
         },
       });
     }

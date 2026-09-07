@@ -1302,7 +1302,8 @@
 				"pr_opened": "PR Opened",
 				"pr_merged": "PR Merged",
 				"issue_opened": "Issue Opened",
-				"issue_closed": "Issue Closed"
+				"issue_closed": "Issue Closed",
+				"issue_reopened": "Issue Reopened"
 			}
 		},
 		"externalLinks": {

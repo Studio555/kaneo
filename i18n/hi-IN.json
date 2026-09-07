@@ -1262,7 +1262,8 @@
 				"pr_opened": "PR खुला",
 				"pr_merged": "PR मर्ज किया",
 				"issue_opened": "Issue खुला",
-				"issue_closed": "Issue बंद"
+				"issue_closed": "Issue बंद",
+				"issue_reopened": "Issue फिर से खुला"
 			}
 		},
 		"externalLinks": {

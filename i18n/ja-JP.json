@@ -1261,7 +1261,8 @@
 				"pr_opened": "PR オープン",
 				"pr_merged": "PR マージ",
 				"issue_opened": "Issue オープン",
-				"issue_closed": "Issue クローズ"
+				"issue_closed": "Issue クローズ",
+				"issue_reopened": "Issue 再オープン"
 			}
 		},
 		"externalLinks": {

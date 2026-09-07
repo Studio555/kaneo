@@ -873,7 +873,8 @@
 				"pr_opened": "PR abierta",
 				"pr_merged": "PR mergeada",
 				"issue_opened": "Issue abierto",
-				"issue_closed": "Issue cerrado"
+				"issue_closed": "Issue cerrado",
+				"issue_reopened": "Issue reabierto"
 			},
 			"giteaHeading": "Gitea",
 			"giteaHint": "Cuando ocurre un evento de webhook de Gitea, mueve la tarea vinculada a una columna."

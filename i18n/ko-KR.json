@@ -1100,7 +1100,8 @@
 				"pr_opened": "PR 열림",
 				"pr_merged": "PR 병합됨",
 				"issue_opened": "이슈 열림",
-				"issue_closed": "이슈 닫힘"
+				"issue_closed": "이슈 닫힘",
+				"issue_reopened": "이슈 다시 열림"
 			}
 		},
 		"externalLinks": {
