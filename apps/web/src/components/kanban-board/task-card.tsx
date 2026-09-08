@@ -47,6 +47,7 @@ import useProjectStore from "@/store/project";
 import { useUserPreferencesStore } from "@/store/user-preferences";
 import type Task from "@/types/task";
 import TaskCardContextMenuContent from "./task-card-context-menu/task-card-context-menu-content";
+import { TaskCraft } from "./task-craft";
 import { TaskLabels } from "./task-labels";
 
 type TaskCardProps = {
@@ -253,9 +254,10 @@ function TaskCard({ task, disableDragDrop = false }: TaskCardProps) {
               </div>
             </div>
 
-            {showLabels && (
-              <div className="mb-2.5">
-                <TaskLabels labels={task.labels ?? []} />
+            {(task.craft || (showLabels && (task.labels ?? []).length > 0)) && (
+              <div className="mb-2.5 flex min-w-0 flex-wrap gap-1">
+                <TaskCraft craft={task.craft ?? null} />
+                {showLabels && <TaskLabels labels={task.labels ?? []} />}
               </div>
             )}
 

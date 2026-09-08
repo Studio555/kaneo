@@ -798,6 +798,31 @@
 			"deleteError": "Không thể xóa nhãn",
 			"nameRequired": "Cần có tên nhãn"
 		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
+		},
 		"projectGeneral": {
 			"pageTitle": "Cài đặt dự án",
 			"title": "Cài đặt chung",
@@ -1449,6 +1474,9 @@
 		"assignedTo": "đã giao công việc cho {{name}}",
 		"changedStatus": "đã thay đổi trạng thái từ {{from}} sang {{to}}",
 		"changedPriority": "đã thay đổi mức ưu tiên từ {{from}} sang {{to}}",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft",
 		"clearedDueDate": "đã xóa ngày đến hạn",
 		"setDueDate": "đã đặt ngày đến hạn thành {{date}}",
 		"changedDueDate": "đã thay đổi ngày đến hạn từ {{from}} sang {{to}}",
@@ -1729,6 +1757,7 @@
 		"properties": {
 			"title": "Thuộc tính",
 			"labels": "Nhãn",
+			"craft": "Craft",
 			"copyTaskLink": "Sao chép liên kết công việc",
 			"copyTaskBranch": "Sao chép nhánh công việc",
 			"start": "Bắt đầu",
@@ -1788,6 +1817,11 @@
 					"rose": "Hồng",
 					"crimson": "Đỏ thẫm"
 				}
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -1838,13 +1872,15 @@
 			"allAssignees": "Tất cả người được giao",
 			"allDueDates": "Tất cả ngày đến hạn",
 			"allLabels": "Tất cả nhãn",
+			"allCrafts": "All crafts",
 			"selectedCount": "Đã chọn {{count}}",
 			"subjects": {
 				"status": "Trạng thái",
 				"priority": "Mức ưu tiên",
 				"assignee": "Người được giao",
 				"dueDate": "Ngày đến hạn",
-				"labels": "Nhãn"
+				"labels": "Nhãn",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "là một trong",
@@ -1908,6 +1944,10 @@
 		"labels": {
 			"label": "Nhãn",
 			"empty": "Không có nhãn khả dụng"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
 		},
 		"update": {
 			"success": "Cập nhật công việc thành công",

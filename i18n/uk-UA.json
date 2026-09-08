@@ -1275,6 +1275,31 @@
 			"updateError": "Не вдалося оновити мітку",
 			"deleteError": "Не вдалося видалити мітку",
 			"nameRequired": "Назва мітки є обов'язковою"
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -1464,6 +1489,9 @@
 		"assignedTo": "призначив завдання на {{name}}",
 		"changedStatus": "змінив статус з {{from}} на {{to}}",
 		"changedPriority": "змінив пріоритет з {{from}} на {{to}}",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft",
 		"clearedDueDate": "очистив дату завершення",
 		"setDueDate": "встановив дату завершення на {{date}}",
 		"changedDueDate": "змінив дату завершення з {{from}} на {{to}}",
@@ -1744,6 +1772,7 @@
 		"properties": {
 			"title": "Властивості",
 			"labels": "Мітки",
+			"craft": "Craft",
 			"copyTaskLink": "Копіювати посилання на завдання",
 			"copyTaskBranch": "Копіювати гілку завдання",
 			"start": "Початок",
@@ -1803,6 +1832,11 @@
 					"rose": "Троянда",
 					"crimson": "Багряний"
 				}
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -1853,13 +1887,15 @@
 			"allAssignees": "Усі виконавці",
 			"allDueDates": "Усі дати завершення",
 			"allLabels": "Усі мітки",
+			"allCrafts": "All crafts",
 			"selectedCount": "{{count}} обрано",
 			"subjects": {
 				"status": "Статус",
 				"priority": "Пріоритет",
 				"assignee": "Виконавець",
 				"dueDate": "Дата завершення",
-				"labels": "Мітки"
+				"labels": "Мітки",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "є будь-яким з",
@@ -1926,6 +1962,10 @@
 		"labels": {
 			"label": "Мітки",
 			"empty": "Немає доступних міток"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
 		},
 		"update": {
 			"success": "Завдання успішно оновлено",

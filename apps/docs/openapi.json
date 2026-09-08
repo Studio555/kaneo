@@ -366,6 +366,9 @@
               "$ref": "#/components/schemas/TaskLabel"
             }
           },
+          "craft": {
+            "$ref": "#/components/schemas/TaskCraft"
+          },
           "externalLinks": {
             "type": "array",
             "items": {
@@ -390,11 +393,34 @@
           "assigneeImage",
           "projectId",
           "labels",
+          "craft",
           "externalLinks"
         ]
       },
       "TaskLabel": {
         "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color"
+        ]
+      },
+      "TaskCraft": {
+        "type": [
+          "object",
+          "null"
+        ],
         "properties": {
           "id": {
             "type": "string"
@@ -743,6 +769,13 @@
             "type": "string",
             "description": "One of: no-priority, low, medium, high, urgent."
           },
+          "craftId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The craft (discipline) this task belongs to, if any."
+          },
           "startDate": {
             "type": [
               "string",
@@ -772,6 +805,7 @@
           "description",
           "status",
           "priority",
+          "craftId",
           "startDate",
           "dueDate",
           "createdAt"
@@ -904,6 +938,13 @@
               "null"
             ]
           },
+          "craft": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The craft name, resolved by name on import so a round-trip keeps it."
+          },
           "labels": {
             "type": "array",
             "items": {
@@ -920,6 +961,7 @@
           "dueDate",
           "startDate",
           "userId",
+          "craft",
           "labels"
         ]
       },
@@ -1084,7 +1126,7 @@
           },
           "type": {
             "type": "string",
-            "description": "One of: comment, task, create, status_changed, priority_changed, assignee_changed, unassigned, due_date_changed, title_changed, description_changed."
+            "description": "One of: comment, task, create, status_changed, priority_changed, craft_changed, assignee_changed, unassigned, due_date_changed, title_changed, description_changed."
           },
           "createdAt": {
             "type": "string",
@@ -1329,6 +1371,39 @@
           "updatedAt",
           "taskId",
           "workspaceId"
+        ]
+      },
+      "Craft": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "name",
+          "color",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "Notification": {
@@ -6404,6 +6479,13 @@
                   "userId": {
                     "type": "string",
                     "description": "Assignee, if any."
+                  },
+                  "craftId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "The craft (discipline) to file the task under, if any."
                   }
                 },
                 "required": [
@@ -6869,6 +6951,13 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "craft": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Craft name, resolved against the target workspace. Unknown names import with no craft."
                         }
                       },
                       "required": [
@@ -7064,6 +7153,93 @@
           },
           "403": {
             "description": "No workspace access, or missing task:update permission",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/task/craft/{id}": {
+      "put": {
+        "operationId": "updateTaskCraft",
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Update task craft",
+        "description": "Set the craft (discipline) a task belongs to, or clear it by passing null. The craft must belong to the task's workspace.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "craftId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "The craft to set, or null to clear it."
+                  }
+                },
+                "required": [
+                  "craftId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated task",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown task, or the craft is not in its workspace",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "403": {
+            "description": "No workspace access, or missing task:update permission",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found",
             "content": {
               "text/plain": {
                 "schema": {
@@ -9427,6 +9603,364 @@
           },
           "404": {
             "description": "Task not found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/craft/workspace/{workspaceId}": {
+      "get": {
+        "operationId": "getWorkspaceCrafts",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Get workspace crafts",
+        "description": "List the crafts defined in a workspace, ordered by name. A craft is the discipline a task belongs to, kept separate from labels so integrations cannot pollute it.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of crafts in the workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Craft"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Workspace ID could not be determined",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "403": {
+            "description": "No access to the workspace",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/craft/{id}": {
+      "get": {
+        "operationId": "getCraft",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Get craft",
+        "description": "Get a specific craft by ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Craft details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Craft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown craft, or its workspace could not be determined",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "403": {
+            "description": "No access to the craft's workspace",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Craft not found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateCraft",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Update craft",
+        "description": "Rename or recolor a craft. A rename re-labels linked forge issues in the background; a colour change does not touch them.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "color": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "name",
+                  "color"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Craft updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Craft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, or unknown craft",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "403": {
+            "description": "No workspace access, or missing label:update permission",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Craft not found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another craft in the workspace already has that name",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteCraft",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Delete craft",
+        "description": "Delete a craft. Tasks carrying it are left with no craft rather than being deleted, and the `craft:` label is removed from linked forge issues.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Craft deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Craft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown craft, or its workspace could not be determined",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "403": {
+            "description": "No workspace access, or missing label:delete permission",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Craft not found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/craft": {
+      "post": {
+        "operationId": "createCraft",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Create craft",
+        "description": "Create a craft in a workspace. Craft names are unique per workspace; re-creating an existing name returns the existing craft.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "color": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "workspaceId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "color",
+                  "workspaceId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Craft created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Craft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, or workspace ID could not be determined",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "403": {
+            "description": "No workspace access, or missing label:create permission",
             "content": {
               "text/plain": {
                 "schema": {

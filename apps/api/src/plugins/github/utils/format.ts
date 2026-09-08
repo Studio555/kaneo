@@ -1,3 +1,5 @@
+import { toCraftLabelName } from "../../system-labels";
+
 export function formatIssueTitle(taskTitle: string): string {
   return taskTitle;
 }
@@ -25,6 +27,7 @@ export function formatSyncComment(taskId: string): string {
 export function getLabelsForIssue(
   priority: string | null,
   status: string,
+  craftName?: string | null,
 ): string[] {
   const labels: string[] = [];
 
@@ -33,6 +36,10 @@ export function getLabelsForIssue(
   }
 
   labels.push(`status:${status}`);
+
+  if (craftName) {
+    labels.push(toCraftLabelName(craftName));
+  }
 
   return labels;
 }

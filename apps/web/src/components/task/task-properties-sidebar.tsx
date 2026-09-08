@@ -5,6 +5,7 @@ import {
   CalendarX,
   Copy,
   GitBranch,
+  Hammer,
   Plus,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -19,6 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useGetColumns } from "@/hooks/queries/column/use-get-columns";
+import useGetCraftsByWorkspace from "@/hooks/queries/craft/use-get-crafts-by-workspace";
 import useGetGiteaIntegration from "@/hooks/queries/gitea-integration/use-get-gitea-integration";
 import useGetGithubIntegration from "@/hooks/queries/github-integration/use-get-github-integration";
 import useGetLabelsByTask from "@/hooks/queries/label/use-get-labels-by-task";
@@ -40,6 +42,7 @@ import { resolveLabelColor } from "@/lib/label-color";
 import { getPriorityIcon } from "@/lib/priority";
 import { toast } from "@/lib/toast";
 import TaskAssigneePopover from "./task-assignee-popover";
+import TaskCraftPopover from "./task-craft-popover";
 import TaskDueDatePopover from "./task-due-date-popover";
 import TaskLabelsPopover from "./task-labels-popover";
 import TaskMovePopover from "./task-move-popover";
@@ -91,6 +94,11 @@ export default function TaskPropertiesSidebar({
   const taskIsCompleted = isTaskCompleted(task?.status ?? "", columns);
   const { data: workspaceUsers } = useGetActiveWorkspaceUsers(workspaceId);
   const { data: taskLabels = [] } = useGetLabelsByTask(taskId ?? "");
+  const { data: workspaceCrafts = [] } = useGetCraftsByWorkspace(workspaceId);
+  // getTask returns craftId, not the resolved craft, so the name and colour
+  // come from the workspace vocabulary.
+  const currentCraft =
+    workspaceCrafts.find((craft) => craft.id === task?.craftId) ?? null;
   const { data: githubIntegration } = useGetGithubIntegration(projectId);
   const { data: giteaIntegration } = useGetGiteaIntegration(projectId);
   const { data: workspaceProjects = [] } = useGetProjects({ workspaceId });
@@ -226,6 +234,39 @@ export default function TaskPropertiesSidebar({
                     </span>
                   </Button>
                 </TaskPriorityPopover>
+              )}
+              {task && (
+                <TaskCraftPopover task={task} workspaceId={workspaceId}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="justify-start h-7 px-1.5 gap-1.5"
+                  >
+                    {currentCraft ? (
+                      <>
+                        <span
+                          aria-hidden="true"
+                          className="inline-block w-2 h-2 shrink-0 rounded-full"
+                          style={{
+                            backgroundColor: resolveLabelColor(
+                              currentCraft.color,
+                            ),
+                          }}
+                        />
+                        <span className="text-xs font-semibold truncate">
+                          {currentCraft.name}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Hammer className="size-3.5 text-muted-foreground" />
+                        <span className="text-xs font-semibold truncate">
+                          {t("tasks:popover.craft.none")}
+                        </span>
+                      </>
+                    )}
+                  </Button>
+                </TaskCraftPopover>
               )}
               {task && (
                 <TaskAssigneePopover task={task} workspaceId={workspaceId}>

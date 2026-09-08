@@ -11,6 +11,7 @@ const DEFAULT_FILTERS: BoardFilters = {
   assignee: null,
   dueDate: null,
   labels: null,
+  craft: null,
 };
 
 const FILTER_KEYS: Array<keyof BoardFilters> = [
@@ -19,6 +20,7 @@ const FILTER_KEYS: Array<keyof BoardFilters> = [
   "assignee",
   "dueDate",
   "labels",
+  "craft",
 ];
 
 function normalizeFilters(raw: unknown): BoardFilters {
@@ -161,6 +163,16 @@ export function useTaskFiltersWithLabelsSupport(
           });
 
           if (!matchesAnyDueDate) {
+            return false;
+          }
+        }
+
+        // Craft is single-select on a task, so an empty craft filter value
+        // means "no craft" and matches tasks with none.
+        if (filters.craft && filters.craft.length > 0) {
+          const taskCraftId = task.craft?.id ?? task.craftId ?? "";
+
+          if (!filters.craft.includes(taskCraftId)) {
             return false;
           }
         }

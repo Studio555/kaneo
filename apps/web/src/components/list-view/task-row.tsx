@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { type CSSProperties, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { TaskCraft } from "@/components/kanban-board/task-craft";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -214,6 +215,7 @@ function TaskRow({ task, projectSlug }: TaskRowProps) {
                   {task.title}
                 </span>
                 <div className="flex items-center gap-1">
+                  <TaskCraft craft={task.craft ?? null} />
                   {showLabels && <TaskLabels labels={task.labels ?? []} />}
 
                   {pullRequests.length === 1 && (

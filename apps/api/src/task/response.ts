@@ -22,6 +22,9 @@ export const taskSchema = z
       description: "The slug of the column the task sits in.",
     }),
     priority: z.string().openapi({ description: priorityDescription }),
+    craftId: z.string().nullable().openapi({
+      description: "The craft (discipline) this task belongs to, if any.",
+    }),
     startDate: nullableResponseTimestamp,
     dueDate: nullableResponseTimestamp,
     createdAt: responseTimestamp,
@@ -38,6 +41,10 @@ export const taskWithAssigneeSchema = taskSchema
 const taskLabelSchema = z
   .object({ id: z.string(), name: z.string(), color: z.string() })
   .openapi("TaskLabel");
+
+const taskCraftSchema = z
+  .object({ id: z.string(), name: z.string(), color: z.string() })
+  .openapi("TaskCraft");
 
 const taskExternalLinkSchema = z
   .object({
@@ -75,6 +82,7 @@ export const boardTaskSchema = z
     assigneeImage: z.string().nullable(),
     projectId: z.string(),
     labels: z.array(taskLabelSchema),
+    craft: taskCraftSchema.nullable(),
     externalLinks: z.array(taskExternalLinkSchema),
   })
   .openapi("BoardTask");
@@ -153,6 +161,10 @@ export const taskExportSchema = z
           dueDate: z.string().nullable().openapi({ format: "date-time" }),
           startDate: z.string().nullable().openapi({ format: "date-time" }),
           userId: z.string().nullable(),
+          craft: z.string().nullable().openapi({
+            description:
+              "The craft name, resolved by name on import so a round-trip keeps it.",
+          }),
           labels: z
             .array(
               z

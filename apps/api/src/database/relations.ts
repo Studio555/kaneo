@@ -6,6 +6,7 @@ import {
   assetTable,
   columnTable,
   commentTable,
+  craftTable,
   externalLinkTable,
   githubIntegrationTable,
   integrationTable,
@@ -76,6 +77,7 @@ export const workspaceTableRelations = relations(
     assets: many(assetTable),
     invitations: many(invitationTable),
     notificationWorkspaceRules: many(userNotificationWorkspaceRuleTable),
+    crafts: many(craftTable),
   }),
 );
 
@@ -146,6 +148,10 @@ export const taskTableRelations = relations(taskTable, ({ one, many }) => ({
     fields: [taskTable.columnId],
     references: [columnTable.id],
   }),
+  craft: one(craftTable, {
+    fields: [taskTable.craftId],
+    references: [craftTable.id],
+  }),
   timeEntries: many(timeEntryTable),
   activities: many(activityTable),
   comments: many(commentTable),
@@ -200,6 +206,14 @@ export const assetTableRelations = relations(assetTable, ({ one }) => ({
     fields: [assetTable.createdBy],
     references: [userTable.id],
   }),
+}));
+
+export const craftTableRelations = relations(craftTable, ({ one, many }) => ({
+  workspace: one(workspaceTable, {
+    fields: [craftTable.workspaceId],
+    references: [workspaceTable.id],
+  }),
+  tasks: many(taskTable),
 }));
 
 export const labelTableRelations = relations(labelTable, ({ one }) => ({

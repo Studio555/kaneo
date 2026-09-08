@@ -800,6 +800,31 @@
 			"deleteError": "Eliminazione etichetta fallita",
 			"nameRequired": "Il nome dell'etichetta è obbligatorio"
 		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
+		},
 		"projectGeneral": {
 			"pageTitle": "Impostazioni Progetto",
 			"title": "Impostazioni Generali",
@@ -1459,6 +1484,9 @@
 		"assignedTo": "ha assegnato l'attività a {{name}}",
 		"changedStatus": "ha cambiato lo stato da {{from}} a {{to}}",
 		"changedPriority": "ha cambiato la priorità da {{from}} a {{to}}",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft",
 		"clearedDueDate": "ha rimosso la data di scadenza",
 		"setDueDate": "ha impostato la scadenza al {{date}}",
 		"changedDueDate": "ha cambiato la scadenza da {{from}} a {{to}}",
@@ -1739,6 +1767,7 @@
 		"properties": {
 			"title": "Proprietà",
 			"labels": "Etichette",
+			"craft": "Craft",
 			"copyTaskLink": "Copia link attività",
 			"copyTaskBranch": "Copia ramo attività",
 			"start": "Inizio",
@@ -1798,6 +1827,11 @@
 					"rose": "Rosa",
 					"crimson": "Cremisi"
 				}
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -1848,13 +1882,15 @@
 			"allAssignees": "Tutti gli assegnatari",
 			"allDueDates": "Tutte le scadenze",
 			"allLabels": "Tutte le etichette",
+			"allCrafts": "All crafts",
 			"selectedCount": "{{count}} selezionati",
 			"subjects": {
 				"status": "Stato",
 				"priority": "Priorità",
 				"assignee": "Assegnatario",
 				"dueDate": "Data scadenza",
-				"labels": "Etichette"
+				"labels": "Etichette",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "è uno di",
@@ -1920,6 +1956,10 @@
 		"labels": {
 			"label": "Etichette",
 			"empty": "Nessuna etichetta disponibile"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
 		},
 		"update": {
 			"success": "Attività aggiornata con successo",

@@ -2,6 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import db from "../../../database";
 import { labelTable, taskTable } from "../../../database/schema";
 import { publishEvent } from "../../../events";
+import updateTaskCraft from "../../../task/controllers/update-task-craft";
 import { findExternalLink } from "../../github/services/link-manager";
 import { updateTaskStatus } from "../../github/services/task-service";
 import {
@@ -9,10 +10,15 @@ import {
   extractIssueStatus,
 } from "../../github/utils/extract-priority";
 import {
+  findCraftLabelName,
+  resolveCraftByName,
+  resolveCraftLabel,
+} from "../../resolve-craft-label";
+import { isSystemLabelName, parseCraftLabelName } from "../../system-labels";
+import {
   findAllIntegrationsByGiteaRepo,
   repoOwnerLogin,
 } from "../services/integration-lookup";
-import { isSystemLabelName } from "../utils/system-labels";
 import { baseUrlFromRepositoryHtmlUrl } from "../utils/webhook-repo";
 
 type IssueLabeledPayload = {
@@ -190,11 +196,75 @@ export async function handleGiteaIssueLabeled(
             task.project.workspaceId,
             giteaLabelsForSync(issue.labels),
           );
+
+          // label_updated carries the issue's whole label set and no single
+          // added label, so the craft is derived from that set: a resolvable
+          // `craft:` label wins, its absence clears the craft, and an
+          // unrecognized one is left alone rather than wiping the current one.
+          const craftLabelName = findCraftLabelName(issue.labels);
+
+          if (craftLabelName) {
+            const craft = await resolveCraftByName(
+              task.project.workspaceId,
+              craftLabelName,
+            );
+
+            if (craft) {
+              await updateTaskCraft({
+                id: existingLink.taskId,
+                craftId: craft.id,
+                currentUserId: null,
+              });
+            }
+          } else if (task.craftId) {
+            await updateTaskCraft({
+              id: existingLink.taskId,
+              craftId: null,
+              currentUserId: null,
+            });
+          }
         }
         continue;
       }
 
       if (!addedLabel) {
+        continue;
+      }
+
+      // Craft is single-select, so this keys off the label that was just
+      // added or removed rather than scanning the issue's full label set.
+      if (parseCraftLabelName(addedLabel.name)) {
+        const craft = await resolveCraftLabel(
+          existingLink.taskId,
+          addedLabel.name,
+        );
+
+        if (payload.action === "labeled" && craft) {
+          // An unrecognized craft name is ignored: the vocabulary is curated
+          // in Kaneo, not seeded from the forge.
+          await updateTaskCraft({
+            id: existingLink.taskId,
+            craftId: craft.id,
+            currentUserId: null,
+          });
+        }
+
+        if (payload.action === "unlabeled" && craft) {
+          const craftTask = await db.query.taskTable.findFirst({
+            where: eq(taskTable.id, existingLink.taskId),
+          });
+
+          // Only clear when the removed label is the craft the task actually
+          // carries, so a stale `craft:` label doesn't wipe the real one.
+          if (craftTask?.craftId === craft.id) {
+            await updateTaskCraft({
+              id: existingLink.taskId,
+              craftId: null,
+              currentUserId: null,
+            });
+          }
+        }
+
         continue;
       }
 

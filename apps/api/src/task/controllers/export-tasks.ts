@@ -2,6 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import db from "../../database";
 import {
+  craftTable,
   labelTable,
   projectTable,
   taskTable,
@@ -34,9 +35,11 @@ async function exportTasks(projectId: string) {
       userId: taskTable.userId,
       assigneeName: userTable.name,
       assigneeId: userTable.id,
+      craftName: craftTable.name,
     })
     .from(taskTable)
     .leftJoin(userTable, eq(taskTable.userId, userTable.id))
+    .leftJoin(craftTable, eq(taskTable.craftId, craftTable.id))
     .where(eq(taskTable.projectId, projectId))
     .orderBy(taskTable.position);
 
@@ -86,6 +89,7 @@ async function exportTasks(projectId: string) {
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
       startDate: task.startDate ? new Date(task.startDate).toISOString() : null,
       userId: task.userId || null,
+      craft: task.craftName ?? null,
       labels: taskLabelsMap.get(task.id) || [],
     })),
   };

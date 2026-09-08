@@ -798,6 +798,31 @@
 			"deleteError": "删除标签失败",
 			"nameRequired": "标签名称不能为空"
 		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
+		},
 		"projectGeneral": {
 			"pageTitle": "项目设置",
 			"title": "常规设置",
@@ -1449,6 +1474,9 @@
 		"assignedTo": "将任务指派给 {{name}}",
 		"changedStatus": "将状态从 {{from}} 改为 {{to}}",
 		"changedPriority": "将优先级从 {{from}} 改为 {{to}}",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft",
 		"clearedDueDate": "清除了截止日期",
 		"setDueDate": "将截止日期设为 {{date}}",
 		"changedDueDate": "将截止日期从 {{from}} 改为 {{to}}",
@@ -1729,6 +1757,7 @@
 		"properties": {
 			"title": "属性",
 			"labels": "标签",
+			"craft": "Craft",
 			"copyTaskLink": "复制任务链接",
 			"copyTaskBranch": "复制任务分支",
 			"start": "开始",
@@ -1788,6 +1817,11 @@
 					"rose": "玫红",
 					"crimson": "深红"
 				}
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -1838,13 +1872,15 @@
 			"allAssignees": "所有负责人",
 			"allDueDates": "所有截止日期",
 			"allLabels": "所有标签",
+			"allCrafts": "All crafts",
 			"selectedCount": "已选 {{count}} 个",
 			"subjects": {
 				"status": "状态",
 				"priority": "优先级",
 				"assignee": "负责人",
 				"dueDate": "截止日期",
-				"labels": "标签"
+				"labels": "标签",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "为以下任一",
@@ -1908,6 +1944,10 @@
 		"labels": {
 			"label": "标签",
 			"empty": "无可用标签"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
 		},
 		"update": {
 			"success": "任务更新成功",

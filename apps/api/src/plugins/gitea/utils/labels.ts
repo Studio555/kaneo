@@ -1,3 +1,4 @@
+import { FALLBACK_LABEL_HEX, toHexColor } from "../../label-color";
 import type { GiteaConfig } from "../config";
 import { createGiteaClient, type GiteaLabel } from "./gitea-api";
 
@@ -15,12 +16,33 @@ const labelColors: Record<string, string> = {
 };
 
 function getLabelColor(labelName: string): string {
-  return labelColors[labelName] || "6B7280";
+  return labelColors[labelName] || FALLBACK_LABEL_HEX;
+}
+
+/**
+ * Colours for labels whose names aren't known ahead of time. `craft:` labels
+ * carry whatever colour the workspace picked, so the static map can't cover
+ * them.
+ */
+export type LabelColorOverrides = Record<string, string>;
+
+function resolveLabelColor(
+  labelName: string,
+  overrides?: LabelColorOverrides,
+): string {
+  const override = overrides?.[labelName];
+  if (override) {
+    // Craft colours arrive as palette keys ("gray") or hex; the forge only
+    // accepts bare six-digit hex.
+    return toHexColor(override);
+  }
+  return getLabelColor(labelName);
 }
 
 export async function ensureLabelsExistGitea(
   config: GiteaConfig,
   labels: string[],
+  overrides?: LabelColorOverrides,
 ): Promise<Map<string, number>> {
   const client = createGiteaClient(config);
   const map = new Map<string, number>();
@@ -48,7 +70,7 @@ export async function ensureLabelsExistGitea(
         continue;
       }
 
-      const color = getLabelColor(name);
+      const color = resolveLabelColor(name, overrides);
       const created = await client.createLabel(
         repositoryOwner,
         repositoryName,
@@ -68,10 +90,11 @@ export async function addLabelsToIssueGitea(
   config: GiteaConfig,
   issueIndex: number,
   labelNames: string[],
+  overrides?: LabelColorOverrides,
 ) {
   if (labelNames.length === 0) return;
 
-  const nameToId = await ensureLabelsExistGitea(config, labelNames);
+  const nameToId = await ensureLabelsExistGitea(config, labelNames, overrides);
   const ids: number[] = [];
   for (const name of labelNames) {
     const id = nameToId.get(name);
