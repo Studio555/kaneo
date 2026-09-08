@@ -12,12 +12,16 @@ import { areDatesEnabled } from "../../utils/dates-enabled";
 import { assertValidTaskStatus } from "../validate-task-fields";
 
 /**
- * The full-PUT update route always writes startDate/dueDate (omitting a
- * field wipes it), so a caller that never touches dates must resend the
- * stored value just to avoid losing it. That echo must not itself be
- * treated as "setting a date" while dates are disabled: only a value that
- * actually differs from what's stored is a real change and gets rejected.
- * Clearing (undefined) always stays allowed.
+ * While dates are disabled this route never writes the date columns at all
+ * (see the `.set()` below), so a caller that omits them — including a
+ * third-party script doing a legitimate full PUT — keeps whatever is stored
+ * instead of silently wiping it. Echoing the stored value is likewise a
+ * no-op. Only a value that actually differs from what's stored is a real
+ * change, and that still gets rejected rather than quietly ignored.
+ *
+ * The accepted consequence: while disabled, a stored date cannot be cleared
+ * through this route. `PUT /task/due-date/:id` and the bulk operation still
+ * clear a due date; clearing a start date needs the feature back on.
  */
 function assertDateUnchanged(
   incoming: Date | undefined,
@@ -68,7 +72,9 @@ async function updateTask(
     });
   }
 
-  if (!areDatesEnabled()) {
+  const datesEnabled = areDatesEnabled();
+
+  if (!datesEnabled) {
     assertDateUnchanged(startDate, existingTask.startDate);
     assertDateUnchanged(dueDate, existingTask.dueDate);
   }
@@ -97,8 +103,9 @@ async function updateTask(
       title,
       status,
       columnId: column?.id ?? null,
-      startDate: startDate || null,
-      dueDate: dueDate || null,
+      ...(datesEnabled
+        ? { startDate: startDate || null, dueDate: dueDate || null }
+        : {}),
       projectId,
       description,
       priority,

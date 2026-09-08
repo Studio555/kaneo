@@ -28,7 +28,7 @@ import TaskDetailsSheet from "@/components/task/task-details-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
-import { useDatesEnabled } from "@/hooks/use-dates-enabled";
+import { useDatesKnownDisabled } from "@/hooks/use-dates-enabled";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/cn";
 import { getStatusLabel } from "@/lib/i18n/domain";
@@ -58,7 +58,11 @@ function RouteComponent() {
   const { projectId, workspaceId } = Route.useParams();
   const { taskId } = Route.useSearch();
   const navigate = useNavigate();
-  const datesEnabled = useDatesEnabled();
+  // Redirecting must wait for a definite answer: `useDatesEnabled()` is also false
+  // while the config query is in flight, and bouncing a cold page load off
+  // this route is not something the user can undo (the redirect replaces the
+  // history entry).
+  const datesKnownDisabled = useDatesKnownDisabled();
   const { data: project } = useGetTasks(projectId);
   const weekStartsOn = useUserPreferencesStore((state) => state.weekStartsOn);
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,14 +105,14 @@ function RouteComponent() {
   // The Gantt view renders nothing useful without dates; when the instance
   // disables them, bounce back to the board rather than showing a dead page.
   useEffect(() => {
-    if (!datesEnabled) {
+    if (datesKnownDisabled) {
       navigate({
         to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
         params: { workspaceId, projectId },
         replace: true,
       });
     }
-  }, [datesEnabled, navigate, workspaceId, projectId]);
+  }, [datesKnownDisabled, navigate, workspaceId, projectId]);
 
   const allTasks = useMemo(
     () => [

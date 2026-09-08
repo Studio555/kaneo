@@ -9,7 +9,7 @@ import {
 } from "../../database/schema";
 import { publishEvent } from "../../events";
 import { filterAssignableUsers } from "../../utils/assert-assignable-user";
-import { assertDatesEnabled } from "../../utils/validate-dates";
+import { areDatesEnabled } from "../../utils/dates-enabled";
 import {
   coercePriority,
   coerceStatus,
@@ -74,6 +74,7 @@ async function importTasks(
   );
 
   const results = [];
+  const datesEnabled = areDatesEnabled();
 
   for (const taskData of tasksToImport) {
     const assigneeId = taskData.userId?.trim() || null;
@@ -82,6 +83,18 @@ async function importTasks(
       results.push({
         success: false,
         error: "Assignee is not a member of this workspace",
+        task: taskData,
+      });
+      continue;
+    }
+
+    // A dated row in the file is a per-task failure, exactly like an unknown
+    // assignee: throwing here instead would abort the loop with the earlier
+    // rows already committed and no result body to say which ones landed.
+    if (!datesEnabled && (taskData.startDate || taskData.dueDate)) {
+      results.push({
+        success: false,
+        error: "Date fields are disabled on this instance",
         task: taskData,
       });
       continue;
@@ -108,9 +121,6 @@ async function importTasks(
 
       const createdTask = await db.transaction(async (tx) => {
         const taskNumber = await claimTaskNumber(projectId, tx);
-
-        assertDatesEnabled(taskData.startDate);
-        assertDatesEnabled(taskData.dueDate);
 
         const [task] = await tx
           .insert(taskTable)

@@ -55,19 +55,26 @@ type ScheduledJobDefinition = {
 // cron timers: which jobs run is a decision; `new Cron` is only how it is carried out.
 export function getScheduledJobDefinitions(): ScheduledJobDefinition[] {
   const definitions: ScheduledJobDefinition[] = [];
+  // Both reminder jobs exist only to deliver due-date reminders — the webhook
+  // one does no other work — so an instance with dates disabled registers
+  // neither. Leaving the webhook job running would keep posting due-date
+  // reminders to customers' endpoints (and writing dedupe rows) with no way
+  // to turn it off, because the UI toggle for it is hidden while disabled.
   if (areDatesEnabled()) {
-    definitions.push({
-      name: "due-date-reminders",
-      pattern: "*/5 * * * *",
-      run: checkDueDateReminders,
-    });
+    definitions.push(
+      {
+        name: "due-date-reminders",
+        pattern: "*/5 * * * *",
+        run: checkDueDateReminders,
+      },
+      {
+        name: "project-webhook-reminders",
+        pattern: "*/5 * * * *",
+        run: checkProjectWebhookReminders,
+      },
+    );
   }
   definitions.push(
-    {
-      name: "project-webhook-reminders",
-      pattern: "*/5 * * * *",
-      run: checkProjectWebhookReminders,
-    },
     {
       name: "seat-reconciliation",
       pattern: "17 * * * *",
@@ -83,11 +90,14 @@ export function getScheduledJobDefinitions(): ScheduledJobDefinition[] {
 }
 
 export function initializeScheduler(): void {
-  for (const { name, pattern, run } of getScheduledJobDefinitions()) {
+  const definitions = getScheduledJobDefinitions();
+  for (const { name, pattern, run } of definitions) {
     jobs.push(new Cron(pattern, withCheckIn(name, run)));
   }
+  // Names the jobs that were actually registered: which ones those are
+  // depends on instance configuration, so a fixed sentence would lie.
   console.log(
-    "⏰ Scheduler started (reminders every 5 minutes, seat reconciliation and trial reminders hourly)",
+    `⏰ Scheduler started (${definitions.map((job) => job.name).join(", ")})`,
   );
 }
 

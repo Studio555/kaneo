@@ -333,7 +333,11 @@ async function bulkUpdateTasks({
     }
 
     case "updateDueDate": {
-      assertDatesEnabled(value);
+      // An empty string means "clear", matching the dedicated due-date route;
+      // clearing a stale value must stay possible while dates are disabled.
+      if (value) {
+        assertDatesEnabled(value);
+      }
       let parsedDate: Date | null = null;
       if (value) {
         parsedDate = new Date(value);

@@ -9,6 +9,7 @@ import {
 
 const DISABLED_MESSAGE = "Date fields are disabled on this instance";
 const A_DATE = "2026-08-01T00:00:00.000Z";
+const A_START_DATE = "2026-07-01T00:00:00.000Z";
 const JSON_HEADERS = { "content-type": "application/json" };
 
 describe("API integration: dates disabled", () => {
@@ -108,6 +109,22 @@ describe("API integration: dates disabled", () => {
     expect(res.status).toBe(422);
   });
 
+  it("still allows a bulk due-date clear", async () => {
+    process.env.DISABLE_DATES = "true";
+    // An empty value means "clear" in `bulkUpdateBody`, exactly as on the
+    // dedicated due-date route; a disabled instance must not block it.
+    const res = await app.request("/api/task/bulk", {
+      method: "PATCH",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        taskIds: [seededTaskId],
+        operation: "updateDueDate",
+        value: "",
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
   it("rejects a bulk due-date update", async () => {
     process.env.DISABLE_DATES = "true";
     const res = await app.request("/api/task/bulk", {
@@ -122,16 +139,57 @@ describe("API integration: dates disabled", () => {
     expect(res.status).toBe(422);
   });
 
-  it("rejects a date on import", async () => {
+  it("reports a dated import row as a per-task failure instead of aborting the import", async () => {
     process.env.DISABLE_DATES = "true";
     const res = await app.request(`/api/task/import/${projectId}`, {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify({
-        tasks: [{ title: "imported", status: "to-do", dueDate: A_DATE }],
+        tasks: [
+          { title: "undated import", status: "to-do" },
+          { title: "dated import", status: "to-do", dueDate: A_DATE },
+          { title: "later undated import", status: "to-do" },
+        ],
       }),
     });
-    expect(res.status).toBe(422);
+
+    // Aborting mid-loop would commit the first row, 422 with no body, and
+    // leave the caller unable to tell what landed.
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      results: {
+        total: number;
+        successful: number;
+        failed: number;
+        tasks: { success: boolean; error?: string; task?: unknown }[];
+      };
+    };
+    expect(body.results.total).toBe(3);
+    expect(body.results.successful).toBe(2);
+    expect(body.results.failed).toBe(1);
+    expect(body.results.tasks[1]).toMatchObject({
+      success: false,
+      error: DISABLED_MESSAGE,
+    });
+    // The row after the dated one still imported, proving the loop continued.
+    expect(body.results.tasks[2]).toMatchObject({ success: true });
+  });
+
+  it("imports dated rows normally when dates are enabled", async () => {
+    delete process.env.DISABLE_DATES;
+    const res = await app.request(`/api/task/import/${projectId}`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        tasks: [{ title: "enabled import", status: "to-do", dueDate: A_DATE }],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      results: { successful: number; failed: number };
+    };
+    expect(body.results.successful).toBe(1);
+    expect(body.results.failed).toBe(0);
   });
 
   it("still allows clearing a date", async () => {
@@ -198,7 +256,7 @@ describe("API integration: dates disabled", () => {
     expect(read.status).toBe(200);
   });
 
-  it("echoing a stored due date on a full update is accepted, but changing it still 422s, and clearing still works", async () => {
+  it("echoing a stored due date on a full update is accepted, changing it still 422s, and omitting it preserves it", async () => {
     delete process.env.DISABLE_DATES;
     const created = await app.request(`/api/task/${projectId}`, {
       method: "POST",
@@ -208,6 +266,7 @@ describe("API integration: dates disabled", () => {
         description: "",
         priority: "medium",
         status: "to-do",
+        startDate: A_START_DATE,
         dueDate: A_DATE,
       }),
     });
@@ -224,9 +283,11 @@ describe("API integration: dates disabled", () => {
       priority: string;
       projectId: string;
       position: number;
+      startDate: string | null;
       dueDate: string | null;
     };
     expect(task.dueDate).not.toBeNull();
+    expect(task.startDate).not.toBeNull();
 
     // A title-only change that echoes the stored due date is not a date
     // change and must be accepted.
@@ -269,9 +330,11 @@ describe("API integration: dates disabled", () => {
     expect(changed.status).toBe(422);
     expect(await changed.text()).toContain(DISABLED_MESSAGE);
 
-    // Clearing the date (omitting it from a full update) must still be
-    // allowed even while disabled.
-    const cleared = await app.request(`/api/task/${createdTask.id}`, {
+    // Omitting the date from a full update — what a third-party script doing
+    // a legitimate PUT looks like — must not destroy it. While disabled this
+    // route never writes the date columns at all, so the stored value
+    // survives.
+    const omitted = await app.request(`/api/task/${createdTask.id}`, {
       method: "PUT",
       headers: JSON_HEADERS,
       body: JSON.stringify({
@@ -283,9 +346,50 @@ describe("API integration: dates disabled", () => {
         position: task.position,
       }),
     });
-    expect(cleared.status).toBe(200);
-    const clearedTask = (await cleared.json()) as { dueDate: string | null };
+    expect(omitted.status).toBe(200);
+    const omittedTask = (await omitted.json()) as {
+      startDate: string | null;
+      dueDate: string | null;
+    };
+    expect(omittedTask.dueDate).toBe(task.dueDate);
+    expect(omittedTask.startDate).toBe(task.startDate);
+
+    // The stored dates are still there on a fresh read, not just echoed back.
+    const refetched = await app.request(`/api/task/${createdTask.id}`);
+    expect(refetched.status).toBe(200);
+    const refetchedTask = (await refetched.json()) as {
+      startDate: string | null;
+      dueDate: string | null;
+    };
+    expect(refetchedTask.dueDate).toBe(task.dueDate);
+    expect(refetchedTask.startDate).toBe(task.startDate);
+
+    // Positive control: with dates enabled the same omission still clears the
+    // column, so the assertions above are about the flag and not about the
+    // route having stopped writing dates altogether.
+    delete process.env.DISABLE_DATES;
+    const clearedWhileEnabled = await app.request(
+      `/api/task/${createdTask.id}`,
+      {
+        method: "PUT",
+        headers: JSON_HEADERS,
+        body: JSON.stringify({
+          title: "renamed while enabled",
+          description: task.description,
+          priority: task.priority,
+          status: task.status,
+          projectId: task.projectId,
+          position: task.position,
+        }),
+      },
+    );
+    expect(clearedWhileEnabled.status).toBe(200);
+    const clearedTask = (await clearedWhileEnabled.json()) as {
+      startDate: string | null;
+      dueDate: string | null;
+    };
     expect(clearedTask.dueDate).toBeNull();
+    expect(clearedTask.startDate).toBeNull();
   });
 
   it("rejects updating a time entry while dates are disabled", async () => {

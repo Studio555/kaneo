@@ -36,11 +36,19 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
-const datesEnabled = vi.hoisted(() => ({ value: true }));
+// The instance config query is mocked rather than the date hooks themselves:
+// the route guard has to tell "config resolved and dates are off" apart from
+// "the config hasn't arrived yet", and that distinction lives inside the real
+// hook. Mocking the hook would make the pending case untestable here.
+const config = vi.hoisted(
+  () =>
+    ({ value: { datesEnabled: true } }) as {
+      value: { datesEnabled: boolean } | undefined;
+    },
+);
 
-vi.mock("@/hooks/use-dates-enabled", () => ({
-  useDatesEnabled: () => datesEnabled.value,
-  useShowDueDates: () => datesEnabled.value,
+vi.mock("@/hooks/queries/config/use-get-config", () => ({
+  default: () => ({ data: config.value }),
 }));
 
 const useGetTasks = vi.fn();
@@ -151,7 +159,7 @@ afterEach(() => {
   scrollIntoView.mockClear();
   useGetTasks.mockReset();
   routeParams.projectId = "project-1";
-  datesEnabled.value = true;
+  config.value = { datesEnabled: true };
 });
 
 describe("Gantt jump-to-today", () => {
@@ -334,7 +342,7 @@ describe("Gantt jump-to-today", () => {
 describe("Gantt route with dates disabled", () => {
   it("redirects to the board", () => {
     mockProjectWithTask(makeTask({ title: "Task" }));
-    datesEnabled.value = false;
+    config.value = { datesEnabled: false };
     navigate.mockClear();
 
     render(<GanttRoute />);
@@ -355,5 +363,26 @@ describe("Gantt route with dates disabled", () => {
     render(<GanttRoute />);
 
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("does not redirect while the instance config is still loading", () => {
+    mockProjectWithTask(makeTask({ title: "Task" }));
+    // A cold load (bookmark, refresh, new tab) renders this route before the
+    // ["config"] query resolves. Treating that as "dates are disabled" would
+    // bounce the user to the board with `replace: true`, so Back wouldn't
+    // even bring them home.
+    config.value = undefined;
+    navigate.mockClear();
+
+    render(<GanttRoute />);
+
+    expect(navigate).not.toHaveBeenCalled();
+
+    // Positive control: once the config resolves as disabled, the very same
+    // render does redirect, so the assertion above can actually fail.
+    cleanup();
+    config.value = { datesEnabled: false };
+    render(<GanttRoute />);
+    expect(navigate).toHaveBeenCalled();
   });
 });

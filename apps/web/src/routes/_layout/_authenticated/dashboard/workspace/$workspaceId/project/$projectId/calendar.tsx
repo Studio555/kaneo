@@ -10,7 +10,10 @@ import PageTitle from "@/components/page-title";
 import TaskDetailsSheet from "@/components/task/task-details-sheet";
 import { shortcuts } from "@/constants/shortcuts";
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
-import { useDatesEnabled } from "@/hooks/use-dates-enabled";
+import {
+  useDatesEnabled,
+  useDatesKnownDisabled,
+} from "@/hooks/use-dates-enabled";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toScheduledTasks } from "@/lib/task-schedule";
@@ -40,6 +43,11 @@ function RouteComponent() {
   const { taskId } = Route.useSearch();
   const navigate = useNavigate();
   const datesEnabled = useDatesEnabled();
+  // Redirecting must wait for a definite answer: `datesEnabled` is also false
+  // while the config query is in flight, and bouncing a cold page load off
+  // this route is not something the user can undo (the redirect replaces the
+  // history entry).
+  const datesKnownDisabled = useDatesKnownDisabled();
   const { data: project, isLoading, isError } = useGetTasks(projectId);
   const weekStartsOn = useUserPreferencesStore((state) => state.weekStartsOn);
   const setViewMode = useUserPreferencesStore((state) => state.setViewMode);
@@ -82,14 +90,14 @@ function RouteComponent() {
   // instance disables them, bounce back to the board rather than showing a
   // dead page.
   useEffect(() => {
-    if (!datesEnabled) {
+    if (datesKnownDisabled) {
       navigate({
         to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
         params: { workspaceId, projectId },
         replace: true,
       });
     }
-  }, [datesEnabled, navigate, workspaceId, projectId]);
+  }, [datesKnownDisabled, navigate, workspaceId, projectId]);
 
   useRegisterShortcuts({
     sequentialShortcuts: {
