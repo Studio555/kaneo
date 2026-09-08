@@ -5,6 +5,8 @@ import { ArrowRight, Calendar, Filter, Plus, User, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import BacklogListView from "@/components/backlog-list-view";
+import BacklogTableView from "@/components/backlog-table-view";
+import BacklogViewSwitcher from "@/components/backlog-table-view/backlog-view-switcher";
 import ProjectLayout from "@/components/common/project-layout";
 import SortControl from "@/components/common/sort-control";
 import PageTitle from "@/components/page-title";
@@ -79,7 +81,8 @@ function RouteComponent() {
     });
   }, [navigate]);
 
-  const { setViewMode } = useUserPreferencesStore();
+  const { setViewMode, backlogViewMode, setBacklogViewMode } =
+    useUserPreferencesStore();
 
   useRegisterShortcuts({
     sequentialShortcuts: {
@@ -691,6 +694,13 @@ function RouteComponent() {
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                <div className="ml-auto">
+                  <BacklogViewSwitcher
+                    backlogViewMode={backlogViewMode}
+                    setBacklogViewMode={setBacklogViewMode}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -698,10 +708,19 @@ function RouteComponent() {
 
         <div className="flex-1 overflow-hidden bg-card h-full">
           {sortedProject ? (
-            <BacklogListView
-              project={sortedProject}
-              disableDragDrop={sort.field !== "position"}
-            />
+            backlogViewMode === "table" ? (
+              <BacklogTableView
+                project={sortedProject}
+                sort={sort}
+                onSortChange={setSort}
+                disableDragDrop={sort.field !== "position"}
+              />
+            ) : (
+              <BacklogListView
+                project={sortedProject}
+                disableDragDrop={sort.field !== "position"}
+              />
+            )
           ) : (
             <div className="flex h-full items-center justify-center">
               <div className="text-center space-y-4">

@@ -1,122 +1,52 @@
-import { eq } from "drizzle-orm";
-import db from "../../../database";
-import { projectTable } from "../../../database/schema";
-import { toCraftLabelName } from "../../system-labels";
 import type { PluginContext, TaskCreatedEvent } from "../../types";
+import { isVirtualStatus } from "../../virtual-status";
 import type { GitHubConfig } from "../config";
-import {
-  createExternalLink,
-  findExternalLinkByTaskAndType,
-} from "../services/link-manager";
-import {
-  formatIssueBody,
-  formatIssueTitle,
-  getLabelsForIssue,
-} from "../utils/format";
+import { ensureIssueForTask } from "../services/issue-creator";
 import { getGithubApp, getInstallationIdForRepo } from "../utils/github-app";
-import { addLabelsToIssue } from "../utils/labels";
-import { syncIssueAssignee } from "../utils/sync-issue-assignee";
 
 export async function handleTaskCreated(
   event: TaskCreatedEvent,
   context: PluginContext,
 ): Promise<void> {
+  if (isVirtualStatus(event.status)) {
+    return;
+  }
+
   const githubApp = getGithubApp();
   if (!githubApp) {
     return;
   }
 
   const config = context.config as GitHubConfig;
-  const { repositoryOwner, repositoryName } = config;
-
-  const existingLink = await findExternalLinkByTaskAndType(
-    event.taskId,
-    context.integrationId,
-    "issue",
-  );
-
-  if (existingLink) {
-    return;
-  }
 
   try {
     let installationId = config.installationId;
     if (!installationId) {
       installationId = await getInstallationIdForRepo(
-        repositoryOwner,
-        repositoryName,
+        config.repositoryOwner,
+        config.repositoryName,
       );
     }
 
     const octokit = await githubApp.getInstallationOctokit(installationId);
 
-    const createdIssue = await octokit.rest.issues.create({
-      owner: repositoryOwner,
-      repo: repositoryName,
-      title: formatIssueTitle(event.title),
-      body: formatIssueBody(event.description, event.taskId),
-    });
-
-    const labels = getLabelsForIssue(
-      event.priority,
-      event.status,
-      event.craftName,
-    );
-    await addLabelsToIssue(
+    await ensureIssueForTask(
       octokit,
-      repositoryOwner,
-      repositoryName,
-      createdIssue.data.number,
-      labels,
-      event.craftName && event.craftColor
-        ? { [toCraftLabelName(event.craftName)]: event.craftColor }
-        : undefined,
-    );
-
-    await createExternalLink({
-      taskId: event.taskId,
-      integrationId: context.integrationId,
-      resourceType: "issue",
-      externalId: createdIssue.data.number.toString(),
-      url: createdIssue.data.html_url,
-      title: createdIssue.data.title,
-      metadata: {
-        state: createdIssue.data.state,
-        createdFrom: "kaneo",
+      {
+        taskId: event.taskId,
+        projectId: event.projectId,
+        number: event.number,
+        title: event.title,
+        description: event.description,
+        priority: event.priority,
+        status: event.status,
+        craftName: event.craftName,
+        craftColor: event.craftColor,
+        // On task.created the event's userId is the assignee, not the actor.
+        assigneeId: event.userId || null,
       },
-    });
-
-    // A task created with an assignee already on it emits only task.created,
-    // so the assignee handlers never see it. The link exists by now, which is
-    // what the assignee write needs.
-    if (event.userId) {
-      await syncIssueAssignee(
-        event.taskId,
-        event.userId,
-        context,
-        "task_created",
-      );
-    }
-
-    if (config.commentTaskLinkOnGitHubIssue !== false) {
-      const project = await db.query.projectTable.findFirst({
-        where: eq(projectTable.id, event.projectId),
-      });
-
-      if (project) {
-        const clientUrl =
-          process.env.KANEO_CLIENT_URL || "http://localhost:5173";
-        const taskUrl = `${clientUrl}/dashboard/workspace/${project.workspaceId}/project/${event.projectId}/task/${event.taskId}`;
-        const taskIdentifier = `${project.slug.toUpperCase()}-${event.number}`;
-
-        await octokit.rest.issues.createComment({
-          owner: repositoryOwner,
-          repo: repositoryName,
-          issue_number: createdIssue.data.number,
-          body: `[${taskIdentifier}](${taskUrl})`,
-        });
-      }
-    }
+      context,
+    );
   } catch (error) {
     console.error("Failed to create GitHub issue:", error);
   }

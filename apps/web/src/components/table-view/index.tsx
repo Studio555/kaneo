@@ -12,7 +12,7 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { produce } from "immer";
-import { Archive, ArrowDown, ArrowUp, ChevronRight, Plus } from "lucide-react";
+import { Archive, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateTask } from "@/hooks/mutations/task/use-update-task";
@@ -29,12 +29,8 @@ import type { ProjectWithTasks } from "@/types/project";
 import BulkToolbar from "../bulk-selection/bulk-toolbar";
 import { ArchiveTasksModal } from "../shared/modals/archive-tasks-modal";
 import CreateTaskModal from "../shared/modals/create-task-modal";
-import {
-  getTableGridTemplate,
-  getVisibleTableColumns,
-  type TableColumn,
-} from "./columns";
-import { getNextHeaderSort } from "./header-sort";
+import { getVisibleTableColumns, type TableColumn } from "./columns";
+import { TableHeaderRow } from "./table-header";
 import TaskTableRow from "./task-table-row";
 
 type TableViewProps = {
@@ -43,62 +39,6 @@ type TableViewProps = {
   onSortChange: (sort: SortConfig) => void;
   disableDragDrop?: boolean;
 };
-
-function TableHeaderCell({
-  column,
-  sort,
-  onSortChange,
-}: {
-  column: TableColumn;
-  sort: SortConfig;
-  onSortChange: (sort: SortConfig) => void;
-}) {
-  const { t } = useTranslation();
-  const isActive = column.sortField !== null && sort.field === column.sortField;
-
-  const label = (
-    <span className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-      {t(column.labelKey)}
-    </span>
-  );
-
-  if (column.sortField === null) {
-    return <div className="flex min-w-0 items-center px-1.5">{label}</div>;
-  }
-
-  const sortField = column.sortField;
-
-  return (
-    <div className="flex min-w-0 items-center">
-      <button
-        type="button"
-        onClick={() => onSortChange(getNextHeaderSort(sort, sortField))}
-        className={cn(
-          "flex h-7 w-full min-w-0 items-center gap-1 rounded-md px-1.5 text-left transition-colors hover:bg-accent/70",
-          isActive && "text-foreground",
-        )}
-      >
-        {label}
-        {isActive && (
-          <>
-            {sort.direction === "asc" ? (
-              <ArrowUp className="size-3 shrink-0 text-muted-foreground" />
-            ) : (
-              <ArrowDown className="size-3 shrink-0 text-muted-foreground" />
-            )}
-            {/* The arrow is the only visual cue, so the direction is also part
-                of the button's accessible name. */}
-            <span className="sr-only">
-              {sort.direction === "asc"
-                ? t("tasks:sort.ascending")
-                : t("tasks:sort.descending")}
-            </span>
-          </>
-        )}
-      </button>
-    </div>
-  );
-}
 
 type ColumnSectionProps = {
   column: ProjectWithTasks["columns"][number];
@@ -277,7 +217,6 @@ function TableView({
       }),
     [showAssignees, showDueDates, showLabels, showPriority],
   );
-  const gridTemplate = getTableGridTemplate(columns);
 
   useEffect(() => {
     if (project?.columns) {
@@ -387,20 +326,11 @@ function TableView({
       modifiers={[snapCenterToCursor]}
     >
       <div className="h-full w-full overflow-auto bg-muted/20">
-        {/* The rows scroll under the header, so it needs its own opaque background. */}
-        <div
-          style={{ gridTemplateColumns: gridTemplate }}
-          className="sticky top-0 z-10 grid min-w-fit items-center gap-2 border-b border-border/80 bg-card/95 px-2 py-1.5 backdrop-blur supports-[backdrop-filter]:bg-card/80"
-        >
-          {columns.map((column) => (
-            <TableHeaderCell
-              key={column.key}
-              column={column}
-              sort={sort}
-              onSortChange={onSortChange}
-            />
-          ))}
-        </div>
+        <TableHeaderRow
+          columns={columns}
+          sort={sort}
+          onSortChange={onSortChange}
+        />
 
         <div className="min-w-fit divide-y divide-border/50">
           {project.columns.map((column) => (

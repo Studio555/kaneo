@@ -100,7 +100,7 @@ beforeEach(() => {
   mocks.mockSyncIssueAssignee.mockResolvedValue(undefined);
 });
 
-describe("handleTaskCreated assignee", () => {
+describe("assignee on issue creation", () => {
   it("assigns the new issue to the task's assignee", async () => {
     // A task created with somebody already on it emits only task.created, so
     // without this the assignee never reaches GitHub at all.
@@ -121,6 +121,68 @@ describe("handleTaskCreated assignee", () => {
     await handleTaskCreated(
       { ...event(""), userId: "" } as Parameters<typeof handleTaskCreated>[0],
       context as Parameters<typeof handleTaskCreated>[1],
+    );
+
+    expect(mocks.mockSyncIssueAssignee).not.toHaveBeenCalled();
+  });
+});
+
+describe("assignee on deferred issue creation", () => {
+  it("assigns the issue opened when a task leaves the backlog", async () => {
+    // A task can sit in the backlog with an assignee for days. Its issue is
+    // only opened when it reaches a column, and that issue must still name the
+    // person the task names - no assignee event is coming.
+    const { ensureIssueForTask } = await import(
+      "../../../../../apps/api/src/plugins/github/services/issue-creator"
+    );
+
+    await ensureIssueForTask(
+      mocks.mockOctokit as never,
+      {
+        taskId: "task-1",
+        projectId: "project-1",
+        number: 1,
+        title: "TEST",
+        description: null,
+        priority: "medium",
+        status: "to-do",
+        assigneeId: "user-1",
+      },
+      context as never,
+    );
+
+    expect(mocks.mockSyncIssueAssignee).toHaveBeenCalledWith(
+      "task-1",
+      "user-1",
+      context,
+      expect.any(String),
+    );
+  });
+
+  it("leaves assignees alone when an issue already existed", async () => {
+    mocks.mockFindExternalLinkByTaskAndType.mockResolvedValue({
+      id: "link-1",
+      taskId: "task-1",
+      externalId: "2",
+      metadata: null,
+    });
+    const { ensureIssueForTask } = await import(
+      "../../../../../apps/api/src/plugins/github/services/issue-creator"
+    );
+
+    await ensureIssueForTask(
+      mocks.mockOctokit as never,
+      {
+        taskId: "task-1",
+        projectId: "project-1",
+        number: 1,
+        title: "TEST",
+        description: null,
+        priority: "medium",
+        status: "to-do",
+        assigneeId: "user-1",
+      },
+      context as never,
     );
 
     expect(mocks.mockSyncIssueAssignee).not.toHaveBeenCalled();
