@@ -290,6 +290,59 @@ Kaneo automatically creates and syncs these label types:
 - Any labels added to GitHub issues (not starting with `priority:` or `status:`) are synced to Kaneo
 - Labels added in Kaneo can be synced to GitHub (if configured)
 
+### Assignee Synchronization
+
+Assigning a task also assigns the linked GitHub issue to the same person, and
+assigning the issue on GitHub assigns the Kaneo task. This needs to know which
+GitHub account belongs to which Kaneo user.
+
+**Linking a GitHub account**
+
+- Anyone who signs in with GitHub is linked automatically, with no action needed.
+  GitHub itself proved the account is theirs, so the link is **confirmed**.
+- Everyone else links their account under **Settings → Account → Information**
+  by entering their GitHub username. The username is checked against GitHub and
+  its numeric account id is stored, so a later GitHub rename keeps working.
+
+Each GitHub account links to at most one Kaneo user.
+
+<Warning>
+Typing a username asserts that the account is yours but does not prove it, so
+an unconfirmed link works in one direction only: assignments you make in Kaneo
+are mirrored to GitHub, but GitHub's own assignments are never routed back to
+an unconfirmed user. Otherwise anyone could receive the tasks of the person
+whose handle they typed. Signing in with GitHub confirms the link, and takes
+over an unconfirmed claim on the same account.
+</Warning>
+
+**What syncs**
+
+| Change | Result |
+|--------|--------|
+| Task assigned in Kaneo | The linked issue's assignee is replaced with that person |
+| Task unassigned in Kaneo | The linked issue's assignees are cleared |
+| Issue assigned on GitHub | The linked task is assigned to the mapped Kaneo user |
+| Issue unassigned on GitHub | The linked task is unassigned, but only when the departing user is the task's current assignee |
+
+<Note>
+Kaneo tasks have one assignee and GitHub issues can have several, so an
+assignment from Kaneo replaces the issue's assignee list rather than adding to
+it. Co-assignees added on GitHub are removed the next time the task's assignee
+changes in Kaneo.
+</Note>
+
+**When nothing happens**
+
+An assignment is skipped, and the reason written to the API logs, when:
+
+- The Kaneo assignee has no linked GitHub account.
+- The linked GitHub user cannot be assigned on that repository. GitHub only
+  accepts assignees with repository access, and silently drops the rest, so
+  Kaneo checks first rather than reporting a success that did not happen.
+- An inbound GitHub assignee is not a member of the project's workspace. The
+  workspace boundary holds regardless of what the webhook says.
+- An inbound GitHub assignee's Kaneo link is unconfirmed, as described above.
+
 ### Multiple Organizations
 If you need to connect repositories from multiple GitHub organizations:
 

@@ -13,6 +13,7 @@ import {
 } from "../utils/format";
 import { addLabelsToIssue } from "../utils/labels";
 import { parseLinkMetadata } from "../utils/parse-link-metadata";
+import { syncIssueAssignee } from "../utils/sync-issue-assignee";
 import {
   createExternalLink,
   findExternalLinkByTaskAndType,
@@ -30,6 +31,8 @@ export type IssueSource = {
   status: string;
   craftName?: string | null;
   craftColor?: string | null;
+  /** Who the task is assigned to, so a brand new issue names them too. */
+  assigneeId?: string | null;
 };
 
 export type ResolvedIssue = {
@@ -140,6 +143,19 @@ async function createIssue(
         body: `[${taskIdentifier}](${taskUrl})`,
       });
     }
+  }
+
+  // A task can be assigned before its issue exists, either created with an
+  // assignee or assigned while it sat in the backlog. Neither emits an
+  // assignee event the issue could act on, so the new issue picks the
+  // assignee up here. The link it needs was written just above.
+  if (source.assigneeId) {
+    await syncIssueAssignee(
+      source.taskId,
+      source.assigneeId,
+      context,
+      "issue_created",
+    );
   }
 
   return {

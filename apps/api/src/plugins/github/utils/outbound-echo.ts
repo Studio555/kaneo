@@ -51,3 +51,48 @@ export function shouldSkipInboundStateSync(
     metadata.state === inboundState
   );
 }
+
+// The assignee twin of the state check above, and it exists for the same
+// reason: assigning from Kaneo comes straight back as issues.assigned, so
+// inbound assignee sync cannot be driven off the payload alone.
+//
+// The two rules carry over unchanged. A delivery older than our latest write
+// describes assignee state we have already moved past, whoever it names. A
+// delivery inside the window naming the login we just wrote is our own update
+// returning, while one naming somebody else is a person reassigning seconds
+// after Kaneo wrote — real, and dropping it would leave the board wrong.
+//
+// `null` on both sides is the unassign case, so it compares as an echo the
+// same way a matching login does.
+export function shouldSkipInboundAssigneeSync(
+  metadata: { assigneeLogin?: unknown; lastOutboundAssigneeSyncAt?: unknown },
+  issue: { updated_at?: string },
+  inboundLogin: string | null,
+): boolean {
+  const lastOutbound = metadata.lastOutboundAssigneeSyncAt;
+
+  if (typeof lastOutbound !== "number" || !Number.isFinite(lastOutbound)) {
+    return false;
+  }
+
+  const eventMs = parseIssueUpdatedAtMs(issue);
+  if (eventMs === null) {
+    return false;
+  }
+
+  if (eventMs < lastOutbound - OUTBOUND_STATE_ECHO_WINDOW_MS) {
+    return true;
+  }
+
+  // Logins compare case-insensitively because GitHub treats them that way and
+  // the payload does not promise the casing we stored.
+  const writtenLogin =
+    typeof metadata.assigneeLogin === "string"
+      ? metadata.assigneeLogin.toLowerCase()
+      : null;
+
+  return (
+    eventMs <= lastOutbound + OUTBOUND_STATE_ECHO_WINDOW_MS &&
+    writtenLogin === (inboundLogin?.toLowerCase() ?? null)
+  );
+}

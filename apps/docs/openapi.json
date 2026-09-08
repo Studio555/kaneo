@@ -3222,6 +3222,79 @@
         "required": [
           "deleted"
         ]
+      },
+      "UserGithubIdentityState": {
+        "type": "object",
+        "properties": {
+          "identity": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "githubUserId": {
+                "type": "string",
+                "description": "GitHub's numeric account id. This is the identity, because handles get renamed.",
+                "example": "4242"
+              },
+              "githubLogin": {
+                "type": "string",
+                "description": "Cached GitHub username, used when assigning issues.",
+                "example": "ada"
+              },
+              "verified": {
+                "type": "boolean",
+                "description": "True when GitHub proved the account belongs to this user through an OAuth sign-in. Only a verified link is trusted to route GitHub's own events back to a Kaneo user; an unverified one still drives assignment out to GitHub.",
+                "example": true
+              }
+            },
+            "required": [
+              "githubUserId",
+              "githubLogin",
+              "verified"
+            ],
+            "description": "Null when the user has no linked GitHub account."
+          }
+        },
+        "required": [
+          "identity"
+        ]
+      },
+      "UserGithubIdentity": {
+        "type": "object",
+        "properties": {
+          "githubUserId": {
+            "type": "string",
+            "description": "GitHub's numeric account id. This is the identity, because handles get renamed.",
+            "example": "4242"
+          },
+          "githubLogin": {
+            "type": "string",
+            "description": "Cached GitHub username, used when assigning issues.",
+            "example": "ada"
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "True when GitHub proved the account belongs to this user through an OAuth sign-in. Only a verified link is trusted to route GitHub's own events back to a Kaneo user; an unverified one still drives assignment out to GitHub.",
+            "example": true
+          }
+        },
+        "required": [
+          "githubUserId",
+          "githubLogin",
+          "verified"
+        ]
+      },
+      "UserGithubIdentityUnlinked": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
       }
     },
     "parameters": {}
@@ -5348,25 +5421,17 @@
                   },
                   "grant_types": {
                     "type": "array",
-                    "prefixItems": [
-                      {
-                        "type": "string",
-                        "enum": [
-                          "authorization_code"
-                        ]
-                      }
-                    ]
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
                   },
                   "response_types": {
                     "type": "array",
-                    "prefixItems": [
-                      {
-                        "type": "string",
-                        "enum": [
-                          "code"
-                        ]
-                      }
-                    ]
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
                   }
                 },
                 "required": [
@@ -14065,6 +14130,130 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UserAvatarDeleted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          }
+        }
+      }
+    },
+    "/user/github-identity": {
+      "get": {
+        "operationId": "getUserGithubIdentity",
+        "tags": [
+          "User"
+        ],
+        "summary": "Get linked GitHub account",
+        "description": "Return the GitHub account linked to the current user, so task assignment can name the same person on a linked GitHub issue. Null when nothing is linked.",
+        "responses": {
+          "200": {
+            "description": "Current GitHub link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserGithubIdentityState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          }
+        }
+      },
+      "put": {
+        "operationId": "linkUserGithubIdentity",
+        "tags": [
+          "User"
+        ],
+        "summary": "Link a GitHub account",
+        "description": "Link a GitHub username to the current user. The username is resolved through GitHub and its numeric account id is stored, so a rename keeps working. Replaces any existing link.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 39,
+                    "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$",
+                    "description": "GitHub username to link. Resolved through GitHub, and the numeric account id it returns is what gets stored.",
+                    "example": "ada"
+                  }
+                },
+                "required": [
+                  "login"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "GitHub account linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserGithubIdentity"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "404": {
+            "description": "No GitHub user exists for that username",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "That GitHub account is linked to another user",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "GitHub integration is not configured",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "unlinkUserGithubIdentity",
+        "tags": [
+          "User"
+        ],
+        "summary": "Unlink the GitHub account",
+        "description": "Remove the current user's GitHub link. Succeeds even when there was nothing to remove.",
+        "responses": {
+          "200": {
+            "description": "GitHub account unlinked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserGithubIdentityUnlinked"
                 }
               }
             }

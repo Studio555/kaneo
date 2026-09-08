@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import PageTitle from "@/components/page-title";
 import useAuth from "@/components/providers/auth-provider/hooks/use-auth";
+import GithubIdentityCard from "@/components/settings/github-identity-card";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -409,6 +410,8 @@ function RouteComponent() {
             </Form>
           </div>
         </div>
+
+        <GithubIdentityCard />
 
         <div className="space-y-6">
           <div className="space-y-1">

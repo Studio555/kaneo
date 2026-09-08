@@ -42,6 +42,8 @@ export async function handleTaskCreated(
         status: event.status,
         craftName: event.craftName,
         craftColor: event.craftColor,
+        // On task.created the event's userId is the assignee, not the actor.
+        assigneeId: event.userId || null,
       },
       context,
     );

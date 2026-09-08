@@ -80,6 +80,7 @@ export async function handleTaskStatusChanged(
           status: event.newStatus,
           craftName: task.craft?.name ?? null,
           craftColor: task.craft?.color ?? null,
+          assigneeId: task.userId,
         },
         context,
       );

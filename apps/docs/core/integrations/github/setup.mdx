@@ -68,7 +68,7 @@ Configure the following permissions:
 
 | Permission | Access | Purpose |
 |------------|---------|---------|
-| **Issues** | Read & Write | Create issues, add/remove labels, create comments, close/reopen issues |
+| **Issues** | Read & Write | Create issues, add/remove labels, create comments, close/reopen issues, set assignees |
 | **Pull Requests** | Read | Link pull requests to tasks and track PR status |
 | **Metadata** | Read | Access repository information and verify installation |
 | **Contents** | Read | Track branch pushes and associate commits with tasks |
@@ -87,7 +87,7 @@ Pull Requests permission is optional but recommended for full integration featur
 
 **This step is required for proper integration.** Subscribe to these events:
 
-- **Issues** - To sync issues with tasks (opened, edited, closed, labeled, unlabeled)
+- **Issues** - To sync issues with tasks (opened, edited, closed, labeled, unlabeled, assigned, unassigned)
 - **Issue comments** - To track comments on linked issues
 - **Pull requests** - To link PRs to tasks and update task status (opened, closed, reopened, merged)
 - **Push** - To automatically update task status based on branch activity

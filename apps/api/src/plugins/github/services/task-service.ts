@@ -5,7 +5,12 @@ import {
   columnTable,
   integrationTable,
   taskTable,
+  userTable,
 } from "../../../database/schema";
+import {
+  filterAssignableUsers,
+  getProjectWorkspaceId,
+} from "../../../utils/assert-assignable-user";
 import { isVirtualStatus } from "../../virtual-status";
 
 export type TaskRow = InferSelectModel<typeof taskTable>;
@@ -13,6 +18,16 @@ export type TaskRow = InferSelectModel<typeof taskTable>;
 export type UpdateTaskStatusResult =
   | { applied: false }
   | { applied: true; before: TaskRow; after: TaskRow };
+
+export type UpdateTaskAssigneeResult =
+  | { applied: false }
+  | {
+      applied: true;
+      before: TaskRow;
+      after: TaskRow;
+      /** The new assignee's display name, for the published event. */
+      assigneeName: string | undefined;
+    };
 
 export async function findTaskByNumber(projectId: string, taskNumber: number) {
   return db.query.taskTable.findFirst({
@@ -151,4 +166,67 @@ export async function findAllIntegrationsByRepo(owner: string, repo: string) {
       return false;
     }
   });
+}
+
+/**
+ * Sets a task's assignee on behalf of an inbound forge event, or clears it
+ * when `assigneeId` is null.
+ *
+ * This lives beside the other webhook-facing task writes rather than calling
+ * the task controller, because the plugin layer importing a controller closes
+ * a require cycle through the event registry. It therefore repeats the
+ * controller's workspace-membership check — which is the boundary that
+ * matters: a GitHub assignee who is not a member of the project's workspace
+ * must not end up on the task, whatever the payload says.
+ *
+ * Returns `applied: false` when there is nothing to do or the assignee was
+ * refused, so the caller knows not to publish an event.
+ */
+export async function updateTaskAssignee(
+  taskId: string,
+  assigneeId: string | null,
+): Promise<UpdateTaskAssigneeResult> {
+  const task = await db.query.taskTable.findFirst({
+    where: eq(taskTable.id, taskId),
+  });
+
+  if (!task || task.userId === assigneeId) {
+    return { applied: false };
+  }
+
+  let assigneeName: string | undefined;
+
+  if (assigneeId) {
+    const workspaceId = await getProjectWorkspaceId(task.projectId);
+    const assignable = await filterAssignableUsers([assigneeId], workspaceId);
+
+    if (!assignable.has(assigneeId)) {
+      console.warn(
+        `[GitHub] Skipping assignee update for task ${taskId}: user ${assigneeId} is not a member of workspace ${workspaceId}`,
+      );
+      return { applied: false };
+    }
+
+    const [assignee] = await db
+      .select({ name: userTable.name })
+      .from(userTable)
+      .where(eq(userTable.id, assigneeId))
+      .limit(1);
+    assigneeName = assignee?.name;
+  }
+
+  await db
+    .update(taskTable)
+    .set({ userId: assigneeId })
+    .where(eq(taskTable.id, taskId));
+
+  const after = await db.query.taskTable.findFirst({
+    where: eq(taskTable.id, taskId),
+  });
+
+  if (!after) {
+    return { applied: false };
+  }
+
+  return { applied: true, before: task, after, assigneeName };
 }
