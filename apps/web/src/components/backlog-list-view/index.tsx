@@ -1,17 +1,8 @@
 import {
   closestCorners,
   DndContext,
-  type DragEndEvent,
-  type DragOverEvent,
   DragOverlay,
-  type DragStartEvent,
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  type UniqueIdentifier,
   useDroppable,
-  useSensor,
-  useSensors,
 } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
@@ -20,16 +11,14 @@ import {
 } from "@dnd-kit/sortable";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { produce } from "immer";
 import { Archive, ChevronRight, Clock, Flag, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { priorityColorsTaskCard } from "@/constants/priority-colors";
-import { useUpdateTask } from "@/hooks/mutations/task/use-update-task";
+import { useBacklogSectionDnd } from "@/hooks/use-backlog-section-dnd";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { cn } from "@/lib/cn";
 import useBacklogBulkSelectionStore from "@/store/backlog-bulk-selection";
-import useProjectStore from "@/store/project";
 import type { ProjectWithTasks } from "@/types/project";
 import type Task from "@/types/task";
 import BacklogBulkToolbar from "../bulk-selection/backlog-bulk-toolbar";
@@ -46,8 +35,6 @@ function BacklogListView({
   disableDragDrop = false,
 }: BacklogListViewProps) {
   const { t } = useTranslation();
-  const { mutate: updateTask } = useUpdateTask();
-  const { setProject } = useProjectStore();
   const {
     setAvailableTasks,
     focusNext,
@@ -56,8 +43,16 @@ function BacklogListView({
     clearFocus,
   } = useBacklogBulkSelectionStore();
   const navigate = useNavigate();
-  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
-  const [overColumnId, setOverColumnId] = useState<string | null>(null);
+  const {
+    sensors,
+    activeId,
+    activeTask,
+    overSectionId,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleDragCancel,
+  } = useBacklogSectionDnd(project, { disabled: disableDragDrop });
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({
@@ -119,168 +114,6 @@ function BacklogListView({
     },
   });
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: { distance: disableDragDrop ? 999999 : 8 },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: disableDragDrop ? 999999 : 200,
-        tolerance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor),
-  );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id);
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-    if (!over || !activeId) {
-      setOverColumnId(null);
-      return;
-    }
-
-    if (over.id === "planned" || over.id === "archived") {
-      setOverColumnId(over.id.toString());
-      return;
-    }
-
-    const taskId = over.id.toString();
-    const plannedTasks = project?.plannedTasks || [];
-    const archivedTasks = project?.archivedTasks || [];
-
-    if (plannedTasks.some((task) => task.id === taskId)) {
-      setOverColumnId("planned");
-    } else if (archivedTasks.some((task) => task.id === taskId)) {
-      setOverColumnId("archived");
-    } else {
-      setOverColumnId(null);
-    }
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    setOverColumnId(null);
-
-    if (!over || !project) return;
-
-    const activeTaskId = active.id.toString();
-    const overId = over.id.toString();
-
-    const plannedTasks = project.plannedTasks || [];
-    const archivedTasks = project.archivedTasks || [];
-    const activeTask = [...plannedTasks, ...archivedTasks].find(
-      (task) => task.id === activeTaskId,
-    );
-
-    if (!activeTask) return;
-
-    let targetSection = overId;
-    if (overId !== "planned" && overId !== "archived") {
-      if (plannedTasks.some((task) => task.id === overId)) {
-        targetSection = "planned";
-      } else if (archivedTasks.some((task) => task.id === overId)) {
-        targetSection = "archived";
-      } else {
-        return;
-      }
-    }
-
-    const updatedProject = produce(project, (draft) => {
-      const sourceSection =
-        activeTask.status === "planned"
-          ? draft.plannedTasks || []
-          : draft.archivedTasks || [];
-
-      const sourceTaskIndex = sourceSection.findIndex(
-        (task) => task.id === activeTaskId,
-      );
-      const task = sourceSection[sourceTaskIndex];
-
-      if (!task) return;
-
-      if (activeTask.status === "planned") {
-        draft.plannedTasks =
-          draft.plannedTasks?.filter((t) => t.id !== activeTaskId) || [];
-      } else {
-        draft.archivedTasks =
-          draft.archivedTasks?.filter((t) => t.id !== activeTaskId) || [];
-      }
-
-      if (activeTask.status === targetSection) {
-        const targetSectionTasks =
-          activeTask.status === "planned"
-            ? draft.plannedTasks || []
-            : draft.archivedTasks || [];
-
-        let destinationIndex = targetSectionTasks.findIndex(
-          (t) => t.id === overId,
-        );
-
-        if (sourceTaskIndex <= destinationIndex) {
-          destinationIndex += 1;
-        }
-
-        if (activeTask.status === "planned") {
-          draft.plannedTasks?.splice(destinationIndex, 0, task);
-        } else {
-          draft.archivedTasks?.splice(destinationIndex, 0, task);
-        }
-
-        const finalTasks =
-          activeTask.status === "planned"
-            ? draft.plannedTasks || []
-            : draft.archivedTasks || [];
-
-        finalTasks.forEach((t, index) => {
-          updateTask({
-            ...t,
-            position: index,
-          });
-        });
-      } else {
-        task.status = targetSection;
-
-        if (targetSection === "planned") {
-          draft.plannedTasks = [...(draft.plannedTasks || []), task];
-        } else {
-          draft.archivedTasks = [...(draft.archivedTasks || []), task];
-        }
-
-        const updatedTasks =
-          targetSection === "planned"
-            ? draft.plannedTasks || []
-            : draft.archivedTasks || [];
-
-        updatedTasks.forEach((t, index) => {
-          updateTask({
-            ...t,
-            status: targetSection,
-            position: index,
-          });
-        });
-
-        const sourceTasks =
-          activeTask.status === "planned"
-            ? draft.plannedTasks || []
-            : draft.archivedTasks || [];
-
-        sourceTasks.forEach((t, index) => {
-          updateTask({
-            ...t,
-            position: index,
-          });
-        });
-      }
-    });
-
-    setProject(updatedProject);
-  };
-
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -309,7 +142,7 @@ function BacklogListView({
       },
     });
 
-    const showDropIndicator = activeId && overColumnId === sectionId;
+    const showDropIndicator = activeId && overSectionId === sectionId;
 
     return (
       <div
@@ -408,10 +241,6 @@ function BacklogListView({
   const plannedTasks = project.plannedTasks || [];
   const archivedTasks = project.archivedTasks || [];
 
-  const activeTask =
-    project.plannedTasks.find((task) => task.id === activeId) ||
-    project.archivedTasks.find((task) => task.id === activeId);
-
   return (
     <DndContext
       sensors={sensors}
@@ -419,6 +248,7 @@ function BacklogListView({
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
       modifiers={[snapCenterToCursor]}
     >
       <div className="w-full h-full overflow-auto bg-muted/20">
