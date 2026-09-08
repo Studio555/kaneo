@@ -1,76 +1,33 @@
-import {
-  createExternalLink,
-  findExternalLinkByTaskAndType,
-} from "../../github/services/link-manager";
-import {
-  formatIssueBody,
-  formatIssueTitle,
-  getLabelsForIssue,
-} from "../../github/utils/format";
-import { toCraftLabelName } from "../../system-labels";
 import type { PluginContext, TaskCreatedEvent } from "../../types";
+import { isVirtualStatus } from "../../virtual-status";
 import type { GiteaConfig } from "../config";
-import { createGiteaClient } from "../utils/gitea-api";
-import { addLabelsToIssueGitea } from "../utils/labels";
+import { ensureIssueForTask } from "../services/issue-creator";
 
 export async function handleTaskCreated(
   event: TaskCreatedEvent,
   context: PluginContext,
 ): Promise<void> {
+  if (isVirtualStatus(event.status)) {
+    return;
+  }
+
   const config = context.config as GiteaConfig;
   if (!config.baseUrl || !config.accessToken) {
     return;
   }
 
-  const { repositoryOwner, repositoryName } = config;
-
-  const existingLink = await findExternalLinkByTaskAndType(
-    event.taskId,
-    context.integrationId,
-    "issue",
-  );
-
-  if (existingLink) {
-    return;
-  }
-
   try {
-    const client = createGiteaClient(config);
-    const createdIssue = await client.createIssue(
-      repositoryOwner,
-      repositoryName,
+    await ensureIssueForTask(
       {
-        title: formatIssueTitle(event.title),
-        body: formatIssueBody(event.description, event.taskId),
+        taskId: event.taskId,
+        title: event.title,
+        description: event.description,
+        priority: event.priority,
+        status: event.status,
+        craftName: event.craftName,
+        craftColor: event.craftColor,
       },
-    );
-
-    await createExternalLink({
-      taskId: event.taskId,
-      integrationId: context.integrationId,
-      resourceType: "issue",
-      externalId: createdIssue.number.toString(),
-      url: createdIssue.html_url,
-      title: createdIssue.title,
-      metadata: {
-        state: createdIssue.state,
-        createdFrom: "kaneo",
-        lastOutboundStateSyncAt: Date.now(),
-      },
-    });
-
-    const labels = getLabelsForIssue(
-      event.priority,
-      event.status,
-      event.craftName,
-    );
-    await addLabelsToIssueGitea(
-      config,
-      createdIssue.number,
-      labels,
-      event.craftName && event.craftColor
-        ? { [toCraftLabelName(event.craftName)]: event.craftColor }
-        : undefined,
+      context,
     );
   } catch (error) {
     console.error("Failed to create Gitea issue:", error);

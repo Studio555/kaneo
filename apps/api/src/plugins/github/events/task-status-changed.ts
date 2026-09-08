@@ -1,9 +1,15 @@
 import type { PluginContext, TaskStatusChangedEvent } from "../../types";
+import { isVirtualStatus } from "../../virtual-status";
 import type { GitHubConfig } from "../config";
+import {
+  ensureIssueForTask,
+  type ResolvedIssue,
+} from "../services/issue-creator";
 import {
   findExternalLinksByTask,
   updateExternalLink,
 } from "../services/link-manager";
+import { findTaskWithCraft } from "../services/task-service";
 import { getGithubApp, getInstallationIdForRepo } from "../utils/github-app";
 import { addLabelsToIssue, removeLabel } from "../utils/labels";
 import { parseLinkMetadata } from "../utils/parse-link-metadata";
@@ -28,7 +34,9 @@ export async function handleTaskStatusChanged(
         link.resourceType === "issue",
     );
 
-    if (!issueLink) {
+    // A task that has never left the backlog has no issue yet: task.created
+    // deliberately skipped it. Moving into a board column is what commits it.
+    if (!issueLink && isVirtualStatus(event.newStatus)) {
       return;
     }
 
@@ -41,39 +49,80 @@ export async function handleTaskStatusChanged(
     }
 
     const octokit = await githubApp.getInstallationOctokit(installationId);
-    const issueNumber = Number.parseInt(issueLink.externalId, 10);
-    const existingMetadata = parseLinkMetadata(issueLink.metadata, {
-      externalLinkId: issueLink.id,
-      source: "task_status_changed",
-    });
 
-    await removeLabel(
-      octokit,
-      repositoryOwner,
-      repositoryName,
-      issueNumber,
-      `status:${event.oldStatus}`,
-    );
+    let issue: ResolvedIssue;
 
-    await addLabelsToIssue(
-      octokit,
-      repositoryOwner,
-      repositoryName,
-      issueNumber,
-      [`status:${event.newStatus}`],
-    );
+    if (issueLink) {
+      issue = {
+        externalLinkId: issueLink.id,
+        issueNumber: Number.parseInt(issueLink.externalId, 10),
+        metadata: parseLinkMetadata(issueLink.metadata, {
+          externalLinkId: issueLink.id,
+          source: "task_status_changed",
+        }),
+        created: false,
+      };
+    } else {
+      const task = await findTaskWithCraft(event.taskId);
+      if (!task) {
+        return;
+      }
+
+      const resolved = await ensureIssueForTask(
+        octokit,
+        {
+          taskId: task.id,
+          projectId: task.projectId,
+          number: task.number,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          status: event.newStatus,
+          craftName: task.craft?.name ?? null,
+          craftColor: task.craft?.color ?? null,
+        },
+        context,
+      );
+
+      if (!resolved) {
+        return;
+      }
+
+      issue = resolved;
+    }
+
+    // An issue this handler opened is already labelled with the new status;
+    // one that existed, or that task.created opened while this handler was in
+    // flight, still carries the old one.
+    if (!issue.created) {
+      await removeLabel(
+        octokit,
+        repositoryOwner,
+        repositoryName,
+        issue.issueNumber,
+        `status:${event.oldStatus}`,
+      );
+
+      await addLabelsToIssue(
+        octokit,
+        repositoryOwner,
+        repositoryName,
+        issue.issueNumber,
+        [`status:${event.newStatus}`],
+      );
+    }
 
     if (event.newStatus === "done") {
       await octokit.rest.issues.update({
         owner: repositoryOwner,
         repo: repositoryName,
-        issue_number: issueNumber,
+        issue_number: issue.issueNumber,
         state: "closed",
       });
 
-      await updateExternalLink(issueLink.id, {
+      await updateExternalLink(issue.externalLinkId, {
         metadata: {
-          ...existingMetadata,
+          ...issue.metadata,
           state: "closed",
           lastOutboundStateSyncAt: Date.now(),
         },
@@ -82,13 +131,13 @@ export async function handleTaskStatusChanged(
       await octokit.rest.issues.update({
         owner: repositoryOwner,
         repo: repositoryName,
-        issue_number: issueNumber,
+        issue_number: issue.issueNumber,
         state: "open",
       });
 
-      await updateExternalLink(issueLink.id, {
+      await updateExternalLink(issue.externalLinkId, {
         metadata: {
-          ...existingMetadata,
+          ...issue.metadata,
           state: "open",
           lastOutboundStateSyncAt: Date.now(),
         },
