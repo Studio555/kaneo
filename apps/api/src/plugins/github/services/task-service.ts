@@ -6,14 +6,13 @@ import {
   integrationTable,
   taskTable,
 } from "../../../database/schema";
+import { isVirtualStatus } from "../../virtual-status";
 
 export type TaskRow = InferSelectModel<typeof taskTable>;
 
 export type UpdateTaskStatusResult =
   | { applied: false }
   | { applied: true; before: TaskRow; after: TaskRow };
-
-const NON_COLUMN_STATUSES = new Set(["planned", "archived"]);
 
 export async function findTaskByNumber(projectId: string, taskNumber: number) {
   return db.query.taskTable.findFirst({
@@ -27,6 +26,17 @@ export async function findTaskByNumber(projectId: string, taskNumber: number) {
 export async function findTaskById(taskId: string) {
   return db.query.taskTable.findFirst({
     where: eq(taskTable.id, taskId),
+  });
+}
+
+/**
+ * The task plus its craft, which the issue labels need but the task row only
+ * references by id.
+ */
+export async function findTaskWithCraft(taskId: string) {
+  return db.query.taskTable.findFirst({
+    where: eq(taskTable.id, taskId),
+    with: { craft: true },
   });
 }
 
@@ -53,7 +63,7 @@ export async function updateTaskStatus(
 
   if (column) {
     columnId = column.id;
-  } else if (!NON_COLUMN_STATUSES.has(newStatus)) {
+  } else if (!isVirtualStatus(newStatus)) {
     console.warn(
       `[GitHub] Skipping status update for task ${taskId}: column "${newStatus}" not found in project ${task.projectId}`,
     );
