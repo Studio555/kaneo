@@ -17,8 +17,6 @@ import {
 import { createModernMcpHandler } from "./modern";
 import { exchangeCode } from "./oauth";
 import {
-  SUPPORTED_GRANT_TYPES,
-  SUPPORTED_RESPONSE_TYPES,
   authorizationDecisionResponseSchema,
   authorizationDecisionSchema,
   authorizationQuerySchema,
@@ -27,6 +25,8 @@ import {
   clientRegistrationResponseSchema,
   clientRegistrationSchema,
   oauthErrorSchema,
+  SUPPORTED_GRANT_TYPES,
+  SUPPORTED_RESPONSE_TYPES,
 } from "./schemas";
 import { registerMcpTools, toMcpToolRegistrar } from "./tools";
 
