@@ -8,7 +8,18 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GenericWebhookIntegrationSettings } from "./generic-webhook-integration-settings";
 
+const datesEnabled = vi.hoisted(() => ({ value: true }));
+
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => datesEnabled.value,
+  useShowDueDates: () => datesEnabled.value,
+}));
+
+// biome-ignore lint/suspicious/noExplicitAny: test-only stand-in for the query's response shape
+const integrationQuery = vi.hoisted(() => ({ data: null as any }));
+
 const createIntegration = vi.fn();
+const updateIntegration = vi.fn();
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -16,7 +27,9 @@ vi.mock("react-i18next", () => ({
 
 vi.mock(
   "@/hooks/queries/generic-webhook-integration/use-get-generic-webhook-integration",
-  () => ({ default: () => ({ data: null, isLoading: false }) }),
+  () => ({
+    default: () => ({ data: integrationQuery.data, isLoading: false }),
+  }),
 );
 
 vi.mock(
@@ -27,7 +40,7 @@ vi.mock(
       isPending: false,
     }),
     useUpdateGenericWebhookIntegration: () => ({
-      mutateAsync: vi.fn(),
+      mutateAsync: updateIntegration,
       isPending: false,
     }),
     useDeleteGenericWebhookIntegration: () => ({
@@ -45,8 +58,12 @@ describe("GenericWebhookIntegrationSettings", () => {
   afterEach(cleanup);
 
   beforeEach(() => {
+    datesEnabled.value = true;
+    integrationQuery.data = null;
     createIntegration.mockReset();
     createIntegration.mockResolvedValue(undefined);
+    updateIntegration.mockReset();
+    updateIntegration.mockResolvedValue(undefined);
   });
 
   it("creates an opt-in project reminder webhook with its lead time", async () => {
@@ -174,6 +191,111 @@ describe("GenericWebhookIntegrationSettings", () => {
     );
     expect(createIntegration.mock.calls[0]?.[0].data).not.toHaveProperty(
       "dueDateReminderLeadTimeMinutes",
+    );
+  });
+});
+
+describe("GenericWebhookIntegrationSettings with dates disabled", () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    datesEnabled.value = true;
+    integrationQuery.data = null;
+    createIntegration.mockReset();
+    createIntegration.mockResolvedValue(undefined);
+    updateIntegration.mockReset();
+    updateIntegration.mockResolvedValue(undefined);
+  });
+
+  it("omits the due-date event controls", () => {
+    datesEnabled.value = false;
+    render(<GenericWebhookIntegrationSettings projectId="project-1" />);
+
+    expect(
+      screen.queryByRole("switch", {
+        name: "settings:genericWebhookIntegration.events.dueDateReminder",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(
+        "settings:genericWebhookIntegration.reminderLeadTimeLabel",
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("switch", {
+        name: "settings:genericWebhookIntegration.events.taskDueDateChanged",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the due-date event controls when dates are enabled", () => {
+    datesEnabled.value = true;
+    render(<GenericWebhookIntegrationSettings projectId="project-1" />);
+
+    expect(
+      screen.getByRole("switch", {
+        name: "settings:genericWebhookIntegration.events.dueDateReminder",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", {
+        name: "settings:genericWebhookIntegration.events.taskDueDateChanged",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("saves a stored due-date reminder configuration unchanged while its controls are hidden", async () => {
+    datesEnabled.value = false;
+    integrationQuery.data = {
+      webhookConfigured: true,
+      events: {
+        taskCreated: true,
+        taskStatusChanged: true,
+        taskPriorityChanged: false,
+        taskTitleChanged: false,
+        taskDescriptionChanged: false,
+        taskCommentCreated: true,
+        taskDeleted: false,
+        taskMoved: false,
+        taskDueDateChanged: false,
+        taskAssigneeChanged: false,
+        taskUnassigned: false,
+        dueDateReminder: true,
+      },
+      dueDateReminderLeadTimeMinutes: 2880,
+    };
+
+    render(<GenericWebhookIntegrationSettings projectId="project-1" />);
+
+    // The stored config already has a reminder enabled, but its controls
+    // must not render while dates are disabled.
+    expect(
+      screen.queryByRole("switch", {
+        name: "settings:genericWebhookIntegration.events.dueDateReminder",
+      }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(
+      screen.getByLabelText("settings:genericWebhookIntegration.webhookLabel"),
+      { target: { value: "https://example.com/hooks/kaneo" } },
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:genericWebhookIntegration.saveChanges",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(updateIntegration).toHaveBeenCalledWith({
+        projectId: "project-1",
+        json: expect.objectContaining({
+          webhookUrl: "https://example.com/hooks/kaneo",
+          dueDateReminderLeadTimeMinutes: 2880,
+          events: expect.objectContaining({
+            dueDateReminder: true,
+          }),
+        }),
+      }),
     );
   });
 });

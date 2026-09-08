@@ -10,12 +10,12 @@ import {
   getClient,
   registerClient,
 } from "../oauth";
-import { SUPPORTED_GRANT_TYPES, SUPPORTED_RESPONSE_TYPES } from "../schemas";
 import type {
   authorizationDecisionSchema,
   authorizationQuerySchema,
   clientRegistrationSchema,
 } from "../schemas";
+import { SUPPORTED_GRANT_TYPES, SUPPORTED_RESPONSE_TYPES } from "../schemas";
 
 const clientUrl = process.env.KANEO_CLIENT_URL || "http://localhost:5173";
 

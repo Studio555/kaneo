@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import db from "../../database";
 import { taskTable, timeEntryTable } from "../../database/schema";
 import { publishEvent } from "../../events";
+import { areDatesEnabled } from "../../utils/dates-enabled";
 import { resolveDuration } from "../duration";
 
 async function createTimeEntry({
@@ -19,6 +20,12 @@ async function createTimeEntry({
   startTime: Date;
   endTime?: Date;
 }) {
+  if (!areDatesEnabled()) {
+    throw new HTTPException(422, {
+      message: "Date fields are disabled on this instance",
+    });
+  }
+
   const duration = resolveDuration(startTime, endTime);
 
   const [createdTimeEntry] = await db

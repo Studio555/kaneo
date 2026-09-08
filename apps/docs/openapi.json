@@ -90,6 +90,9 @@
           },
           "billingEnabled": {
             "type": "boolean"
+          },
+          "datesEnabled": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -107,7 +110,8 @@
           "disableLoginForm",
           "customOAuthAutoLogin",
           "customOAuthLogoutUrl",
-          "billingEnabled"
+          "billingEnabled",
+          "datesEnabled"
         ]
       },
       "McpClientRegistration": {
@@ -6421,6 +6425,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
@@ -6524,6 +6538,16 @@
           },
           "403": {
             "description": "No workspace access, or missing task:create permission",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
             "content": {
               "text/plain": {
                 "schema": {
@@ -6686,6 +6710,16 @@
           },
           "403": {
             "description": "No workspace access, or missing task:update or task:assign permission",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
             "content": {
               "text/plain": {
                 "schema": {
@@ -7397,6 +7431,16 @@
           },
           "403": {
             "description": "No workspace access, or missing task:update permission",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
             "content": {
               "text/plain": {
                 "schema": {
@@ -8993,6 +9037,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
@@ -9064,6 +9118,16 @@
           },
           "403": {
             "description": "No workspace access, or missing task:update permission",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
             "content": {
               "text/plain": {
                 "schema": {

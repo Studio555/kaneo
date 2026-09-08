@@ -16,6 +16,7 @@ import { Archive, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateTask } from "@/hooks/mutations/task/use-update-task";
+import { useShowDueDates } from "@/hooks/use-dates-enabled";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useTaskColumnDnd } from "@/hooks/use-task-column-dnd";
 import { cn } from "@/lib/cn";
@@ -179,8 +180,8 @@ function TableView({
   } = useBulkSelectionStore();
   const { mutate: updateTask } = useUpdateTask();
   const navigate = useNavigate();
-  const { showAssignees, showDueDates, showLabels, showPriority } =
-    useUserPreferencesStore();
+  const { showAssignees, showLabels, showPriority } = useUserPreferencesStore();
+  const showDueDates = useShowDueDates();
   const {
     sensors,
     activeId,

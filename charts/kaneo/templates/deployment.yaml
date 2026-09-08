@@ -92,6 +92,8 @@ spec:
               value: {{ .Values.kaneo.env.disablePasswordRegistration | quote }}
             - name: DISABLE_EMAIL_OTP_SIGN_IN
               value: {{ .Values.kaneo.env.disableEmailOtpSignIn | quote }}
+            - name: DISABLE_DATES
+              value: {{ .Values.kaneo.env.disableDates | quote }}
             {{- with .Values.kaneo.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

@@ -64,6 +64,11 @@ vi.mock("@/store/user-preferences", () => ({
   }),
 }));
 
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => true,
+  useShowDueDates: () => true,
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
   initReactI18next: { type: "3rdParty", init: vi.fn() },

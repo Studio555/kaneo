@@ -2,6 +2,13 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CreateTaskModal from "./create-task-modal";
 
+const datesEnabled = vi.hoisted(() => ({ value: true }));
+
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => datesEnabled.value,
+  useShowDueDates: () => datesEnabled.value,
+}));
+
 const useLocation = vi.fn();
 const createTask = vi.fn(async (input: Record<string, unknown>) => ({
   id: "task-1",
@@ -15,6 +22,7 @@ afterEach(() => {
   cleanup();
   document.body.innerHTML = "";
   vi.clearAllMocks();
+  datesEnabled.value = true;
 });
 
 vi.mock("@tanstack/react-router", () => ({

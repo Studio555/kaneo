@@ -29,6 +29,7 @@ import { useUpdateTask } from "@/hooks/mutations/task/use-update-task";
 import useGetLabelsByWorkspace from "@/hooks/queries/label/use-get-labels-by-workspace";
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { DUE_DATE_FILTER_VALUES } from "@/hooks/use-task-filters";
 import { getInitials } from "@/lib/get-initials";
@@ -60,6 +61,7 @@ function RouteComponent() {
   const { projectId, workspaceId } = Route.useParams();
   const { taskId } = Route.useSearch();
   const navigate = useNavigate();
+  const datesEnabled = useDatesEnabled();
   const { data } = useGetTasks(projectId);
   const { project, setProject } = useProjectStore();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -108,19 +110,23 @@ function RouteComponent() {
             params: { workspaceId, projectId },
           });
         },
-        [shortcuts.view.calendar]: () => {
-          navigate({
-            to: "/dashboard/workspace/$workspaceId/project/$projectId/calendar",
-            params: { workspaceId, projectId },
-          });
-        },
-        [shortcuts.view.gantt]: () => {
-          navigate({
-            to: "/dashboard/workspace/$workspaceId/project/$projectId/gantt",
-            params: { workspaceId, projectId },
-          });
-        },
         [shortcuts.view.backlog]: () => {},
+        ...(datesEnabled
+          ? {
+              [shortcuts.view.calendar]: () => {
+                navigate({
+                  to: "/dashboard/workspace/$workspaceId/project/$projectId/calendar",
+                  params: { workspaceId, projectId },
+                });
+              },
+              [shortcuts.view.gantt]: () => {
+                navigate({
+                  to: "/dashboard/workspace/$workspaceId/project/$projectId/gantt",
+                  params: { workspaceId, projectId },
+                });
+              },
+            }
+          : {}),
       },
     },
   });
@@ -621,37 +627,46 @@ function RouteComponent() {
                       </DropdownMenuCheckboxItem>
                     ))}
 
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel className="text-[11px] uppercase tracking-wide">
-                        {t("tasks:dueDate.label")}
-                      </DropdownMenuLabel>
-                    </DropdownMenuGroup>
-                    {[
-                      {
-                        label: DUE_DATE_FILTER_VALUES.dueThisWeek,
-                        key: "dueThisWeek",
-                      },
-                      {
-                        label: DUE_DATE_FILTER_VALUES.dueNextWeek,
-                        key: "dueNextWeek",
-                      },
-                      {
-                        label: DUE_DATE_FILTER_VALUES.noDueDate,
-                        key: "noDueDate",
-                      },
-                    ].map((item) => (
-                      <DropdownMenuCheckboxItem
-                        key={item.label}
-                        checked={filters.dueDate === item.label}
-                        onCheckedChange={(checked) =>
-                          updateFilter("dueDate", checked ? item.label : null)
-                        }
-                        className="h-8 rounded-md text-sm"
-                      >
-                        <span>{t(`tasks:backlog.filters.${item.key}`)}</span>
-                      </DropdownMenuCheckboxItem>
-                    ))}
+                    {datesEnabled && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel className="text-[11px] uppercase tracking-wide">
+                            {t("tasks:dueDate.label")}
+                          </DropdownMenuLabel>
+                        </DropdownMenuGroup>
+                        {[
+                          {
+                            label: DUE_DATE_FILTER_VALUES.dueThisWeek,
+                            key: "dueThisWeek",
+                          },
+                          {
+                            label: DUE_DATE_FILTER_VALUES.dueNextWeek,
+                            key: "dueNextWeek",
+                          },
+                          {
+                            label: DUE_DATE_FILTER_VALUES.noDueDate,
+                            key: "noDueDate",
+                          },
+                        ].map((item) => (
+                          <DropdownMenuCheckboxItem
+                            key={item.label}
+                            checked={filters.dueDate === item.label}
+                            onCheckedChange={(checked) =>
+                              updateFilter(
+                                "dueDate",
+                                checked ? item.label : null,
+                              )
+                            }
+                            className="h-8 rounded-md text-sm"
+                          >
+                            <span>
+                              {t(`tasks:backlog.filters.${item.key}`)}
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </>
+                    )}
 
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>

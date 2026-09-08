@@ -30,6 +30,7 @@ import {
 import useGetNotificationPreferences from "@/hooks/queries/notification-preferences/use-get-notification-preferences";
 import useGetProjects from "@/hooks/queries/project/use-get-projects";
 import useGetWorkspaces from "@/hooks/queries/workspace/use-get-workspaces";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 
 type WorkspaceSummary = {
   id: string;
@@ -472,6 +473,7 @@ function WorkspaceRuleCard({
 
 export function NotificationPreferencesSettings() {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
   const { data: preferences, isLoading } = useGetNotificationPreferences();
   const { data: workspacesData } = useGetWorkspaces();
   const { mutateAsync: updatePreferences, isPending: isSavingPreferences } =
@@ -616,83 +618,89 @@ export function NotificationPreferencesSettings() {
               }))
             }
           />
-          <ChannelToggle
-            checked={eventPrefs.dueDateReminderEnabled}
-            label={t("settings:notificationsPage.eventDueDateReminders")}
-            onCheckedChange={(checked) =>
-              setEventPrefs((current) => ({
-                ...current,
-                dueDateReminderEnabled: checked,
-              }))
-            }
-          />
-        </div>
-
-        <div className="flex max-w-sm flex-col gap-1">
-          <Label htmlFor="due-date-reminder-lead-time">
-            {t("settings:notificationsPage.reminderLeadTimeLabel")}
-          </Label>
-          <div className="flex gap-2">
-            <NumberField
-              className="w-36"
-              disabled={!eventPrefs.dueDateReminderEnabled}
-              id="due-date-reminder-lead-time"
-              max={leadTimeMax}
-              min={1}
-              onValueChange={(value) =>
+          {datesEnabled && (
+            <ChannelToggle
+              checked={eventPrefs.dueDateReminderEnabled}
+              label={t("settings:notificationsPage.eventDueDateReminders")}
+              onCheckedChange={(checked) =>
                 setEventPrefs((current) => ({
                   ...current,
-                  dueDateReminderLeadAmount: value ?? 0,
+                  dueDateReminderEnabled: checked,
                 }))
               }
-              step={1}
-              value={eventPrefs.dueDateReminderLeadAmount}
-            >
-              <NumberFieldGroup>
-                <NumberFieldDecrement />
-                <NumberFieldInput />
-                <NumberFieldIncrement />
-              </NumberFieldGroup>
-            </NumberField>
-            <Select
-              disabled={!eventPrefs.dueDateReminderEnabled}
-              onValueChange={(unit) =>
-                setEventPrefs((current) => ({
-                  ...current,
-                  dueDateReminderLeadUnit: unit as "hours" | "days",
-                }))
-              }
-              value={eventPrefs.dueDateReminderLeadUnit}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue>
-                  {eventPrefs.dueDateReminderLeadUnit === "days"
-                    ? t("settings:notificationsPage.reminderLeadTimeUnitDays")
-                    : t("settings:notificationsPage.reminderLeadTimeUnitHours")}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="hours">
-                  {t("settings:notificationsPage.reminderLeadTimeUnitHours")}
-                </SelectItem>
-                <SelectItem value="days">
-                  {t("settings:notificationsPage.reminderLeadTimeUnitDays")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {eventPrefs.dueDateReminderEnabled && !leadTimeValid ? (
-            <p className="text-xs text-destructive">
-              {t("settings:notificationsPage.reminderLeadTimeInvalid", {
-                max: leadTimeMax,
-              })}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              {t("settings:notificationsPage.reminderLeadTimeHint")}
-            </p>
+            />
           )}
         </div>
+
+        {datesEnabled && (
+          <div className="flex max-w-sm flex-col gap-1">
+            <Label htmlFor="due-date-reminder-lead-time">
+              {t("settings:notificationsPage.reminderLeadTimeLabel")}
+            </Label>
+            <div className="flex gap-2">
+              <NumberField
+                className="w-36"
+                disabled={!eventPrefs.dueDateReminderEnabled}
+                id="due-date-reminder-lead-time"
+                max={leadTimeMax}
+                min={1}
+                onValueChange={(value) =>
+                  setEventPrefs((current) => ({
+                    ...current,
+                    dueDateReminderLeadAmount: value ?? 0,
+                  }))
+                }
+                step={1}
+                value={eventPrefs.dueDateReminderLeadAmount}
+              >
+                <NumberFieldGroup>
+                  <NumberFieldDecrement />
+                  <NumberFieldInput />
+                  <NumberFieldIncrement />
+                </NumberFieldGroup>
+              </NumberField>
+              <Select
+                disabled={!eventPrefs.dueDateReminderEnabled}
+                onValueChange={(unit) =>
+                  setEventPrefs((current) => ({
+                    ...current,
+                    dueDateReminderLeadUnit: unit as "hours" | "days",
+                  }))
+                }
+                value={eventPrefs.dueDateReminderLeadUnit}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue>
+                    {eventPrefs.dueDateReminderLeadUnit === "days"
+                      ? t("settings:notificationsPage.reminderLeadTimeUnitDays")
+                      : t(
+                          "settings:notificationsPage.reminderLeadTimeUnitHours",
+                        )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hours">
+                    {t("settings:notificationsPage.reminderLeadTimeUnitHours")}
+                  </SelectItem>
+                  <SelectItem value="days">
+                    {t("settings:notificationsPage.reminderLeadTimeUnitDays")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {eventPrefs.dueDateReminderEnabled && !leadTimeValid ? (
+              <p className="text-xs text-destructive">
+                {t("settings:notificationsPage.reminderLeadTimeInvalid", {
+                  max: leadTimeMax,
+                })}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t("settings:notificationsPage.reminderLeadTimeHint")}
+              </p>
+            )}
+          </div>
+        )}
 
         <div>
           <Button

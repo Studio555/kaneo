@@ -21,6 +21,7 @@ import {
   useUpdateGenericWebhookIntegration,
 } from "@/hooks/mutations/generic-webhook-integration/use-generic-webhook-integration";
 import useGetGenericWebhookIntegration from "@/hooks/queries/generic-webhook-integration/use-get-generic-webhook-integration";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { toast } from "@/lib/toast";
 
 type GenericWebhookIntegrationFormValues = {
@@ -91,6 +92,7 @@ export function GenericWebhookIntegrationSettings({
   projectId: string;
 }) {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
   const schema = React.useMemo(
     () =>
       z
@@ -457,13 +459,15 @@ export function GenericWebhookIntegrationSettings({
               label={t("settings:genericWebhookIntegration.events.taskMoved")}
               name="taskMoved"
             />
-            <EventToggle
-              control={form.control}
-              label={t(
-                "settings:genericWebhookIntegration.events.taskDueDateChanged",
-              )}
-              name="taskDueDateChanged"
-            />
+            {datesEnabled && (
+              <EventToggle
+                control={form.control}
+                label={t(
+                  "settings:genericWebhookIntegration.events.taskDueDateChanged",
+                )}
+                name="taskDueDateChanged"
+              />
+            )}
             <EventToggle
               control={form.control}
               label={t(
@@ -478,14 +482,16 @@ export function GenericWebhookIntegrationSettings({
               )}
               name="taskUnassigned"
             />
-            <EventToggle
-              control={form.control}
-              label={t(
-                "settings:genericWebhookIntegration.events.dueDateReminder",
-              )}
-              name="dueDateReminder"
-            />
-            {form.watch("dueDateReminder") ? (
+            {datesEnabled && (
+              <EventToggle
+                control={form.control}
+                label={t(
+                  "settings:genericWebhookIntegration.events.dueDateReminder",
+                )}
+                name="dueDateReminder"
+              />
+            )}
+            {datesEnabled && form.watch("dueDateReminder") ? (
               <FormField
                 control={form.control}
                 name="dueDateReminderLeadTimeHours"

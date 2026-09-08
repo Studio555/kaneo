@@ -51,6 +51,7 @@ Kaneo supports many optional configuration options including:
 - CORS configuration
 - Redis for horizontal scaling
 - Private-network notification receivers (`KANEO_ALLOW_PRIVATE_WEBHOOK_DESTINATIONS=true` lets ntfy/Gotify/webhook destinations resolve to private addresses; off by default to prevent SSRF)
+- Date features (`DISABLE_DATES=true` hides due dates, start dates, the Gantt and Calendar views, due-date reminders, and time tracking instance-wide; existing stored dates are preserved and reappear if the variable is removed; off by default)
 
 #### Redis Configuration
 

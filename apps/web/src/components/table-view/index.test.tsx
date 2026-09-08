@@ -20,6 +20,11 @@ vi.mock("@/hooks/mutations/task/use-update-task", () => ({
   useUpdateTask: () => ({ mutate: vi.fn() }),
 }));
 
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => true,
+  useShowDueDates: () => true,
+}));
+
 vi.mock("@/hooks/use-task-column-dnd", () => ({
   useTaskColumnDnd: () => ({
     sensors: [],

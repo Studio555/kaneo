@@ -32,6 +32,7 @@ import {
 import { useDeleteTask } from "@/hooks/mutations/task/use-delete-task";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
+import { useShowDueDates } from "@/hooks/use-dates-enabled";
 import { cn } from "@/lib/cn";
 import {
   dueDateStatusColors,
@@ -73,11 +74,11 @@ function TaskCard({ task, disableDragDrop = false }: TaskCardProps) {
   const {
     showAssignees,
     showPriority,
-    showDueDates,
     showLabels,
     showTaskNumbers,
     showTaskItemCounts,
   } = useUserPreferencesStore();
+  const showDueDates = useShowDueDates();
   const [isDeleteTaskModalOpen, setIsDeleteTaskModalOpen] = useState(false);
   const { toggleSelection, isSelected, isFocused } = useBulkSelectionStore();
   const isTaskSelected = isSelected(task.id);

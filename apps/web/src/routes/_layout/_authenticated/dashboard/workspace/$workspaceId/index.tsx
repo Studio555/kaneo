@@ -55,6 +55,7 @@ import icons from "@/constants/project-icons";
 import { shortcuts } from "@/constants/shortcuts";
 import useReorderProjects from "@/hooks/mutations/project/use-reorder-projects";
 import useGetProjects from "@/hooks/queries/project/use-get-projects";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { formatDateMedium } from "@/lib/format";
@@ -156,6 +157,7 @@ function RouteComponent() {
     }
   }, [projects, droppedOrder]);
 
+  const datesEnabled = useDatesEnabled();
   const { canCreateProjects, canUpdateProjects } = useWorkspacePermission();
   const canCreate = canCreateProjects();
   // Matches the API, which gates /project/reorder on `project: ["update"]`
@@ -376,9 +378,11 @@ function RouteComponent() {
                 <TableHead className="text-foreground font-medium">
                   {t("workspace:projects.progress")}
                 </TableHead>
-                <TableHead className="text-foreground font-medium">
-                  {t("workspace:projects.dueDate")}
-                </TableHead>
+                {datesEnabled && (
+                  <TableHead className="text-foreground font-medium">
+                    {t("workspace:projects.dueDate")}
+                  </TableHead>
+                )}
                 <TableHead className="text-foreground font-medium">
                   {t("workspace:projects.status")}
                 </TableHead>
@@ -434,13 +438,15 @@ function RouteComponent() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="py-3">
-                        <span className="text-sm text-muted-foreground">
-                          {project.statistics.dueDate
-                            ? formatDateMedium(project.statistics.dueDate)
-                            : t("workspace:projects.noDueDate")}
-                        </span>
-                      </TableCell>
+                      {datesEnabled && (
+                        <TableCell className="py-3">
+                          <span className="text-sm text-muted-foreground">
+                            {project.statistics.dueDate
+                              ? formatDateMedium(project.statistics.dueDate)
+                              : t("workspace:projects.noDueDate")}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell className="py-3">
                         <Badge variant={getStatusVariant()}>
                           {getStatusText()}

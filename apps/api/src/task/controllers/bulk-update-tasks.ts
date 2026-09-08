@@ -13,6 +13,7 @@ import { publishEvent } from "../../events";
 import { removeLabelFromGitea } from "../../plugins/gitea/utils/sync-label-to-gitea";
 import { removeLabelFromGitHub } from "../../plugins/github/utils/sync-label-to-github";
 import { assertAssignableUser } from "../../utils/assert-assignable-user";
+import { assertDatesEnabled } from "../../utils/validate-dates";
 import {
   assertValidPriority,
   assertValidTaskStatus,
@@ -332,6 +333,11 @@ async function bulkUpdateTasks({
     }
 
     case "updateDueDate": {
+      // An empty string means "clear", matching the dedicated due-date route;
+      // clearing a stale value must stay possible while dates are disabled.
+      if (value) {
+        assertDatesEnabled(value);
+      }
       let parsedDate: Date | null = null;
       if (value) {
         parsedDate = new Date(value);

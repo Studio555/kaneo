@@ -8,7 +8,31 @@ import {
   assertAssignableUser,
   getProjectWorkspaceId,
 } from "../../utils/assert-assignable-user";
+import { areDatesEnabled } from "../../utils/dates-enabled";
 import { assertValidTaskStatus } from "../validate-task-fields";
+
+/**
+ * While dates are disabled this route never writes the date columns at all
+ * (see the `.set()` below), so a caller that omits them — including a
+ * third-party script doing a legitimate full PUT — keeps whatever is stored
+ * instead of silently wiping it. Echoing the stored value is likewise a
+ * no-op. Only a value that actually differs from what's stored is a real
+ * change, and that still gets rejected rather than quietly ignored.
+ *
+ * The accepted consequence: while disabled, a stored date cannot be cleared
+ * through this route. `PUT /task/due-date/:id` and the bulk operation still
+ * clear a due date; clearing a start date needs the feature back on.
+ */
+function assertDateUnchanged(
+  incoming: Date | undefined,
+  stored: Date | null,
+): void {
+  if (incoming === undefined) return;
+  if (stored !== null && incoming.getTime() === stored.getTime()) return;
+  throw new HTTPException(422, {
+    message: "Date fields are disabled on this instance",
+  });
+}
 
 async function updateTask(
   id: string,
@@ -29,6 +53,8 @@ async function updateTask(
       description: taskTable.description,
       status: taskTable.status,
       projectId: taskTable.projectId,
+      startDate: taskTable.startDate,
+      dueDate: taskTable.dueDate,
     })
     .from(taskTable)
     .where(eq(taskTable.id, id))
@@ -44,6 +70,13 @@ async function updateTask(
     throw new HTTPException(400, {
       message: "Use the task move endpoint to move tasks between projects",
     });
+  }
+
+  const datesEnabled = areDatesEnabled();
+
+  if (!datesEnabled) {
+    assertDateUnchanged(startDate, existingTask.startDate);
+    assertDateUnchanged(dueDate, existingTask.dueDate);
   }
 
   await assertValidTaskStatus(status, projectId);
@@ -70,8 +103,9 @@ async function updateTask(
       title,
       status,
       columnId: column?.id ?? null,
-      startDate: startDate || null,
-      dueDate: dueDate || null,
+      ...(datesEnabled
+        ? { startDate: startDate || null, dueDate: dueDate || null }
+        : {}),
       projectId,
       description,
       priority,

@@ -40,6 +40,7 @@ import { useBulkOperations } from "@/hooks/mutations/task/use-bulk-operations";
 import useGetLabelsByWorkspace from "@/hooks/queries/label/use-get-labels-by-workspace";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { getColumnIcon } from "@/lib/column";
 import { getInitials } from "@/lib/get-initials";
@@ -104,6 +105,7 @@ function BulkToolbar() {
   const canDelete = canDeleteTasks();
   const canAssign = canAssignTasks();
   const canEditLabels = canUpdateLabels();
+  const datesEnabled = useDatesEnabled();
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
@@ -416,38 +418,42 @@ function BulkToolbar() {
               </Button>
             </ToolbarGroup>
 
-            <ToolbarSeparator orientation="vertical" className="my-1 h-5" />
-            <ToolbarGroup>
-              <Popover
-                open={isDatePickerOpen}
-                onOpenChange={setIsDatePickerOpen}
-              >
-                <PopoverTrigger asChild>
-                  <Button size="sm" variant="ghost">
-                    <CalendarIcon className="size-4" />
-                    {t("tasks:bulk.setDueDate")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0" align="center">
-                  <Calendar
-                    mode="single"
-                    onSelect={handleBulkDueDate}
-                    className="w-full bg-popover"
-                  />
-                  <div className="p-0 border-t border-border">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground rounded-none"
-                      onClick={() => handleBulkDueDate(undefined)}
-                    >
-                      <X className="h-4 w-4" />
-                      {t("tasks:dueDate.clear")}
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </ToolbarGroup>
+            {datesEnabled && (
+              <>
+                <ToolbarSeparator orientation="vertical" className="my-1 h-5" />
+                <ToolbarGroup>
+                  <Popover
+                    open={isDatePickerOpen}
+                    onOpenChange={setIsDatePickerOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button size="sm" variant="ghost">
+                        <CalendarIcon className="size-4" />
+                        {t("tasks:bulk.setDueDate")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0" align="center">
+                      <Calendar
+                        mode="single"
+                        onSelect={handleBulkDueDate}
+                        className="w-full bg-popover"
+                      />
+                      <div className="p-0 border-t border-border">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground rounded-none"
+                          onClick={() => handleBulkDueDate(undefined)}
+                        >
+                          <X className="h-4 w-4" />
+                          {t("tasks:dueDate.clear")}
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </ToolbarGroup>
+              </>
+            )}
           </>
         )}
 

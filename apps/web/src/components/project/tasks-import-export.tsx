@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import useExportTasks from "@/hooks/mutations/task/use-export-tasks";
 import useImportTasks from "@/hooks/mutations/task/use-import-tasks";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { cn } from "@/lib/cn";
 import { toast } from "@/lib/toast";
 import type { ProjectWithTasks } from "@/types/project";
@@ -22,6 +23,7 @@ type TasksImportExportProps = {
 
 export function TasksImportExport({ project }: TasksImportExportProps) {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
   const [isImportOpen, setIsImportOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -183,7 +185,8 @@ export function TasksImportExport({ project }: TasksImportExportProps) {
                   {t("settings:tasksImportExport.expectedFormat")}
                 </p>
                 <pre className="text-foreground overflow-auto max-h-32 text-xs">
-                  {`{
+                  {datesEnabled
+                    ? `{
   "tasks": [
     {
       "title": "Task title",
@@ -192,6 +195,17 @@ export function TasksImportExport({ project }: TasksImportExportProps) {
       "priority": "low",
       "startDate": "2025-04-18T00:00:00.000Z",
       "dueDate": "2025-04-20T00:00:00.000Z",
+      "userId": "user@example.com"
+    }
+  ]
+}`
+                    : `{
+  "tasks": [
+    {
+      "title": "Task title",
+      "description": "Description text",
+      "status": "to-do",
+      "priority": "low",
       "userId": "user@example.com"
     }
   ]
