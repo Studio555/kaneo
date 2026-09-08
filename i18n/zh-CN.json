@@ -526,7 +526,8 @@
 			"labels": "标签",
 			"labelsDescription": "显示任务的标签和标记",
 			"priority": "优先级",
-			"priorityDescription": "显示优先级指示"
+			"priorityDescription": "显示优先级指示",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "开发者设置",
@@ -1606,7 +1607,8 @@
 		"boardSearchPlaceholder": "搜索工单…",
 		"view": {
 			"board": "看板",
-			"list": "列表"
+			"list": "列表",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "选择任务",
@@ -1862,7 +1864,8 @@
 				"priority": "优先级",
 				"dueDate": "截止日期",
 				"title": "标题",
-				"number": "任务编号"
+				"number": "任务编号",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2017,6 +2020,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

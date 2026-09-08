@@ -98,6 +98,13 @@ function RouteComponent() {
             params: { workspaceId, projectId },
           });
         },
+        [shortcuts.view.table]: () => {
+          setViewMode("table");
+          navigate({
+            to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
+            params: { workspaceId, projectId },
+          });
+        },
         [shortcuts.view.calendar]: () => {
           navigate({
             to: "/dashboard/workspace/$workspaceId/project/$projectId/calendar",

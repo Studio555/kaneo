@@ -8,6 +8,7 @@ import KanbanBoard from "@/components/kanban-board";
 import ListView from "@/components/list-view";
 import PageTitle from "@/components/page-title";
 import CreateTaskModal from "@/components/shared/modals/create-task-modal";
+import TableView from "@/components/table-view";
 import TaskDetailsSheet from "@/components/task/task-details-sheet";
 import { Input } from "@/components/ui/input";
 import { shortcuts } from "@/constants/shortcuts";
@@ -106,6 +107,7 @@ function RouteComponent() {
       [shortcuts.view.prefix]: {
         [shortcuts.view.board]: () => setViewMode("board"),
         [shortcuts.view.list]: () => setViewMode("list"),
+        [shortcuts.view.table]: () => setViewMode("table"),
         [shortcuts.view.calendar]: () =>
           navigate({
             to: "/dashboard/workspace/$workspaceId/project/$projectId/calendar",
@@ -218,7 +220,7 @@ function RouteComponent() {
       headerActions={boardHeaderSearch}
     >
       <PageTitle
-        title={`${project?.name} · ${viewMode === "board" ? t("tasks:view.board") : t("tasks:view.list")}`}
+        title={`${project?.name} · ${t(`tasks:view.${viewMode}`)}`}
         hideAppName
       />
       <div className="relative flex flex-col h-full min-h-0 overflow-hidden">
@@ -242,6 +244,13 @@ function RouteComponent() {
             viewMode === "board" ? (
               <KanbanBoard
                 project={sortedProject}
+                disableDragDrop={sort.field !== "position"}
+              />
+            ) : viewMode === "table" ? (
+              <TableView
+                project={sortedProject}
+                sort={sort}
+                onSortChange={setSort}
                 disableDragDrop={sort.field !== "position"}
               />
             ) : (

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type { BoardViewMode } from "@/components/board/board-toolbar";
 
 export const WEEK_START_DAYS = [0, 1, 6] as const;
 export type WeekStartDay = (typeof WEEK_START_DAYS)[number];
@@ -15,8 +16,8 @@ type UserPreferencesStore = {
     coordinates?: { x: number; y: number },
   ) => void;
 
-  viewMode: "board" | "list";
-  setViewMode: (mode: "board" | "list") => void;
+  viewMode: BoardViewMode;
+  setViewMode: (mode: BoardViewMode) => void;
 
   compactMode: boolean;
   setCompactMode: (compact: boolean) => void;

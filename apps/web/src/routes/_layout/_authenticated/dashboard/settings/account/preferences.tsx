@@ -77,6 +77,7 @@ function RouteComponent() {
   const viewLabels: Record<string, string> = {
     board: t("settings:preferencesPage.board"),
     list: t("settings:preferencesPage.list"),
+    table: t("settings:preferencesPage.table"),
   };
   const weekStartLabels: Record<WeekStartDay, string> = {
     0: t("settings:preferencesPage.weekStartsOnSunday"),
@@ -250,6 +251,9 @@ function RouteComponent() {
                 </SelectItem>
                 <SelectItem value="list">
                   {t("settings:preferencesPage.list")}
+                </SelectItem>
+                <SelectItem value="table">
+                  {t("settings:preferencesPage.table")}
                 </SelectItem>
               </SelectContent>
             </Select>

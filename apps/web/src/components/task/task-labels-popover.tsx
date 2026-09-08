@@ -48,6 +48,8 @@ type TaskLabelsPopoverProps = {
   workspaceId: string;
   children: React.ReactNode;
   triggerNativeButton?: boolean;
+  /** Opens on mount, for callers that mount this lazily on first interaction. */
+  defaultOpen?: boolean;
 };
 
 type PopoverStep = "select" | "color";
@@ -57,9 +59,10 @@ export default function TaskLabelsPopover({
   workspaceId,
   children,
   triggerNativeButton = true,
+  defaultOpen = false,
 }: TaskLabelsPopoverProps) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [step, setStep] = useState<PopoverStep>("select");
   const [searchValue, setSearchValue] = useState("");
   const [selectedColor, setSelectedColor] = useState<LabelColor>("gray");
