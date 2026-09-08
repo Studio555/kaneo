@@ -198,6 +198,96 @@ describe("API integration: dates disabled", () => {
     expect(read.status).toBe(200);
   });
 
+  it("echoing a stored due date on a full update is accepted, but changing it still 422s, and clearing still works", async () => {
+    delete process.env.DISABLE_DATES;
+    const created = await app.request(`/api/task/${projectId}`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        title: "echo-target",
+        description: "",
+        priority: "medium",
+        status: "to-do",
+        dueDate: A_DATE,
+      }),
+    });
+    expect(created.status).toBe(200);
+    const createdTask = (await created.json()) as { id: string };
+
+    process.env.DISABLE_DATES = "true";
+
+    const fetched = await app.request(`/api/task/${createdTask.id}`);
+    expect(fetched.status).toBe(200);
+    const task = (await fetched.json()) as {
+      description: string;
+      status: string;
+      priority: string;
+      projectId: string;
+      position: number;
+      dueDate: string | null;
+    };
+    expect(task.dueDate).not.toBeNull();
+
+    // A title-only change that echoes the stored due date is not a date
+    // change and must be accepted.
+    const renamed = await app.request(`/api/task/${createdTask.id}`, {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        title: "renamed while disabled",
+        description: task.description,
+        priority: task.priority,
+        status: task.status,
+        projectId: task.projectId,
+        position: task.position,
+        dueDate: task.dueDate,
+      }),
+    });
+    expect(renamed.status).toBe(200);
+    const renamedTask = (await renamed.json()) as {
+      title: string;
+      dueDate: string | null;
+    };
+    expect(renamedTask.title).toBe("renamed while disabled");
+    expect(renamedTask.dueDate).toBe(task.dueDate);
+
+    // Actually changing the date to a different value is a real change and
+    // must still 422.
+    const changed = await app.request(`/api/task/${createdTask.id}`, {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        title: "renamed while disabled",
+        description: task.description,
+        priority: task.priority,
+        status: task.status,
+        projectId: task.projectId,
+        position: task.position,
+        dueDate: "2026-09-01T00:00:00.000Z",
+      }),
+    });
+    expect(changed.status).toBe(422);
+    expect(await changed.text()).toContain(DISABLED_MESSAGE);
+
+    // Clearing the date (omitting it from a full update) must still be
+    // allowed even while disabled.
+    const cleared = await app.request(`/api/task/${createdTask.id}`, {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        title: "renamed while disabled",
+        description: task.description,
+        priority: task.priority,
+        status: task.status,
+        projectId: task.projectId,
+        position: task.position,
+      }),
+    });
+    expect(cleared.status).toBe(200);
+    const clearedTask = (await cleared.json()) as { dueDate: string | null };
+    expect(clearedTask.dueDate).toBeNull();
+  });
+
   it("rejects updating a time entry while dates are disabled", async () => {
     // Create one with the flag off so the workspace-access lookup succeeds,
     // then attempt to update it with the flag on.

@@ -24,6 +24,7 @@ import {
 import { normalizeApiServerUrl } from "../utils/openapi-spec";
 import { requireWorkspacePermission } from "../utils/require-workspace-permission";
 import {
+  assertDatesEnabled,
   validateAndParseDate,
   validateDateRange,
 } from "../utils/validate-dates";
@@ -624,6 +625,9 @@ const task = apiRouter<BaseVariables & { workspaceId: string }>()
       craftId,
     } = c.req.valid("json");
 
+    assertDatesEnabled(startDate);
+    assertDatesEnabled(dueDate);
+
     const parsedStartDate =
       startDate !== undefined
         ? validateAndParseDate(startDate, "startDate")
@@ -778,6 +782,11 @@ const task = apiRouter<BaseVariables & { workspaceId: string }>()
     const { id } = c.req.valid("param");
     const { dueDate = null } = c.req.valid("json");
     const currentUserId = c.get("userId");
+
+    // An empty string means "clear"; it must not trip the guard.
+    if (dueDate) {
+      assertDatesEnabled(dueDate);
+    }
 
     const task = await updateTaskDueDate({
       id,

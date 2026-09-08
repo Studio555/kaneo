@@ -19,7 +19,6 @@ export function assertDatesEnabled(value: unknown): void {
  * is empty or cannot be parsed into a valid Date.
  */
 export function validateAndParseDate(dateStr: string, fieldName: string): Date {
-  assertDatesEnabled(dateStr);
   if (dateStr.trim() === "") {
     throw new HTTPException(400, {
       message: `${fieldName} cannot be an empty string. Please provide a valid date or omit the field.`,

@@ -8,7 +8,27 @@ import {
   assertAssignableUser,
   getProjectWorkspaceId,
 } from "../../utils/assert-assignable-user";
+import { areDatesEnabled } from "../../utils/dates-enabled";
 import { assertValidTaskStatus } from "../validate-task-fields";
+
+/**
+ * The full-PUT update route always writes startDate/dueDate (omitting a
+ * field wipes it), so a caller that never touches dates must resend the
+ * stored value just to avoid losing it. That echo must not itself be
+ * treated as "setting a date" while dates are disabled: only a value that
+ * actually differs from what's stored is a real change and gets rejected.
+ * Clearing (undefined) always stays allowed.
+ */
+function assertDateUnchanged(
+  incoming: Date | undefined,
+  stored: Date | null,
+): void {
+  if (incoming === undefined) return;
+  if (stored !== null && incoming.getTime() === stored.getTime()) return;
+  throw new HTTPException(422, {
+    message: "Date fields are disabled on this instance",
+  });
+}
 
 async function updateTask(
   id: string,
@@ -29,6 +49,8 @@ async function updateTask(
       description: taskTable.description,
       status: taskTable.status,
       projectId: taskTable.projectId,
+      startDate: taskTable.startDate,
+      dueDate: taskTable.dueDate,
     })
     .from(taskTable)
     .where(eq(taskTable.id, id))
@@ -44,6 +66,11 @@ async function updateTask(
     throw new HTTPException(400, {
       message: "Use the task move endpoint to move tasks between projects",
     });
+  }
+
+  if (!areDatesEnabled()) {
+    assertDateUnchanged(startDate, existingTask.startDate);
+    assertDateUnchanged(dueDate, existingTask.dueDate);
   }
 
   await assertValidTaskStatus(status, projectId);
