@@ -8,6 +8,13 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NotificationPreferencesSettings } from "./notification-preferences-settings";
 
+const datesEnabled = vi.hoisted(() => ({ value: true }));
+
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => datesEnabled.value,
+  useShowDueDates: () => datesEnabled.value,
+}));
+
 const updatePreferences = vi.fn();
 const preferences = {
   emailAddress: "mina@example.com",
@@ -74,6 +81,7 @@ describe("NotificationPreferencesSettings", () => {
   beforeEach(() => {
     updatePreferences.mockReset();
     updatePreferences.mockResolvedValue(undefined);
+    datesEnabled.value = true;
   });
 
   it("saves event preferences and a configurable reminder lead time", async () => {
@@ -149,5 +157,26 @@ describe("NotificationPreferencesSettings", () => {
         dueDateReminderEnabled: false,
       }),
     );
+  });
+});
+
+describe("notification preferences with dates disabled", () => {
+  afterEach(cleanup);
+
+  it("omits the due date reminder controls", () => {
+    datesEnabled.value = false;
+    render(<NotificationPreferencesSettings />);
+    expect(
+      screen.queryByText("settings:notificationsPage.eventDueDateReminders"),
+    ).not.toBeInTheDocument();
+    datesEnabled.value = true;
+  });
+
+  it("shows them when dates are enabled", () => {
+    datesEnabled.value = true;
+    render(<NotificationPreferencesSettings />);
+    expect(
+      screen.getByText("settings:notificationsPage.eventDueDateReminders"),
+    ).toBeInTheDocument();
   });
 });

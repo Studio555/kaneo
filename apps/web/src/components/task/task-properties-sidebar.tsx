@@ -28,6 +28,7 @@ import useGetProject from "@/hooks/queries/project/use-get-project";
 import useGetProjects from "@/hooks/queries/project/use-get-projects";
 import useGetTask from "@/hooks/queries/task/use-get-task";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { cn } from "@/lib/cn";
 import { getColumnIcon } from "@/lib/column";
 import {
@@ -95,6 +96,7 @@ export default function TaskPropertiesSidebar({
   const { data: workspaceUsers } = useGetActiveWorkspaceUsers(workspaceId);
   const { data: taskLabels = [] } = useGetLabelsByTask(taskId ?? "");
   const { data: workspaceCrafts = [] } = useGetCraftsByWorkspace(workspaceId);
+  const datesEnabled = useDatesEnabled();
   // getTask returns craftId, not the resolved craft, so the name and colour
   // come from the workspace vocabulary.
   const currentCraft =
@@ -303,7 +305,7 @@ export default function TaskPropertiesSidebar({
                   </Button>
                 </TaskAssigneePopover>
               )}
-              {task && (
+              {task && datesEnabled && (
                 <TaskStartDatePopover task={task}>
                   <Button
                     variant="ghost"
@@ -321,7 +323,7 @@ export default function TaskPropertiesSidebar({
                   </Button>
                 </TaskStartDatePopover>
               )}
-              {task && (
+              {task && datesEnabled && (
                 <TaskDueDatePopover task={task}>
                   <Button
                     variant="ghost"
@@ -494,7 +496,7 @@ export default function TaskPropertiesSidebar({
                     </Button>
                   </TaskAssigneePopover>
                 )}
-                {task && (
+                {task && datesEnabled && (
                   <TaskStartDatePopover task={task}>
                     <Button
                       variant="ghost"
@@ -512,7 +514,7 @@ export default function TaskPropertiesSidebar({
                     </Button>
                   </TaskStartDatePopover>
                 )}
-                {task && (
+                {task && datesEnabled && (
                   <TaskDueDatePopover task={task}>
                     <Button
                       variant="ghost"
@@ -687,7 +689,7 @@ export default function TaskPropertiesSidebar({
                     </Button>
                   </TaskAssigneePopover>
                 )}
-                {task && (
+                {task && datesEnabled && (
                   <TaskStartDatePopover task={task}>
                     <Button
                       variant="ghost"
@@ -705,7 +707,7 @@ export default function TaskPropertiesSidebar({
                     </Button>
                   </TaskStartDatePopover>
                 )}
-                {task && (
+                {task && datesEnabled && (
                   <TaskDueDatePopover task={task}>
                     <Button
                       variant="ghost"

@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { KbdSequence } from "@/components/ui/kbd";
 import { shortcuts } from "@/constants/shortcuts";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 
 type ShortcutItem = {
   keys: string[];
@@ -24,6 +25,7 @@ type ShortcutCategory = {
 
 function useShortcutCategories(): ShortcutCategory[] {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
 
   return useMemo(
     () => [
@@ -88,10 +90,16 @@ function useShortcutCategories(): ShortcutCategory[] {
             keys: [shortcuts.view.prefix, shortcuts.view.backlog],
             description: t("navigation:keyboardShortcuts.items.backlogView"),
           },
-          {
-            keys: [shortcuts.view.prefix, shortcuts.view.calendar],
-            description: t("navigation:keyboardShortcuts.items.calendarView"),
-          },
+          ...(datesEnabled
+            ? [
+                {
+                  keys: [shortcuts.view.prefix, shortcuts.view.calendar],
+                  description: t(
+                    "navigation:keyboardShortcuts.items.calendarView",
+                  ),
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -123,7 +131,7 @@ function useShortcutCategories(): ShortcutCategory[] {
         ],
       },
     ],
-    [t],
+    [t, datesEnabled],
   );
 }
 

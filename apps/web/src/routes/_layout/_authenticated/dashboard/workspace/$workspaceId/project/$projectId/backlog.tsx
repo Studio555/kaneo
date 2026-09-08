@@ -624,37 +624,46 @@ function RouteComponent() {
                       </DropdownMenuCheckboxItem>
                     ))}
 
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel className="text-[11px] uppercase tracking-wide">
-                        {t("tasks:dueDate.label")}
-                      </DropdownMenuLabel>
-                    </DropdownMenuGroup>
-                    {[
-                      {
-                        label: DUE_DATE_FILTER_VALUES.dueThisWeek,
-                        key: "dueThisWeek",
-                      },
-                      {
-                        label: DUE_DATE_FILTER_VALUES.dueNextWeek,
-                        key: "dueNextWeek",
-                      },
-                      {
-                        label: DUE_DATE_FILTER_VALUES.noDueDate,
-                        key: "noDueDate",
-                      },
-                    ].map((item) => (
-                      <DropdownMenuCheckboxItem
-                        key={item.label}
-                        checked={filters.dueDate === item.label}
-                        onCheckedChange={(checked) =>
-                          updateFilter("dueDate", checked ? item.label : null)
-                        }
-                        className="h-8 rounded-md text-sm"
-                      >
-                        <span>{t(`tasks:backlog.filters.${item.key}`)}</span>
-                      </DropdownMenuCheckboxItem>
-                    ))}
+                    {datesEnabled && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel className="text-[11px] uppercase tracking-wide">
+                            {t("tasks:dueDate.label")}
+                          </DropdownMenuLabel>
+                        </DropdownMenuGroup>
+                        {[
+                          {
+                            label: DUE_DATE_FILTER_VALUES.dueThisWeek,
+                            key: "dueThisWeek",
+                          },
+                          {
+                            label: DUE_DATE_FILTER_VALUES.dueNextWeek,
+                            key: "dueNextWeek",
+                          },
+                          {
+                            label: DUE_DATE_FILTER_VALUES.noDueDate,
+                            key: "noDueDate",
+                          },
+                        ].map((item) => (
+                          <DropdownMenuCheckboxItem
+                            key={item.label}
+                            checked={filters.dueDate === item.label}
+                            onCheckedChange={(checked) =>
+                              updateFilter(
+                                "dueDate",
+                                checked ? item.label : null,
+                              )
+                            }
+                            className="h-8 rounded-md text-sm"
+                          >
+                            <span>
+                              {t(`tasks:backlog.filters.${item.key}`)}
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </>
+                    )}
 
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>

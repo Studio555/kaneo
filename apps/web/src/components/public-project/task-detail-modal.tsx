@@ -12,6 +12,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogClose, DialogPopup } from "@/components/ui/dialog";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import {
   dueDateStatusColors,
   getDueDateStatus,
@@ -48,6 +49,7 @@ export function PublicTaskDetailModal({
   onOpenChange,
 }: PublicTaskDetailModalProps) {
   const taskIsCompleted = isTaskCompleted(task?.status ?? "", columns);
+  const datesEnabled = useDatesEnabled();
   const { t } = useTranslation();
 
   const getPRStatus = useMemo(
@@ -131,7 +133,7 @@ export function PublicTaskDetailModal({
                   </div>
                 )}
 
-                {task.dueDate && (
+                {datesEnabled && task.dueDate && (
                   <div
                     className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md ${dueDateStatusColors[getDueDateStatus(task.dueDate, taskIsCompleted)]}`}
                   >
@@ -291,7 +293,7 @@ export function PublicTaskDetailModal({
                   {formatDateMedium(task.createdAt)}
                 </div>
               </div>
-              {task.dueDate && (
+              {datesEnabled && task.dueDate && (
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">
                     {t("publicProject:taskDetail.dueDateLabel")}

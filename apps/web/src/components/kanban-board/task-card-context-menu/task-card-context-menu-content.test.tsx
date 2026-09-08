@@ -3,9 +3,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type Task from "@/types/task";
 import TaskCardContextMenuContent from "./task-card-context-menu-content";
 
+const datesEnabled = vi.hoisted(() => ({ value: true }));
+
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => datesEnabled.value,
+  useShowDueDates: () => datesEnabled.value,
+}));
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  datesEnabled.value = true;
 });
 
 vi.mock("@/components/ui/context-menu", () => ({
@@ -155,5 +163,20 @@ describe("TaskCardContextMenuContent", () => {
     renderTask(task);
 
     expect(screen.getByText("tasks:actions.markAsPlanned")).toBeInTheDocument();
+  });
+});
+
+describe("task card context menu with dates disabled", () => {
+  it("omits the due date action", () => {
+    datesEnabled.value = false;
+    renderTask(task);
+    expect(screen.queryByText(/dueDate/i)).not.toBeInTheDocument();
+    datesEnabled.value = true;
+  });
+
+  it("shows the due date action when dates are enabled", () => {
+    datesEnabled.value = true;
+    renderTask(task);
+    expect(screen.getByText(/dueDate/i)).toBeInTheDocument();
   });
 });
