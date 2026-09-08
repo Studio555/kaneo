@@ -2,18 +2,13 @@ import { eq, inArray } from "drizzle-orm";
 import db from "../../../database";
 import { labelTable, taskTable } from "../../../database/schema";
 import { publishEvent } from "../../../events";
-import updateTaskCraft from "../../../task/controllers/update-task-craft";
 import { findExternalLink } from "../../github/services/link-manager";
 import { updateTaskStatus } from "../../github/services/task-service";
 import {
   extractIssuePriority,
   extractIssueStatus,
 } from "../../github/utils/extract-priority";
-import {
-  findCraftLabelName,
-  resolveCraftByName,
-  resolveCraftLabel,
-} from "../../resolve-craft-label";
+import { reconcileCraftFromIssueLabels } from "../../reconcile-craft-from-labels";
 import { isSystemLabelName, parseCraftLabelName } from "../../system-labels";
 import {
   findAllIntegrationsByGiteaRepo,
@@ -197,32 +192,13 @@ export async function handleGiteaIssueLabeled(
             giteaLabelsForSync(issue.labels),
           );
 
-          // label_updated carries the issue's whole label set and no single
-          // added label, so the craft is derived from that set: a resolvable
-          // `craft:` label wins, its absence clears the craft, and an
-          // unrecognized one is left alone rather than wiping the current one.
-          const craftLabelName = findCraftLabelName(issue.labels);
-
-          if (craftLabelName) {
-            const craft = await resolveCraftByName(
-              task.project.workspaceId,
-              craftLabelName,
-            );
-
-            if (craft) {
-              await updateTaskCraft({
-                id: existingLink.taskId,
-                craftId: craft.id,
-                currentUserId: null,
-              });
-            }
-          } else if (task.craftId) {
-            await updateTaskCraft({
-              id: existingLink.taskId,
-              craftId: null,
-              currentUserId: null,
-            });
-          }
+          await reconcileCraftFromIssueLabels({
+            taskId: existingLink.taskId,
+            workspaceId: task.project.workspaceId,
+            labels: issue.labels,
+            link: { id: existingLink.id, metadata: existingLink.metadata },
+            source: "gitea",
+          });
         }
         continue;
       }
@@ -231,38 +207,29 @@ export async function handleGiteaIssueLabeled(
         continue;
       }
 
-      // Craft is single-select, so this keys off the label that was just
-      // added or removed rather than scanning the issue's full label set.
+      // A craft label changed, so the craft is reconciled against the issue's
+      // whole label set rather than against this one delta, the same way
+      // label_updated above does.
       if (parseCraftLabelName(addedLabel.name)) {
-        const craft = await resolveCraftLabel(
-          existingLink.taskId,
-          addedLabel.name,
-        );
+        const craftTask = await db.query.taskTable.findFirst({
+          where: eq(taskTable.id, existingLink.taskId),
+          with: {
+            project: true,
+          },
+        });
 
-        if (payload.action === "labeled" && craft) {
-          // An unrecognized craft name is ignored: the vocabulary is curated
-          // in Kaneo, not seeded from the forge.
-          await updateTaskCraft({
-            id: existingLink.taskId,
-            craftId: craft.id,
-            currentUserId: null,
+        if (craftTask?.project?.workspaceId) {
+          await reconcileCraftFromIssueLabels({
+            taskId: existingLink.taskId,
+            workspaceId: craftTask.project.workspaceId,
+            labels: issue.labels,
+            delta: {
+              label: addedLabel.name,
+              op: payload.action === "unlabeled" ? "removed" : "added",
+            },
+            link: { id: existingLink.id, metadata: existingLink.metadata },
+            source: "gitea",
           });
-        }
-
-        if (payload.action === "unlabeled" && craft) {
-          const craftTask = await db.query.taskTable.findFirst({
-            where: eq(taskTable.id, existingLink.taskId),
-          });
-
-          // Only clear when the removed label is the craft the task actually
-          // carries, so a stale `craft:` label doesn't wipe the real one.
-          if (craftTask?.craftId === craft.id) {
-            await updateTaskCraft({
-              id: existingLink.taskId,
-              craftId: null,
-              currentUserId: null,
-            });
-          }
         }
 
         continue;

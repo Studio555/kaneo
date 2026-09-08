@@ -1,7 +1,17 @@
+import {
+  addPendingCraftLabelOps,
+  expectedCraftLabelOps,
+  isOutboundCraftEcho,
+  parseLinkMetadata,
+  recordCraftSync,
+} from "../../craft-sync-provenance";
 import { toCraftLabelName } from "../../system-labels";
 import type { PluginContext, TaskCraftChangedEvent } from "../../types";
 import type { GitHubConfig } from "../config";
-import { findExternalLinksByTask } from "../services/link-manager";
+import {
+  findExternalLinksByTask,
+  updateExternalLink,
+} from "../services/link-manager";
 import { getGithubApp, getInstallationIdForRepo } from "../utils/github-app";
 import { addLabelsToIssue, removeLabel } from "../utils/labels";
 
@@ -27,6 +37,36 @@ export async function handleTaskCraftChanged(
 
     if (!issueLink) {
       return;
+    }
+
+    const metadata = parseLinkMetadata(issueLink.metadata);
+
+    // The issue already carries this craft because the issue is where it came
+    // from. Writing the label again would only produce another webhook.
+    if (isOutboundCraftEcho(metadata, event.newCraftName ?? null)) {
+      return;
+    }
+
+    // Written before the first label call, not after the last one. Removing
+    // the outgoing label makes GitHub deliver `unlabeled` immediately, and
+    // that webhook can be handled while the add below is still in flight; if
+    // the ledger were not already stored it would read the issue as having no
+    // craft and clear the task.
+    const ops = expectedCraftLabelOps(
+      event.oldCraftName ?? null,
+      event.newCraftName ?? null,
+    );
+
+    if (ops.length > 0) {
+      await updateExternalLink(issueLink.id, {
+        metadata: addPendingCraftLabelOps(
+          recordCraftSync(metadata, {
+            source: "kaneo",
+            value: event.newCraftName ?? null,
+          }),
+          ops,
+        ),
+      });
     }
 
     let installationId = config.installationId;

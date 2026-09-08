@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import db from "../database";
-import { craftTable, projectTable, taskTable } from "../database/schema";
+import { craftTable } from "../database/schema";
 import { parseCraftLabelName } from "./system-labels";
 
 /**
@@ -44,24 +44,4 @@ export function findCraftLabelName(
   }
 
   return null;
-}
-
-/** Resolve a forge label like `craft:Engineering` against a task's workspace. */
-export async function resolveCraftLabel(
-  taskId: string,
-  labelName: string,
-): Promise<{ id: string; name: string } | null> {
-  const craftName = parseCraftLabelName(labelName);
-  if (!craftName) return null;
-
-  const [row] = await db
-    .select({ workspaceId: projectTable.workspaceId })
-    .from(taskTable)
-    .innerJoin(projectTable, eq(taskTable.projectId, projectTable.id))
-    .where(eq(taskTable.id, taskId))
-    .limit(1);
-
-  if (!row?.workspaceId) return null;
-
-  return resolveCraftByName(row.workspaceId, craftName);
 }
