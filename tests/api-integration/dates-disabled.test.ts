@@ -328,6 +328,45 @@ describe("API integration: dates disabled", () => {
       }),
     });
     expect(changed.status).toBe(422);
+
+    // An unparseable date cannot be an echo of the stored value, so it is a
+    // change attempt too. The caller should be told the feature is disabled,
+    // not handed a parse error for a field this instance will not accept
+    // whatever its format.
+    const malformed = await app.request(`/api/task/${createdTask.id}`, {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        title: "renamed while disabled",
+        description: task.description,
+        priority: task.priority,
+        status: task.status,
+        projectId: task.projectId,
+        position: task.position,
+        dueDate: "not-a-date",
+      }),
+    });
+    expect(malformed.status).toBe(422);
+    expect(await malformed.text()).toContain(DISABLED_MESSAGE);
+
+    // With dates enabled the same body is a plain validation error, so the
+    // 422 above is genuinely about the flag and not about the parse failing.
+    delete process.env.DISABLE_DATES;
+    const malformedEnabled = await app.request(`/api/task/${createdTask.id}`, {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        title: "renamed while disabled",
+        description: task.description,
+        priority: task.priority,
+        status: task.status,
+        projectId: task.projectId,
+        position: task.position,
+        dueDate: "not-a-date",
+      }),
+    });
+    expect(malformedEnabled.status).toBe(400);
+    process.env.DISABLE_DATES = "true";
     expect(await changed.text()).toContain(DISABLED_MESSAGE);
 
     // Omitting the date from a full update — what a third-party script doing

@@ -21,6 +21,7 @@ import {
   isImageContentType,
   validateTaskAssetUploadInput,
 } from "../storage/s3";
+import { areDatesEnabled } from "../utils/dates-enabled";
 import { normalizeApiServerUrl } from "../utils/openapi-spec";
 import { requireWorkspacePermission } from "../utils/require-workspace-permission";
 import {
@@ -128,6 +129,7 @@ const bulkUpdateTasksRoute = createRoute({
       "No workspace access, or missing the permission the operation needs",
     ),
     404: errorResponse("No tasks found"),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -157,6 +159,7 @@ const createTaskRoute = createRoute({
     403: errorResponse(
       "No workspace access, or missing task:create permission",
     ),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -238,6 +241,7 @@ const updateTaskRoute = createRoute({
     403: errorResponse(
       "No workspace access, or missing task:update or task:assign permission",
     ),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -454,6 +458,7 @@ const updateTaskDueDateRoute = createRoute({
     403: errorResponse(
       "No workspace access, or missing task:update permission",
     ),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -691,14 +696,28 @@ const task = apiRouter<BaseVariables & { workspaceId: string }>()
 
     const currentUserId = c.get("userId");
 
-    const parsedStartDate =
-      startDate !== undefined
-        ? validateAndParseDate(startDate, "startDate")
-        : undefined;
-    const parsedDueDate =
-      dueDate !== undefined
-        ? validateAndParseDate(dueDate, "dueDate")
-        : undefined;
+    // This route parses dates before `updateTask` can compare them against the
+    // stored values, so an unparseable value would surface as a 400 parse error
+    // even when the real answer is that this instance does not accept date
+    // writes at all. A value that cannot be parsed also cannot be an echo of a
+    // stored date, so while dates are disabled it is necessarily an attempt to
+    // set one: report the feature as disabled instead.
+    const parseUpdateDate = (value: string | undefined, fieldName: string) => {
+      if (value === undefined) return undefined;
+      try {
+        return validateAndParseDate(value, fieldName);
+      } catch (error) {
+        if (!areDatesEnabled()) {
+          throw new HTTPException(422, {
+            message: "Date fields are disabled on this instance",
+          });
+        }
+        throw error;
+      }
+    };
+
+    const parsedStartDate = parseUpdateDate(startDate, "startDate");
+    const parsedDueDate = parseUpdateDate(dueDate, "dueDate");
 
     validateDateRange(parsedStartDate, parsedDueDate);
 

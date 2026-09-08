@@ -78,6 +78,7 @@ const createTimeEntryRoute = createRoute({
     403: errorResponse(
       "No workspace access, or missing task:update permission",
     ),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -106,6 +107,7 @@ const updateTimeEntryRoute = createRoute({
     403: errorResponse(
       "No workspace access, or missing task:update permission",
     ),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 

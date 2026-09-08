@@ -162,7 +162,12 @@ function RouteComponent() {
           onToday={handleToday}
         />
 
-        {isLoading ? (
+        {/* `!datesEnabled` holds the grid back until the instance confirms
+            dates are on. While the config query is pending — or after it
+            failed — painting the month would put stored task dates on screen
+            on an instance that has them turned off, which the redirect cannot
+            prevent because it waits for a definite answer. */}
+        {isLoading || !datesEnabled ? (
           <div className="border-b border-border/80 px-4 py-3 text-center">
             <p className="text-sm text-muted-foreground">
               {t("common:empty.loading")}

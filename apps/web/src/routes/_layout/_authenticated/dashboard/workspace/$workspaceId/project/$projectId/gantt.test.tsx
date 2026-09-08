@@ -48,7 +48,14 @@ const config = vi.hoisted(
 );
 
 vi.mock("@/hooks/queries/config/use-get-config", () => ({
-  default: () => ({ data: config.value }),
+  //  mirrors the real query: it is only true once a payload has
+  // arrived. An undefined value therefore models both "still pending" and
+  // "the request failed", which is exactly what the route guard must not
+  // treat as "dates are disabled".
+  default: () => ({
+    data: config.value,
+    isSuccess: config.value !== undefined,
+  }),
 }));
 
 const useGetTasks = vi.fn();
