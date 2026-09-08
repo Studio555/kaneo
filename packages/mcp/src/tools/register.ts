@@ -492,6 +492,100 @@ export function registerTools(
   );
 
   server.registerTool(
+    "list_workspace_crafts",
+    {
+      description:
+        "List the crafts (disciplines) defined in a workspace. Craft is a curated, single-select dimension kept separate from labels.",
+      inputSchema: z.object({ workspaceId: nonEmptyString }),
+    },
+    async (args) =>
+      run(() =>
+        client.json(
+          `/api/craft/workspace/${encodeURIComponent(args.workspaceId)}`,
+          { method: "GET" },
+        ),
+      ),
+  );
+
+  server.registerTool(
+    "create_craft",
+    {
+      description:
+        "Create a craft in a workspace. Names are unique per workspace; an existing name returns the existing craft.",
+      inputSchema: z.object({
+        name: nonEmptyString,
+        color: hexColorSchema,
+        workspaceId: nonEmptyString,
+      }),
+    },
+    async (args) =>
+      run(() =>
+        client.json("/api/craft", {
+          method: "POST",
+          body: JSON.stringify({
+            name: args.name,
+            color: args.color,
+            workspaceId: args.workspaceId,
+          }),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "update_craft",
+    {
+      description:
+        "Rename or recolor a craft. A rename re-labels linked GitHub and Gitea issues in the background.",
+      inputSchema: z.object({
+        id: nonEmptyString,
+        name: nonEmptyString,
+        color: hexColorSchema,
+      }),
+    },
+    async (args) =>
+      run(() =>
+        client.json(`/api/craft/${encodeURIComponent(args.id)}`, {
+          method: "PUT",
+          body: JSON.stringify({ name: args.name, color: args.color }),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "delete_craft",
+    {
+      description:
+        "Delete a craft. Tasks carrying it are left with no craft rather than deleted.",
+      inputSchema: z.object({ id: nonEmptyString }),
+    },
+    async (args) =>
+      run(() =>
+        client.json(`/api/craft/${encodeURIComponent(args.id)}`, {
+          method: "DELETE",
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "set_task_craft",
+    {
+      description:
+        "Set the craft (discipline) of a task, or pass craftId null to clear it. The craft must belong to the task's workspace.",
+      inputSchema: z.object({
+        taskId: nonEmptyString,
+        craftId: z.string().nullable(),
+      }),
+    },
+    async (args) =>
+      run(() =>
+        client.json(`/api/task/craft/${encodeURIComponent(args.taskId)}`, {
+          method: "PUT",
+          body: JSON.stringify({ craftId: args.craftId }),
+        }),
+      ),
+  );
+
+  server.registerTool(
     "create_task_relation",
     {
       description:

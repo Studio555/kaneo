@@ -1274,6 +1274,31 @@
 			"updateError": "Échec de la mise à jour du label",
 			"deleteError": "Échec de la suppression du label",
 			"nameRequired": "Le nom du label est requis"
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -1459,6 +1484,9 @@
 		"assignedTo": "a assigné la tâche à {{name}}",
 		"changedStatus": "a changé le statut de {{from}} à {{to}}",
 		"changedPriority": "a changé la priorité de {{from}} à {{to}}",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft",
 		"clearedDueDate": "a effacé la date d'échéance",
 		"setDueDate": "a défini la date d'échéance à {{date}}",
 		"changedDueDate": "a changé la date d'échéance de {{from}} à {{to}}",
@@ -1739,6 +1767,7 @@
 		"properties": {
 			"title": "Propriétés",
 			"labels": "Labels",
+			"craft": "Craft",
 			"copyTaskLink": "Copier le lien de la tâche",
 			"copyTaskBranch": "Copier la branche de la tâche",
 			"start": "Début",
@@ -1798,6 +1827,11 @@
 					"rose": "Rose",
 					"crimson": "Cramoisi"
 				}
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -1848,13 +1882,15 @@
 			"allAssignees": "Tous les assignés",
 			"allDueDates": "Toutes les dates d'échéance",
 			"allLabels": "Tous les labels",
+			"allCrafts": "All crafts",
 			"selectedCount": "{{count}} sélectionné",
 			"subjects": {
 				"status": "Statut",
 				"priority": "Priorité",
 				"assignee": "Assigné",
 				"dueDate": "Date d'échéance",
-				"labels": "Labels"
+				"labels": "Labels",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "est l'un des",
@@ -1920,6 +1956,10 @@
 		"labels": {
 			"label": "Labels",
 			"empty": "Aucun label disponible"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
 		},
 		"update": {
 			"success": "Tâche mise à jour avec succès",

@@ -800,6 +800,31 @@
 			"deleteError": "Falha ao excluir etiqueta",
 			"nameRequired": "O nome da etiqueta é obrigatório"
 		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
+		},
 		"projectGeneral": {
 			"pageTitle": "Configurações do projeto",
 			"title": "Configurações gerais",
@@ -1459,6 +1484,9 @@
 		"assignedTo": "atribuiu a tarefa a {{name}}",
 		"changedStatus": "mudou o status de {{from}} para {{to}}",
 		"changedPriority": "mudou a prioridade de {{from}} para {{to}}",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft",
 		"clearedDueDate": "limpou a data de vencimento",
 		"setDueDate": "definiu a data de vencimento para {{date}}",
 		"changedDueDate": "mudou a data de vencimento de {{from}} para {{to}}",
@@ -1739,6 +1767,7 @@
 		"properties": {
 			"title": "Propriedades",
 			"labels": "Etiquetas",
+			"craft": "Craft",
 			"copyTaskLink": "Copiar link da tarefa",
 			"copyTaskBranch": "Copiar branch da tarefa",
 			"start": "Início",
@@ -1798,6 +1827,11 @@
 					"rose": "Rosa",
 					"crimson": "Carmesim"
 				}
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -1848,13 +1882,15 @@
 			"allAssignees": "Todos os responsáveis",
 			"allDueDates": "Todas as datas de vencimento",
 			"allLabels": "Todas as etiquetas",
+			"allCrafts": "All crafts",
 			"selectedCount": "{{count}} selecionado(s)",
 			"subjects": {
 				"status": "Status",
 				"priority": "Prioridade",
 				"assignee": "Responsável",
 				"dueDate": "Data de vencimento",
-				"labels": "Etiquetas"
+				"labels": "Etiquetas",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "é qualquer um de",
@@ -1920,6 +1956,10 @@
 		"labels": {
 			"label": "Etiquetas",
 			"empty": "Nenhuma etiqueta disponível"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
 		},
 		"update": {
 			"success": "Tarefa atualizada com sucesso",

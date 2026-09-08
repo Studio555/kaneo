@@ -3125,6 +3125,106 @@
 						"nameRequired"
 					]
 				},
+				"workspaceCrafts": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"pageTitle": {
+							"type": "string"
+						},
+						"title": {
+							"type": "string"
+						},
+						"subtitle": {
+							"type": "string"
+						},
+						"cardDescription": {
+							"type": "string"
+						},
+						"createCraft": {
+							"type": "string"
+						},
+						"editCraft": {
+							"type": "string"
+						},
+						"deleteCraft": {
+							"type": "string"
+						},
+						"saveCraft": {
+							"type": "string"
+						},
+						"nameLabel": {
+							"type": "string"
+						},
+						"namePlaceholder": {
+							"type": "string"
+						},
+						"colorLabel": {
+							"type": "string"
+						},
+						"createDescription": {
+							"type": "string"
+						},
+						"editDescription": {
+							"type": "string"
+						},
+						"deleteConfirmTitle": {
+							"type": "string"
+						},
+						"deleteConfirmDescription": {
+							"type": "string"
+						},
+						"empty": {
+							"type": "string"
+						},
+						"createSuccess": {
+							"type": "string"
+						},
+						"updateSuccess": {
+							"type": "string"
+						},
+						"deleteSuccess": {
+							"type": "string"
+						},
+						"createError": {
+							"type": "string"
+						},
+						"updateError": {
+							"type": "string"
+						},
+						"deleteError": {
+							"type": "string"
+						},
+						"nameRequired": {
+							"type": "string"
+						}
+					},
+					"required": [
+						"cardDescription",
+						"colorLabel",
+						"createCraft",
+						"createDescription",
+						"createError",
+						"createSuccess",
+						"deleteConfirmDescription",
+						"deleteConfirmTitle",
+						"deleteCraft",
+						"deleteError",
+						"deleteSuccess",
+						"editCraft",
+						"editDescription",
+						"empty",
+						"nameLabel",
+						"namePlaceholder",
+						"nameRequired",
+						"pageTitle",
+						"saveCraft",
+						"subtitle",
+						"title",
+						"updateError",
+						"updateSuccess"
+					]
+				},
 				"projectGeneral": {
 					"type": "object",
 					"additionalProperties": false,
@@ -5118,35 +5218,36 @@
 			},
 			"required": [
 				"account",
-				"developer",
-				"information",
-				"notifications",
-				"preferences",
-				"apiKeys",
-				"informationPage",
-				"notificationsPage",
-				"preferencesPage",
-				"developerPage",
 				"apiKey",
-				"workspaceGeneral",
-				"workspaceRoles",
-				"workspaceLabels",
+				"apiKeys",
+				"columnEditor",
+				"developer",
+				"developerPage",
+				"discordIntegration",
+				"externalLinks",
+				"genericWebhookIntegration",
+				"giteaIntegration",
+				"githubIntegration",
+				"information",
+				"informationPage",
+				"notifications",
+				"notificationsPage",
+				"preferences",
+				"preferencesPage",
 				"projectGeneral",
 				"projectIntegrations",
+				"projectSwitcher",
 				"projectVisibility",
 				"projectWorkflow",
-				"projectSwitcher",
-				"columnEditor",
-				"githubIntegration",
-				"giteaIntegration",
-				"slackIntegration",
-				"discordIntegration",
-				"genericWebhookIntegration",
-				"telegramIntegration",
 				"repositoryBrowser",
+				"slackIntegration",
 				"tasksImportExport",
+				"telegramIntegration",
 				"workflowEditor",
-				"externalLinks"
+				"workspaceCrafts",
+				"workspaceGeneral",
+				"workspaceLabels",
+				"workspaceRoles"
 			]
 		},
 		"navigation": {
@@ -5882,6 +5983,15 @@
 				"changedPriority": {
 					"type": "string"
 				},
+				"changedCraft": {
+					"type": "string"
+				},
+				"setCraft": {
+					"type": "string"
+				},
+				"clearedCraft": {
+					"type": "string"
+				},
 				"clearedDueDate": {
 					"type": "string"
 				},
@@ -6303,19 +6413,22 @@
 				}
 			},
 			"required": [
-				"assignedToSelf",
-				"unassigned",
 				"assignedTo",
-				"changedStatus",
-				"changedPriority",
-				"clearedDueDate",
-				"setDueDate",
+				"assignedToSelf",
+				"changedCraft",
 				"changedDueDate",
+				"changedPriority",
+				"changedStatus",
 				"changedTitle",
-				"moved",
+				"clearedCraft",
+				"clearedDueDate",
+				"comment",
 				"created",
 				"githubUser",
-				"comment"
+				"moved",
+				"setCraft",
+				"setDueDate",
+				"unassigned"
 			]
 		},
 		"tasks": {
@@ -6987,6 +7100,9 @@
 						"labels": {
 							"type": "string"
 						},
+						"craft": {
+							"type": "string"
+						},
 						"copyTaskLink": {
 							"type": "string"
 						},
@@ -7004,13 +7120,14 @@
 						}
 					},
 					"required": [
-						"title",
-						"labels",
-						"copyTaskLink",
 						"copyTaskBranch",
+						"copyTaskLink",
+						"craft",
+						"labels",
+						"noDate",
 						"start",
 						"startDate",
-						"noDate"
+						"title"
 					]
 				},
 				"move": {
@@ -7214,15 +7331,32 @@
 								"createError",
 								"colors"
 							]
+						},
+						"craft": {
+							"type": "object",
+							"additionalProperties": false,
+							"properties": {
+								"none": {
+									"type": "string"
+								},
+								"empty": {
+									"type": "string"
+								},
+								"updateError": {
+									"type": "string"
+								}
+							},
+							"required": ["empty", "none", "updateError"]
 						}
 					},
 					"required": [
 						"assignee",
-						"status",
-						"priority",
+						"craft",
 						"dueDate",
+						"labels",
+						"priority",
 						"startDate",
-						"labels"
+						"status"
 					]
 				},
 				"backlog": {
@@ -7445,6 +7579,9 @@
 						"allLabels": {
 							"type": "string"
 						},
+						"allCrafts": {
+							"type": "string"
+						},
 						"selectedCount": {
 							"type": "string"
 						},
@@ -7484,14 +7621,18 @@
 								},
 								"labels": {
 									"type": "string"
+								},
+								"craft": {
+									"type": "string"
 								}
 							},
 							"required": [
-								"status",
-								"priority",
 								"assignee",
+								"craft",
 								"dueDate",
-								"labels"
+								"labels",
+								"priority",
+								"status"
 							]
 						},
 						"operators": {
@@ -7509,14 +7650,15 @@
 						}
 					},
 					"required": [
-						"filterBy",
-						"allStatuses",
-						"allPriorities",
 						"allAssignees",
+						"allCrafts",
 						"allDueDates",
 						"allLabels",
-						"subjects",
-						"operators"
+						"allPriorities",
+						"allStatuses",
+						"filterBy",
+						"operators",
+						"subjects"
 					]
 				},
 				"calendar": {
@@ -7826,6 +7968,19 @@
 						}
 					},
 					"required": ["label", "empty"]
+				},
+				"crafts": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"label": {
+							"type": "string"
+						},
+						"empty": {
+							"type": "string"
+						}
+					},
+					"required": ["empty", "label"]
 				},
 				"update": {
 					"type": "object",
@@ -8195,36 +8350,37 @@
 				}
 			},
 			"required": [
-				"status",
-				"priority",
+				"actions",
+				"archive",
+				"assignee",
+				"backlog",
+				"boardFilters",
 				"boardSearchPlaceholder",
-				"view",
+				"bulk",
+				"calendar",
 				"common",
+				"contextMenu",
+				"crafts",
+				"delete",
 				"detail",
+				"dueDate",
+				"editor",
 				"entity",
-				"relations",
-				"subtasks",
-				"properties",
+				"gantt",
+				"kanban",
+				"labels",
+				"listView",
 				"move",
 				"popover",
-				"backlog",
-				"sort",
-				"boardFilters",
-				"calendar",
-				"gantt",
-				"delete",
-				"archive",
-				"listView",
-				"kanban",
 				"pr",
-				"assignee",
-				"dueDate",
-				"labels",
+				"priority",
+				"properties",
+				"relations",
+				"sort",
+				"status",
+				"subtasks",
 				"update",
-				"contextMenu",
-				"actions",
-				"bulk",
-				"editor"
+				"view"
 			]
 		},
 		"invitations": {

@@ -1273,6 +1273,31 @@
 			"updateError": "Label konnte nicht aktualisiert werden",
 			"deleteError": "Label konnte nicht gelöscht werden",
 			"nameRequired": "Label-Name ist erforderlich"
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -1454,6 +1479,9 @@
 		"assignedTo": "hat die Aufgabe {{name}} zugewiesen",
 		"changedStatus": "hat den Status von {{from}} zu {{to}} geändert",
 		"changedPriority": "hat die Priorität von {{from}} zu {{to}} geändert",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft",
 		"clearedDueDate": "hat das Fälligkeitsdatum entfernt",
 		"setDueDate": "hat das Fälligkeitsdatum auf {{date}} gesetzt",
 		"changedDueDate": "hat das Fälligkeitsdatum von {{from}} zu {{to}} geändert",
@@ -1734,6 +1762,7 @@
 		"properties": {
 			"title": "Eigenschaften",
 			"labels": "Labels",
+			"craft": "Craft",
 			"copyTaskLink": "Aufgabenlink kopieren",
 			"copyTaskBranch": "Aufgaben-Branch kopieren",
 			"start": "Start",
@@ -1793,6 +1822,11 @@
 					"rose": "Rosa",
 					"crimson": "Karmesinrot"
 				}
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -1843,13 +1877,15 @@
 			"allAssignees": "Alle Zugewiesenen",
 			"allDueDates": "Alle Fälligkeitsdaten",
 			"allLabels": "Alle Labels",
+			"allCrafts": "All crafts",
 			"selectedCount": "{{count}} ausgewählt",
 			"subjects": {
 				"status": "Status",
 				"priority": "Priorität",
 				"assignee": "Zugewiesen",
 				"dueDate": "Fälligkeitsdatum",
-				"labels": "Labels"
+				"labels": "Labels",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "ist einer von",
@@ -1914,6 +1950,10 @@
 		"labels": {
 			"label": "Labels",
 			"empty": "Keine Labels verfügbar"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
 		},
 		"update": {
 			"success": "Aufgabe erfolgreich aktualisiert",

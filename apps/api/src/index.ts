@@ -20,6 +20,7 @@ import billing from "./billing";
 import column from "./column";
 import comment from "./comment";
 import config from "./config";
+import craft from "./craft";
 import db, { getDatabase, schema } from "./database";
 import { prepareDatabaseStartup } from "./database/prepare-database-startup";
 import { waitForDatabase } from "./database/wait-for-database";
@@ -580,6 +581,7 @@ export function createApp() {
   const commentApi = api.route("/comment", comment);
   const timeEntryApi = api.route("/time-entry", timeEntry);
   const labelApi = api.route("/label", label);
+  const craftApi = api.route("/craft", craft);
   const notificationApi = api.route("/notification", notification);
   const notificationPreferencesApi = api.route(
     "/notification-preferences",
@@ -764,6 +766,7 @@ export function createApp() {
     githubIntegrationApi,
     giteaIntegrationApi,
     invitationApi,
+    craftApi,
     invitationPublicApi,
     labelApi,
     notificationApi,
@@ -883,6 +886,7 @@ const {
   githubIntegrationApi,
   giteaIntegrationApi,
   invitationApi,
+  craftApi,
   invitationPublicApi,
   labelApi,
   mattermostIntegrationApi,
@@ -922,6 +926,7 @@ export type AppType =
   | typeof commentApi
   | typeof timeEntryApi
   | typeof labelApi
+  | typeof craftApi
   | typeof notificationApi
   | typeof notificationPreferencesApi
   | typeof searchApi

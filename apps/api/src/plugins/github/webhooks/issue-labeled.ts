@@ -2,6 +2,9 @@ import { eq } from "drizzle-orm";
 import db from "../../../database";
 import { labelTable, taskTable } from "../../../database/schema";
 import { publishEvent } from "../../../events";
+import updateTaskCraft from "../../../task/controllers/update-task-craft";
+import { resolveCraftLabel } from "../../resolve-craft-label";
+import { isSystemLabelName, parseCraftLabelName } from "../../system-labels";
 import { findExternalLink } from "../services/link-manager";
 import {
   findAllIntegrationsByRepo,
@@ -80,11 +83,52 @@ export async function handleIssueLabeled(payload: IssueLabeledPayload) {
       return;
     }
 
-    const isSystemLabel =
-      addedLabel.name.startsWith("priority:") ||
-      addedLabel.name.startsWith("status:");
+    // Craft is single-select, so this keys off the label that was just
+    // added or removed rather than scanning issue.labels the way priority
+    // and status do. That reflects what the person actually did, and avoids
+    // an arbitrary first-match when several `craft:` labels coexist.
+    if (parseCraftLabelName(addedLabel.name)) {
+      if (payload.action === "labeled") {
+        const craft = await resolveCraftLabel(
+          existingLink.taskId,
+          addedLabel.name,
+        );
 
-    if (isSystemLabel) {
+        // An unrecognized craft name is ignored: the vocabulary is curated
+        // in Kaneo, not seeded from the forge.
+        if (craft) {
+          await updateTaskCraft({
+            id: existingLink.taskId,
+            craftId: craft.id,
+            currentUserId: null,
+          });
+        }
+      }
+
+      if (payload.action === "unlabeled") {
+        const craft = await resolveCraftLabel(
+          existingLink.taskId,
+          addedLabel.name,
+        );
+        const task = await db.query.taskTable.findFirst({
+          where: eq(taskTable.id, existingLink.taskId),
+        });
+
+        // Only clear when the removed label is the craft the task actually
+        // carries, so removing a stale `craft:` label leaves the real one be.
+        if (craft && task?.craftId === craft.id) {
+          await updateTaskCraft({
+            id: existingLink.taskId,
+            craftId: null,
+            currentUserId: null,
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (isSystemLabelName(addedLabel.name)) {
       return;
     }
 

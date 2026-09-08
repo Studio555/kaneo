@@ -73,6 +73,14 @@ function getActivitySearchContent(
       return `changed status from ${toDisplayCase(String(data.oldStatus ?? ""))} to ${toDisplayCase(String(data.newStatus ?? ""))}`;
     case "priority_changed":
       return `changed priority from ${toDisplayCase(String(data.oldPriority ?? ""))} to ${toDisplayCase(String(data.newPriority ?? ""))}`;
+    case "craft_changed":
+      if (!data.newCraftName) {
+        return "cleared the craft";
+      }
+      if (!data.oldCraftName) {
+        return `set craft to ${String(data.newCraftName)}`;
+      }
+      return `changed craft from ${String(data.oldCraftName)} to ${String(data.newCraftName)}`;
     case "unassigned":
       return "unassigned the task";
     case "assignee_changed":

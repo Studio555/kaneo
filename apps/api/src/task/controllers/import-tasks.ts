@@ -1,7 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import db from "../../database";
-import { columnTable, projectTable, taskTable } from "../../database/schema";
+import {
+  columnTable,
+  craftTable,
+  projectTable,
+  taskTable,
+} from "../../database/schema";
 import { publishEvent } from "../../events";
 import { filterAssignableUsers } from "../../utils/assert-assignable-user";
 import {
@@ -19,6 +24,7 @@ export type ImportTask = {
   startDate?: string | null;
   dueDate?: string | null;
   userId?: string | null;
+  craft?: string | null;
 };
 
 async function importTasks(
@@ -51,6 +57,21 @@ async function importTasks(
 
   const validStatuses = await getValidTaskStatuses(projectId);
 
+  // Craft is exported by name, so imports resolve it back against the target
+  // workspace's vocabulary. An unknown name imports the task with no craft
+  // rather than inventing one, matching how inbound `craft:` labels behave.
+  const workspaceCrafts = await db
+    .select({
+      id: craftTable.id,
+      name: craftTable.name,
+      color: craftTable.color,
+    })
+    .from(craftTable)
+    .where(eq(craftTable.workspaceId, project.workspaceId));
+  const craftByName = new Map(
+    workspaceCrafts.map((craft) => [craft.name.toLowerCase(), craft]),
+  );
+
   const results = [];
 
   for (const taskData of tasksToImport) {
@@ -75,6 +96,8 @@ async function importTasks(
       );
       const warnings = [statusWarning, priorityWarning].filter(Boolean);
 
+      const craft = craftByName.get(taskData.craft?.trim().toLowerCase() ?? "");
+
       const column = await db.query.columnTable.findFirst({
         where: and(
           eq(columnTable.projectId, projectId),
@@ -97,6 +120,7 @@ async function importTasks(
             dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
             description: taskData.description || "",
             priority,
+            craftId: craft?.id ?? null,
             number: taskNumber,
           })
           .returning();
@@ -110,6 +134,8 @@ async function importTasks(
           taskId: createdTask.id,
           userId: createdTask.userId ?? "",
           currentUserId: currentUserId ?? "",
+          craftName: craft?.name ?? null,
+          craftColor: craft?.color ?? null,
           type: "create",
           content: "imported the task",
         });

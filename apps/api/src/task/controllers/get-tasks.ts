@@ -13,6 +13,7 @@ import { HTTPException } from "hono/http-exception";
 import db from "../../database";
 import {
   columnTable,
+  craftTable,
   externalLinkTable,
   labelTable,
   projectTable,
@@ -136,6 +137,9 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
     assigneeId: userTable.id,
     assigneeImage: userTable.image,
     projectId: taskTable.projectId,
+    craftId: taskTable.craftId,
+    craftName: craftTable.name,
+    craftColor: craftTable.color,
   };
 
   const query = db
@@ -143,6 +147,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
     .from(taskTable)
     .leftJoin(userTable, eq(taskTable.userId, userTable.id))
     .leftJoin(projectTable, eq(taskTable.projectId, projectTable.id))
+    .leftJoin(craftTable, eq(taskTable.craftId, craftTable.id))
     .where(whereClause)
     .orderBy(orderByClause);
 
@@ -215,6 +220,19 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
     });
   }
 
+  // Flatten the joined craft columns into the nested shape the board expects,
+  // dropping the raw craftName/craftColor fields from the payload.
+  const withCraft = paginatedTasks.map((task) => {
+    const { craftName, craftColor, ...rest } = task;
+    return {
+      ...rest,
+      craft:
+        task.craftId && craftName
+          ? { id: task.craftId, name: craftName, color: craftColor ?? "" }
+          : null,
+    };
+  });
+
   const projectColumns = await db
     .select()
     .from(columnTable)
@@ -227,7 +245,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
     name: column.name,
     icon: column.icon,
     isFinal: column.isFinal,
-    tasks: paginatedTasks
+    tasks: withCraft
       .filter((task) => task.status === column.slug)
       .map((task) => ({
         ...task,
@@ -236,7 +254,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
       })),
   }));
 
-  const archivedTasks = paginatedTasks
+  const archivedTasks = withCraft
     .filter((task) => task.status === "archived")
     .map((task) => ({
       ...task,
@@ -244,7 +262,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
       externalLinks: taskExternalLinksMap.get(task.id) || [],
     }));
 
-  const plannedTasks = paginatedTasks
+  const plannedTasks = withCraft
     .filter((task) => task.status === "planned")
     .map((task) => ({
       ...task,

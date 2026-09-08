@@ -21,6 +21,11 @@ import {
 } from "../../plugins/github/utils/extract-priority";
 import { formatTaskDescriptionFromIssue } from "../../plugins/github/utils/format";
 import { getInstallationOctokit } from "../../plugins/github/utils/github-app";
+import {
+  findCraftLabelName,
+  resolveCraftByName,
+} from "../../plugins/resolve-craft-label";
+import { isSystemLabelName } from "../../plugins/system-labels";
 import { claimTaskNumber } from "../../task/controllers/claim-task-numbers";
 
 type ImportResult = {
@@ -210,6 +215,13 @@ async function importSingleIssue(
   const priority = extractIssuePriority(issue.labels);
   const status = extractIssueStatus(issue.labels);
 
+  // A `craft:` label carries the task's discipline. An unknown craft name
+  // imports with no craft rather than seeding the workspace vocabulary.
+  const craftLabelName = findCraftLabelName(issue.labels);
+  const craft = craftLabelName
+    ? await resolveCraftByName(workspaceId, craftLabelName)
+    : null;
+
   if (existingLink) {
     const updateData: Record<string, unknown> = {
       title: issue.title,
@@ -218,6 +230,7 @@ async function importSingleIssue(
 
     if (priority) updateData.priority = priority;
     if (status) updateData.status = status;
+    if (craft) updateData.craftId = craft.id;
 
     await db
       .update(taskTable)
@@ -245,6 +258,7 @@ async function importSingleIssue(
     description: formatTaskDescriptionFromIssue(issue.body),
     status: status || "to-do",
     priority: priority ?? "low",
+    craftId: craft?.id ?? null,
     number: nextTaskNumber,
   };
 
@@ -293,12 +307,10 @@ async function importLabelsForTask(
         color: label.color ? `#${label.color}` : "#6B7280",
       };
     })
-    .filter(
-      (label) =>
-        label.name &&
-        !label.name.startsWith("priority:") &&
-        !label.name.startsWith("status:"),
-    ) as Array<{ name: string; color: string }>;
+    .filter((label) => label.name && !isSystemLabelName(label.name)) as Array<{
+    name: string;
+    color: string;
+  }>;
 
   for (const labelData of nonSystemLabels) {
     const existingLabelOnTask = await db.query.labelTable.findFirst({

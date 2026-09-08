@@ -799,6 +799,31 @@
 			"deleteError": "लेबल हटाने में विफल",
 			"nameRequired": "लेबल का नाम आवश्यक है"
 		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
+		},
 		"projectGeneral": {
 			"pageTitle": "प्रोजेक्ट सेटिंग",
 			"title": "सामान्य सेटिंग",
@@ -1454,6 +1479,9 @@
 		"assignedTo": "कार्य {{name}} को सौंपा",
 		"changedStatus": "स्थिति {{from}} से {{to}} में बदली",
 		"changedPriority": "प्राथमिकता {{from}} से {{to}} में बदली",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft",
 		"clearedDueDate": "नियत तारीख साफ़ की",
 		"setDueDate": "नियत तारीख {{date}} सेट की",
 		"changedDueDate": "नियत तारीख {{from}} से {{to}} में बदली",
@@ -1734,6 +1762,7 @@
 		"properties": {
 			"title": "गुण",
 			"labels": "लेबल",
+			"craft": "Craft",
 			"copyTaskLink": "कार्य लिंक कॉपी करें",
 			"copyTaskBranch": "कार्य शाखा कॉपी करें",
 			"start": "शुरू",
@@ -1793,6 +1822,11 @@
 					"rose": "गुलाब",
 					"crimson": "किरमिज़ी"
 				}
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -1843,13 +1877,15 @@
 			"allAssignees": "सभी सौंपे गए",
 			"allDueDates": "सभी नियत तारीखें",
 			"allLabels": "सभी लेबल",
+			"allCrafts": "All crafts",
 			"selectedCount": "{{count}} चयनित",
 			"subjects": {
 				"status": "स्थिति",
 				"priority": "प्राथमिकता",
 				"assignee": "सौंपा गया",
 				"dueDate": "नियत तारीख",
-				"labels": "लेबल"
+				"labels": "लेबल",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "में से कोई है",
@@ -1914,6 +1950,10 @@
 		"labels": {
 			"label": "लेबल",
 			"empty": "कोई लेबल उपलब्ध नहीं"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
 		},
 		"update": {
 			"success": "कार्य सफलतापूर्वक अपडेट किया गया",

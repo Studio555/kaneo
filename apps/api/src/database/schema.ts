@@ -424,6 +424,12 @@ export const taskTable = pgTable(
       onUpdate: "cascade",
     }),
     priority: text("priority").default("low").notNull(),
+    // Deleting a craft un-crafts its tasks rather than removing them. Labels
+    // cascade instead, because there the row *is* the attachment.
+    craftId: text("craft_id").references(() => craftTable.id, {
+      onDelete: "set null",
+      onUpdate: "cascade",
+    }),
     startDate: timestamp("start_date", { mode: "date" }),
     dueDate: timestamp("due_date", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
@@ -437,6 +443,7 @@ export const taskTable = pgTable(
     index("task_dueDate_idx").on(table.dueDate),
     index("task_assigneeId_idx").on(table.userId),
     index("task_columnId_idx").on(table.columnId),
+    index("task_craftId_idx").on(table.craftId),
     unique("task_project_number_unique").on(table.projectId, table.number),
   ],
 );
@@ -627,6 +634,41 @@ export const assetTable = pgTable(
     index("asset_taskId_idx").on(table.taskId),
     index("asset_activityId_idx").on(table.activityId),
     index("asset_createdBy_idx").on(table.createdBy),
+  ],
+);
+
+export const craftTable = pgTable(
+  "craft",
+  {
+    id: text("id")
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    // Always a workspace-level definition, never a per-task attachment. This
+    // is the structural break from `labelTable`, where a null taskId is what
+    // distinguishes a definition row from an attachment row.
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaceTable.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    name: text("name").notNull(),
+    color: text("color").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("craft_workspace_id_idx").on(table.workspaceId),
+    // Case-insensitive, because inbound `craft:` labels are resolved
+    // case-insensitively. A plain unique constraint would let `Engineering`
+    // and `engineering` coexist and make that resolution ambiguous.
+    uniqueIndex("craft_workspace_name_unique").on(
+      table.workspaceId,
+      sql`lower(${table.name})`,
+    ),
   ],
 );
 

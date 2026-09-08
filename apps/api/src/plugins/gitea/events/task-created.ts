@@ -7,6 +7,7 @@ import {
   formatIssueTitle,
   getLabelsForIssue,
 } from "../../github/utils/format";
+import { toCraftLabelName } from "../../system-labels";
 import type { PluginContext, TaskCreatedEvent } from "../../types";
 import type { GiteaConfig } from "../config";
 import { createGiteaClient } from "../utils/gitea-api";
@@ -58,8 +59,19 @@ export async function handleTaskCreated(
       },
     });
 
-    const labels = getLabelsForIssue(event.priority, event.status);
-    await addLabelsToIssueGitea(config, createdIssue.number, labels);
+    const labels = getLabelsForIssue(
+      event.priority,
+      event.status,
+      event.craftName,
+    );
+    await addLabelsToIssueGitea(
+      config,
+      createdIssue.number,
+      labels,
+      event.craftName && event.craftColor
+        ? { [toCraftLabelName(event.craftName)]: event.craftColor }
+        : undefined,
+    );
   } catch (error) {
     console.error("Failed to create Gitea issue:", error);
   }

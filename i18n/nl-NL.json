@@ -1152,6 +1152,31 @@
 			"deleteError": "Verwijderen label mislukt",
 			"nameRequired": "Labelnaam is verplicht"
 		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
+		},
 		"giteaIntegration": {
 			"validation": {
 				"baseUrlRequired": "Gitea basis-URL is verplicht",
@@ -1454,6 +1479,9 @@
 		"assignedTo": "heeft de taak toegewezen aan {{name}}",
 		"changedStatus": "heeft de status gewijzigd van {{from}} naar {{to}}",
 		"changedPriority": "heeft de prioriteit gewijzigd van {{from}} naar {{to}}",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft",
 		"clearedDueDate": "heeft de einddatum verwijderd",
 		"setDueDate": "heeft de einddatum ingesteld op {{date}}",
 		"changedDueDate": "heeft de einddatum gewijzigd van {{from}} naar {{to}}",
@@ -1734,6 +1762,7 @@
 		"properties": {
 			"title": "Eigenschappen",
 			"labels": "Labels",
+			"craft": "Craft",
 			"copyTaskLink": "Taaklink kopiëren",
 			"copyTaskBranch": "Taakbranch kopiëren",
 			"start": "Start",
@@ -1782,6 +1811,11 @@
 					"rose": "Roos",
 					"crimson": "Karmozijn"
 				}
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -1832,13 +1866,15 @@
 			"allAssignees": "Alle personen",
 			"allDueDates": "Alle einddatums",
 			"allLabels": "Alle labels",
+			"allCrafts": "All crafts",
 			"selectedCount": "{{count}} geselecteerd",
 			"subjects": {
 				"status": "Status",
 				"priority": "Prioriteit",
 				"assignee": "Toegewezen persoon",
 				"dueDate": "Einddatum",
-				"labels": "Labels"
+				"labels": "Labels",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "is een van",
@@ -1903,6 +1939,10 @@
 		"labels": {
 			"label": "Labels",
 			"empty": "Geen labels beschikbaar"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
 		},
 		"update": {
 			"success": "Taak succesvol bijgewerkt",

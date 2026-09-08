@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import db from "../../../database";
 import { projectTable } from "../../../database/schema";
+import { toCraftLabelName } from "../../system-labels";
 import type { PluginContext, TaskCreatedEvent } from "../../types";
 import type { GitHubConfig } from "../config";
 import {
@@ -55,13 +56,20 @@ export async function handleTaskCreated(
       body: formatIssueBody(event.description, event.taskId),
     });
 
-    const labels = getLabelsForIssue(event.priority, event.status);
+    const labels = getLabelsForIssue(
+      event.priority,
+      event.status,
+      event.craftName,
+    );
     await addLabelsToIssue(
       octokit,
       repositoryOwner,
       repositoryName,
       createdIssue.data.number,
       labels,
+      event.craftName && event.craftColor
+        ? { [toCraftLabelName(event.craftName)]: event.craftColor }
+        : undefined,
     );
 
     await createExternalLink({

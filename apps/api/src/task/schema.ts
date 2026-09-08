@@ -55,6 +55,9 @@ export const createTaskBody = z.object({
   priority,
   status: z.string().openapi({ description: "The target column's slug." }),
   userId: z.string().optional().openapi({ description: "Assignee, if any." }),
+  craftId: z.string().nullable().optional().openapi({
+    description: "The craft (discipline) to file the task under, if any.",
+  }),
 });
 
 export const updateTaskBody = z.object({
@@ -86,12 +89,22 @@ export const importTasksBody = z.object({
       startDate: z.string().nullable().optional(),
       dueDate: z.string().nullable().optional(),
       userId: z.string().nullable().optional(),
+      craft: z.string().nullable().optional().openapi({
+        description:
+          "Craft name, resolved against the target workspace. Unknown names import with no craft.",
+      }),
     }),
   ),
 });
 
 export const updateStatusBody = z.object({ status: z.string() });
 export const updatePriorityBody = z.object({ priority });
+
+export const updateCraftBody = z.object({
+  craftId: z.string().nullable().openapi({
+    description: "The craft to set, or null to clear it.",
+  }),
+});
 export const updateAssigneeBody = z.object({
   userId: z.string().nullable().openapi({ description: "Null unassigns." }),
 });

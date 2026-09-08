@@ -15,6 +15,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/menu";
+import useGetCraftsByWorkspace from "@/hooks/queries/craft/use-get-crafts-by-workspace";
 import {
   type BoardFilters,
   DUE_DATE_FILTER_VALUES,
@@ -149,6 +150,10 @@ export default function BoardToolbar({
   const selectedPriorityIds = filters.priority ?? [];
   const selectedAssigneeIds = filters.assignee ?? [];
   const selectedDueDateFilters = filters.dueDate ?? [];
+  const selectedCraftIds = filters.craft ?? [];
+  const { data: workspaceCrafts = [] } = useGetCraftsByWorkspace(
+    project?.workspaceId ?? "",
+  );
 
   const getStatusDisplayName = (statusId: string) => {
     const column = project?.columns?.find((col) => col.id === statusId);
@@ -228,6 +233,15 @@ export default function BoardToolbar({
       ? selectedDueDateFilters.filter((id) => id !== dueDate)
       : [...selectedDueDateFilters, dueDate];
     updateFilter("dueDate", next.length > 0 ? next : null);
+  };
+
+  // The empty string stands for "no craft", so a task with none is filterable.
+  const toggleCraftFilter = (craftId: string) => {
+    const exists = selectedCraftIds.includes(craftId);
+    const next = exists
+      ? selectedCraftIds.filter((id) => id !== craftId)
+      : [...selectedCraftIds, craftId];
+    updateFilter("craft", next.length > 0 ? next : null);
   };
 
   const toggleLabelGroup = (label: { name: string; color: string }) => {
@@ -469,6 +483,62 @@ export default function BoardToolbar({
 
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="h-8 rounded-md text-sm">
+                    {t("tasks:properties.craft")}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-64">
+                    <DropdownMenuItem
+                      onClick={() => updateFilter("craft", null)}
+                      className="h-8 rounded-md text-sm"
+                    >
+                      <CheckSlot checked={selectedCraftIds.length === 0} />
+                      {t("tasks:boardFilters.allCrafts")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {workspaceCrafts.length > 0 ? (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => toggleCraftFilter("")}
+                          className="h-8 rounded-md text-sm"
+                        >
+                          <CheckSlot checked={selectedCraftIds.includes("")} />
+                          <span className="text-muted-foreground">
+                            {t("tasks:popover.craft.none")}
+                          </span>
+                        </DropdownMenuItem>
+                        {workspaceCrafts.map((craft) => (
+                          <DropdownMenuItem
+                            key={craft.id}
+                            onClick={() => toggleCraftFilter(craft.id)}
+                            className="h-8 rounded-md text-sm"
+                          >
+                            <CheckSlot
+                              checked={selectedCraftIds.includes(craft.id)}
+                            />
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{
+                                backgroundColor: resolveLabelColor(craft.color),
+                              }}
+                            />
+                            <span className="max-w-20 truncate">
+                              {craft.name}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    ) : (
+                      <DropdownMenuItem
+                        disabled
+                        className="h-8 rounded-md text-sm text-muted-foreground"
+                      >
+                        {t("tasks:crafts.empty")}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="h-8 rounded-md text-sm">
                     {t("tasks:properties.labels")}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="w-64">
@@ -626,6 +696,17 @@ export default function BoardToolbar({
                       })
                 }
                 onClear={() => updateFilter("dueDate", null)}
+              />
+            )}
+
+            {filters.craft && filters.craft.length > 0 && (
+              <ActiveFilterChip
+                subject={t("tasks:boardFilters.subjects.craft")}
+                operator={t("tasks:boardFilters.operators.includeAnyOf")}
+                value={t("tasks:boardFilters.selectedCount", {
+                  count: filters.craft.length,
+                })}
+                onClear={() => updateFilter("craft", null)}
               />
             )}
 
