@@ -1,4 +1,5 @@
 import { getGithubApp } from "./utils/github-app";
+import { handleIssueAssigneeChanged } from "./webhooks/issue-assignee-changed";
 import { handleIssueClosed } from "./webhooks/issue-closed";
 import { handleIssueCommentCreated } from "./webhooks/issue-comment-created";
 import { handleIssueEdited } from "./webhooks/issue-edited";
@@ -125,6 +126,21 @@ export function setupWebhookHandlers() {
       throw error;
     }
   });
+
+  for (const event of ["issues.assigned", "issues.unassigned"] as const) {
+    githubApp.webhooks.on(event, async ({ payload }) => {
+      console.log(`[GitHub Webhook] Handling ${event}`);
+      try {
+        await handleIssueAssigneeChanged(
+          payload as Parameters<typeof handleIssueAssigneeChanged>[0],
+        );
+        console.log(`[GitHub Webhook] ${event} handled successfully`);
+      } catch (error) {
+        console.error(`[GitHub Webhook] ${event} handler error:`, error);
+        throw error;
+      }
+    });
+  }
 
   githubApp.webhooks.on("issues.edited", async ({ payload }) => {
     console.log("[GitHub Webhook] Handling issues.edited");

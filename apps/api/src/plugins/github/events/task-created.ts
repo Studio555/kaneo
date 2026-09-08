@@ -15,6 +15,7 @@ import {
 } from "../utils/format";
 import { getGithubApp, getInstallationIdForRepo } from "../utils/github-app";
 import { addLabelsToIssue } from "../utils/labels";
+import { syncIssueAssignee } from "../utils/sync-issue-assignee";
 
 export async function handleTaskCreated(
   event: TaskCreatedEvent,
@@ -84,6 +85,18 @@ export async function handleTaskCreated(
         createdFrom: "kaneo",
       },
     });
+
+    // A task created with an assignee already on it emits only task.created,
+    // so the assignee handlers never see it. The link exists by now, which is
+    // what the assignee write needs.
+    if (event.userId) {
+      await syncIssueAssignee(
+        event.taskId,
+        event.userId,
+        context,
+        "task_created",
+      );
+    }
 
     if (config.commentTaskLinkOnGitHubIssue !== false) {
       const project = await db.query.projectTable.findFirst({

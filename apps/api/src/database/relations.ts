@@ -21,6 +21,7 @@ import {
   teamMemberTable,
   teamTable,
   timeEntryTable,
+  userGithubIdentityTable,
   userNotificationPreferenceTable,
   userNotificationWorkspaceProjectTable,
   userNotificationWorkspaceRuleTable,
@@ -47,6 +48,7 @@ export const userTableRelations = relations(userTable, ({ many, one }) => ({
   notificationWorkspaceRules: many(userNotificationWorkspaceRuleTable),
   sentInvitations: many(invitationTable),
   apikeys: many(apikeyTable),
+  githubIdentity: one(userGithubIdentityTable),
 }));
 
 export const sessionTableRelations = relations(sessionTable, ({ one }) => ({
@@ -62,6 +64,16 @@ export const accountTableRelations = relations(accountTable, ({ one }) => ({
     references: [userTable.id],
   }),
 }));
+
+export const userGithubIdentityTableRelations = relations(
+  userGithubIdentityTable,
+  ({ one }) => ({
+    user: one(userTable, {
+      fields: [userGithubIdentityTable.userId],
+      references: [userTable.id],
+    }),
+  }),
+);
 
 export const verificationTableRelations = relations(
   verificationTable,
