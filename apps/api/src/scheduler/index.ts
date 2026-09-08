@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/node";
 import { Cron } from "croner";
+import { areDatesEnabled } from "../utils/dates-enabled";
 import { checkDueDateReminders } from "./due-date-reminders";
 import { checkProjectWebhookReminders } from "./project-webhook-reminders";
 import { reconcileWorkspaceSeats } from "./seat-reconciliation";
@@ -44,28 +45,47 @@ function withCheckIn<T>(name: string, fn: () => Promise<T>) {
   };
 }
 
+type ScheduledJobDefinition = {
+  name: string;
+  pattern: string;
+  run: () => Promise<unknown>;
+};
+
+// Exported so the scheduling policy can be asserted without constructing real
+// cron timers: which jobs run is a decision; `new Cron` is only how it is carried out.
+export function getScheduledJobDefinitions(): ScheduledJobDefinition[] {
+  const definitions: ScheduledJobDefinition[] = [];
+  if (areDatesEnabled()) {
+    definitions.push({
+      name: "due-date-reminders",
+      pattern: "*/5 * * * *",
+      run: checkDueDateReminders,
+    });
+  }
+  definitions.push(
+    {
+      name: "project-webhook-reminders",
+      pattern: "*/5 * * * *",
+      run: checkProjectWebhookReminders,
+    },
+    {
+      name: "seat-reconciliation",
+      pattern: "17 * * * *",
+      run: reconcileWorkspaceSeats,
+    },
+    {
+      name: "trial-reminders",
+      pattern: "23 * * * *",
+      run: checkTrialReminders,
+    },
+  );
+  return definitions;
+}
+
 export function initializeScheduler(): void {
-  jobs.push(
-    new Cron(
-      "*/5 * * * *",
-      withCheckIn("due-date-reminders", checkDueDateReminders),
-    ),
-  );
-  jobs.push(
-    new Cron(
-      "*/5 * * * *",
-      withCheckIn("project-webhook-reminders", checkProjectWebhookReminders),
-    ),
-  );
-  jobs.push(
-    new Cron(
-      "17 * * * *",
-      withCheckIn("seat-reconciliation", reconcileWorkspaceSeats),
-    ),
-  );
-  jobs.push(
-    new Cron("23 * * * *", withCheckIn("trial-reminders", checkTrialReminders)),
-  );
+  for (const { name, pattern, run } of getScheduledJobDefinitions()) {
+    jobs.push(new Cron(pattern, withCheckIn(name, run)));
+  }
   console.log(
     "⏰ Scheduler started (reminders every 5 minutes, seat reconciliation and trial reminders hourly)",
   );
