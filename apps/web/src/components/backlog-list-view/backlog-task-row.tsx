@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { useDeleteTask } from "@/hooks/mutations/task/use-delete-task";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
+import { useShowDueDates } from "@/hooks/use-dates-enabled";
 import { cn } from "@/lib/cn";
 import {
   dueDateStatusColors,
@@ -56,13 +57,9 @@ export default function BacklogTaskRow({ task }: BacklogTaskRowProps) {
   const { project } = useProjectStore();
   const taskIsCompleted = isTaskCompleted(task.status, project?.columns);
   const { data: workspace } = useActiveWorkspace();
-  const {
-    showAssignees,
-    showPriority,
-    showDueDates,
-    showLabels,
-    showTaskNumbers,
-  } = useUserPreferencesStore();
+  const { showAssignees, showPriority, showLabels, showTaskNumbers } =
+    useUserPreferencesStore();
+  const showDueDates = useShowDueDates();
   const [isDeleteTaskModalOpen, setIsDeleteTaskModalOpen] = useState(false);
   const { mutateAsync: deleteTask } = useDeleteTask();
   const { toggleSelection, isSelected, isFocused } =

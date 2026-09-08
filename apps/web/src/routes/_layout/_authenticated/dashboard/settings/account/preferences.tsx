@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useLocale } from "@/hooks/use-locale";
 import {
   isWeekStartDay,
@@ -67,6 +68,7 @@ function RouteComponent() {
     sidebarDefaultOpen,
     setSidebarDefaultOpen,
   } = useUserPreferencesStore();
+  const datesEnabled = useDatesEnabled();
 
   const themeLabels: Record<string, string> = {
     light: t("settings:preferencesPage.themeLight"),
@@ -332,19 +334,26 @@ function RouteComponent() {
             />
           </div>
 
-          <Separator />
+          {datesEnabled && (
+            <>
+              <Separator />
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">
-                {t("settings:preferencesPage.dueDates")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("settings:preferencesPage.dueDatesDescription")}
-              </p>
-            </div>
-            <Switch checked={showDueDates} onCheckedChange={setShowDueDates} />
-          </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">
+                    {t("settings:preferencesPage.dueDates")}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t("settings:preferencesPage.dueDatesDescription")}
+                  </p>
+                </div>
+                <Switch
+                  checked={showDueDates}
+                  onCheckedChange={setShowDueDates}
+                />
+              </div>
+            </>
+          )}
 
           <Separator />
 
