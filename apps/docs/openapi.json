@@ -90,6 +90,9 @@
           },
           "billingEnabled": {
             "type": "boolean"
+          },
+          "datesEnabled": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -107,7 +110,8 @@
           "disableLoginForm",
           "customOAuthAutoLogin",
           "customOAuthLogoutUrl",
-          "billingEnabled"
+          "billingEnabled",
+          "datesEnabled"
         ]
       },
       "McpClientRegistration": {
