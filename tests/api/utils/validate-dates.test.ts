@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  assertDatesEnabled,
   validateAndParseDate,
   validateDateRange,
 } from "../../../apps/api/src/utils/validate-dates";
@@ -75,5 +76,39 @@ describe("validateDateRange", () => {
   it("should not throw when both are null/undefined", () => {
     expect(() => validateDateRange(null, null)).not.toThrow();
     expect(() => validateDateRange(undefined, undefined)).not.toThrow();
+  });
+});
+
+describe("assertDatesEnabled", () => {
+  let original: string | undefined;
+
+  beforeEach(() => {
+    original = process.env.DISABLE_DATES;
+  });
+
+  afterEach(() => {
+    if (original === undefined) {
+      delete process.env.DISABLE_DATES;
+    } else {
+      process.env.DISABLE_DATES = original;
+    }
+  });
+
+  it("permits any value when dates are enabled", () => {
+    delete process.env.DISABLE_DATES;
+    expect(() => assertDatesEnabled("2026-08-01T00:00:00.000Z")).not.toThrow();
+  });
+
+  it("rejects a non-null value when dates are disabled", () => {
+    process.env.DISABLE_DATES = "true";
+    expect(() => assertDatesEnabled("2026-08-01T00:00:00.000Z")).toThrowError(
+      /Date fields are disabled on this instance/,
+    );
+  });
+
+  it("permits clearing when dates are disabled", () => {
+    process.env.DISABLE_DATES = "true";
+    expect(() => assertDatesEnabled(null)).not.toThrow();
+    expect(() => assertDatesEnabled(undefined)).not.toThrow();
   });
 });

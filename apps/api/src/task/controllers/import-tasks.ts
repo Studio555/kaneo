@@ -9,6 +9,7 @@ import {
 } from "../../database/schema";
 import { publishEvent } from "../../events";
 import { filterAssignableUsers } from "../../utils/assert-assignable-user";
+import { assertDatesEnabled } from "../../utils/validate-dates";
 import {
   coercePriority,
   coerceStatus,
@@ -107,6 +108,9 @@ async function importTasks(
 
       const createdTask = await db.transaction(async (tx) => {
         const taskNumber = await claimTaskNumber(projectId, tx);
+
+        assertDatesEnabled(taskData.startDate);
+        assertDatesEnabled(taskData.dueDate);
 
         const [task] = await tx
           .insert(taskTable)
