@@ -20,6 +20,25 @@ function collectTools() {
 
 const tools = collectTools();
 
+function collectToolsWithDatesDisabled() {
+  const original = process.env.DISABLE_DATES;
+  process.env.DISABLE_DATES = "true";
+  try {
+    const collected = new Map<string, ToolCallback>();
+    const registrar: McpToolRegistrar = {
+      registerTool: (name, _config, callback) => collected.set(name, callback),
+    };
+    registerMcpTools(registrar, "http://api.test", "test-token");
+    return collected;
+  } finally {
+    if (original === undefined) {
+      delete process.env.DISABLE_DATES;
+    } else {
+      process.env.DISABLE_DATES = original;
+    }
+  }
+}
+
 function call(name: string, args: unknown = {}) {
   const tool = tools.get(name);
   if (!tool) throw new Error(`Tool ${name} is not registered`);
@@ -205,5 +224,27 @@ describe("MCP tool catalog", () => {
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("Task not found");
+  });
+});
+
+describe("MCP tools with dates disabled", () => {
+  const disabledTools = collectToolsWithDatesDisabled();
+
+  it("does not register the date and time-entry tools", () => {
+    for (const name of [
+      "update_task_due_date",
+      "get_time_entry",
+      "create_time_entry",
+      "update_time_entry",
+      "list_task_time_entries",
+    ]) {
+      expect(disabledTools.has(name)).toBe(false);
+    }
+  });
+
+  it("still registers the non-date tools", () => {
+    for (const name of ["whoami", "create_task", "update_task", "list_tasks"]) {
+      expect(disabledTools.has(name)).toBe(true);
+    }
   });
 });
