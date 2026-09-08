@@ -36,6 +36,13 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
+const datesEnabled = vi.hoisted(() => ({ value: true }));
+
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => datesEnabled.value,
+  useShowDueDates: () => datesEnabled.value,
+}));
+
 const useGetTasks = vi.fn();
 vi.mock("@/hooks/queries/task/use-get-tasks", () => ({
   useGetTasks: (projectId: string) => useGetTasks(projectId),
@@ -144,6 +151,7 @@ afterEach(() => {
   scrollIntoView.mockClear();
   useGetTasks.mockReset();
   routeParams.projectId = "project-1";
+  datesEnabled.value = true;
 });
 
 describe("Gantt jump-to-today", () => {
@@ -320,5 +328,32 @@ describe("Gantt jump-to-today", () => {
     // component is correct.
     const container = screen.getByTestId("gantt-scroll-container");
     expect(container.style.scrollPaddingLeft).toBe("20rem");
+  });
+});
+
+describe("Gantt route with dates disabled", () => {
+  it("redirects to the board", () => {
+    mockProjectWithTask(makeTask({ title: "Task" }));
+    datesEnabled.value = false;
+    navigate.mockClear();
+
+    render(<GanttRoute />);
+
+    expect(navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
+        params: { workspaceId: "workspace-1", projectId: "project-1" },
+        replace: true,
+      }),
+    );
+  });
+
+  it("does not redirect when dates are enabled", () => {
+    mockProjectWithTask(makeTask({ title: "Task" }));
+    navigate.mockClear();
+
+    render(<GanttRoute />);
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

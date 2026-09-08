@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { shortcuts } from "@/constants/shortcuts";
 import useGetProject from "@/hooks/queries/project/use-get-project";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useProjectWebSocket } from "@/hooks/use-project-websocket";
 import { cn } from "@/lib/cn";
 
@@ -46,13 +47,14 @@ export default function ProjectLayout({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const datesEnabled = useDatesEnabled();
   const { data: project } = useGetProject({ id: projectId, workspaceId });
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
     useState(false);
 
   useProjectWebSocket(projectId);
 
-  const resolvedView =
+  const computedView =
     activeView ??
     (location.pathname.includes("/backlog")
       ? "backlog"
@@ -61,6 +63,15 @@ export default function ProjectLayout({
         : location.pathname.includes("/gantt")
           ? "gantt"
           : "board");
+
+  // Calendar and Gantt render nothing useful without dates. Falling back
+  // here (rather than only hiding the switcher buttons) keeps both the
+  // active-view highlight and handleProjectSwitch below correct when a
+  // stale URL or bookmark points at a disabled view.
+  const resolvedView =
+    !datesEnabled && (computedView === "calendar" || computedView === "gantt")
+      ? "board"
+      : computedView;
 
   const handleNavigateToBacklog = () => {
     navigate({
@@ -185,30 +196,36 @@ export default function ProjectLayout({
                   <SquareKanban className="size-3.5" />
                   {t("tasks:title")}
                 </Button>
-                <Button
-                  variant={resolvedView === "calendar" ? "secondary" : "ghost"}
-                  size="xs"
-                  onClick={handleNavigateToCalendar}
-                  className={cn(
-                    "h-6 gap-1.5 rounded-md px-2 text-xs",
-                    resolvedView !== "calendar" && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarRange className="size-3.5" />
-                  {t("tasks:calendar.title")}
-                </Button>
-                <Button
-                  variant={resolvedView === "gantt" ? "secondary" : "ghost"}
-                  size="xs"
-                  onClick={handleNavigateToGantt}
-                  className={cn(
-                    "h-6 gap-1.5 rounded-md px-2 text-xs",
-                    resolvedView !== "gantt" && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarDays className="size-3.5" />
-                  Gantt
-                </Button>
+                {datesEnabled && (
+                  <>
+                    <Button
+                      variant={
+                        resolvedView === "calendar" ? "secondary" : "ghost"
+                      }
+                      size="xs"
+                      onClick={handleNavigateToCalendar}
+                      className={cn(
+                        "h-6 gap-1.5 rounded-md px-2 text-xs",
+                        resolvedView !== "calendar" && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarRange className="size-3.5" />
+                      {t("tasks:calendar.title")}
+                    </Button>
+                    <Button
+                      variant={resolvedView === "gantt" ? "secondary" : "ghost"}
+                      size="xs"
+                      onClick={handleNavigateToGantt}
+                      className={cn(
+                        "h-6 gap-1.5 rounded-md px-2 text-xs",
+                        resolvedView !== "gantt" && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarDays className="size-3.5" />
+                      Gantt
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>

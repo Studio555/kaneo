@@ -16,6 +16,7 @@ import useGetLabelsByWorkspace from "@/hooks/queries/label/use-get-labels-by-wor
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
 import { useBoardSort } from "@/hooks/use-board-sort";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useTaskFiltersWithLabelsSupport } from "@/hooks/use-task-filters-with-labels-support";
 import { sortTasks } from "@/lib/sort-tasks";
@@ -80,6 +81,7 @@ function RouteComponent() {
   const { projectId, workspaceId } = Route.useParams();
   const { taskId } = Route.useSearch();
   const navigate = useNavigate();
+  const datesEnabled = useDatesEnabled();
   const { data } = useGetTasks(projectId);
   const { project, setProject } = useProjectStore();
   const { viewMode, setViewMode } = useUserPreferencesStore();
@@ -108,21 +110,25 @@ function RouteComponent() {
         [shortcuts.view.board]: () => setViewMode("board"),
         [shortcuts.view.list]: () => setViewMode("list"),
         [shortcuts.view.table]: () => setViewMode("table"),
-        [shortcuts.view.calendar]: () =>
-          navigate({
-            to: "/dashboard/workspace/$workspaceId/project/$projectId/calendar",
-            params: { workspaceId, projectId },
-          }),
-        [shortcuts.view.gantt]: () =>
-          navigate({
-            to: "/dashboard/workspace/$workspaceId/project/$projectId/gantt",
-            params: { workspaceId, projectId },
-          }),
         [shortcuts.view.backlog]: () =>
           navigate({
             to: "/dashboard/workspace/$workspaceId/project/$projectId/backlog",
             params: { workspaceId, projectId },
           }),
+        ...(datesEnabled
+          ? {
+              [shortcuts.view.calendar]: () =>
+                navigate({
+                  to: "/dashboard/workspace/$workspaceId/project/$projectId/calendar",
+                  params: { workspaceId, projectId },
+                }),
+              [shortcuts.view.gantt]: () =>
+                navigate({
+                  to: "/dashboard/workspace/$workspaceId/project/$projectId/gantt",
+                  params: { workspaceId, projectId },
+                }),
+            }
+          : {}),
       },
     },
   });

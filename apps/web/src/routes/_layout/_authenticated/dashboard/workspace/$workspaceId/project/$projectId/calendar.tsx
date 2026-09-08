@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { addMonths, startOfMonth, subMonths } from "date-fns";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import CalendarToolbar from "@/components/calendar/calendar-toolbar";
 import MonthGrid from "@/components/calendar/month-grid";
@@ -10,6 +10,7 @@ import PageTitle from "@/components/page-title";
 import TaskDetailsSheet from "@/components/task/task-details-sheet";
 import { shortcuts } from "@/constants/shortcuts";
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toScheduledTasks } from "@/lib/task-schedule";
@@ -38,6 +39,7 @@ function RouteComponent() {
   const { projectId, workspaceId } = Route.useParams();
   const { taskId } = Route.useSearch();
   const navigate = useNavigate();
+  const datesEnabled = useDatesEnabled();
   const { data: project, isLoading, isError } = useGetTasks(projectId);
   const weekStartsOn = useUserPreferencesStore((state) => state.weekStartsOn);
   const setViewMode = useUserPreferencesStore((state) => state.setViewMode);
@@ -76,6 +78,19 @@ function RouteComponent() {
     navigate({ to: ".", search: {}, replace: true });
   }, [navigate]);
 
+  // The Calendar view renders nothing useful without dates; when the
+  // instance disables them, bounce back to the board rather than showing a
+  // dead page.
+  useEffect(() => {
+    if (!datesEnabled) {
+      navigate({
+        to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
+        params: { workspaceId, projectId },
+        replace: true,
+      });
+    }
+  }, [datesEnabled, navigate, workspaceId, projectId]);
+
   useRegisterShortcuts({
     sequentialShortcuts: {
       [shortcuts.view.prefix]: {
@@ -106,13 +121,17 @@ function RouteComponent() {
             params: { workspaceId, projectId },
           });
         },
-        [shortcuts.view.gantt]: () => {
-          navigate({
-            to: "/dashboard/workspace/$workspaceId/project/$projectId/gantt",
-            params: { workspaceId, projectId },
-          });
-        },
-        [shortcuts.view.calendar]: () => {},
+        ...(datesEnabled
+          ? {
+              [shortcuts.view.gantt]: () => {
+                navigate({
+                  to: "/dashboard/workspace/$workspaceId/project/$projectId/gantt",
+                  params: { workspaceId, projectId },
+                });
+              },
+              [shortcuts.view.calendar]: () => {},
+            }
+          : {}),
       },
     },
   });
