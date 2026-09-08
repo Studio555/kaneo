@@ -526,7 +526,8 @@
 			"labels": "Етикети",
 			"labelsDescription": "Прикажи етикети и тагови на задачите",
 			"priority": "Приоритет",
-			"priorityDescription": "Прикажи индикатори за приоритет"
+			"priorityDescription": "Прикажи индикатори за приоритет",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Програмерски поставки",
@@ -1611,7 +1612,8 @@
 		"boardSearchPlaceholder": "Пребарај тикети...",
 		"view": {
 			"board": "Табла",
-			"list": "Листа"
+			"list": "Листа",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Избери задача",
@@ -1867,7 +1869,8 @@
 				"priority": "Приоритет",
 				"dueDate": "Краен рок",
 				"title": "Наслов",
-				"number": "Број на задача"
+				"number": "Број на задача",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2023,6 +2026,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

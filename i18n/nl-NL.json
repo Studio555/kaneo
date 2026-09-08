@@ -423,7 +423,8 @@
 			"labels": "Labels",
 			"labelsDescription": "Toon taaklabels en tags",
 			"priority": "Prioriteit",
-			"priorityDescription": "Toon prioriteitsindicatoren"
+			"priorityDescription": "Toon prioriteitsindicatoren",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Ontwikkelaarsinstellingen",
@@ -1611,7 +1612,8 @@
 		"boardSearchPlaceholder": "Tickets zoeken...",
 		"view": {
 			"board": "Bord",
-			"list": "Lijst"
+			"list": "Lijst",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Selecteer taak",
@@ -1856,7 +1858,8 @@
 				"priority": "Prioriteit",
 				"dueDate": "Einddatum",
 				"title": "Titel",
-				"number": "Taaknummer"
+				"number": "Taaknummer",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2023,6 +2026,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

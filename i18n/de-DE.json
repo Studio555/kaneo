@@ -526,7 +526,8 @@
 			"labels": "Labels",
 			"labelsDescription": "Aufgabenlabels und Tags anzeigen",
 			"priority": "Priorität",
-			"priorityDescription": "Prioritätsindikatoren anzeigen"
+			"priorityDescription": "Prioritätsindikatoren anzeigen",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Entwicklereinstellungen",
@@ -1611,7 +1612,8 @@
 		"boardSearchPlaceholder": "Tickets suchen...",
 		"view": {
 			"board": "Board",
-			"list": "Liste"
+			"list": "Liste",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Aufgabe auswählen",
@@ -1867,7 +1869,8 @@
 				"priority": "Priorität",
 				"dueDate": "Fälligkeitsdatum",
 				"title": "Titel",
-				"number": "Aufgabennummer"
+				"number": "Aufgabennummer",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2023,6 +2026,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

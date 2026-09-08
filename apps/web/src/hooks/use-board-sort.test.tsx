@@ -56,6 +56,38 @@ describe("useBoardSort", () => {
     });
   });
 
+  it("restores a persisted assignee sort", async () => {
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({ field: "assignee", direction: "asc" }),
+    );
+
+    const { result } = renderHook(() => useBoardSort("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.sort).toEqual({
+        field: "assignee",
+        direction: "asc",
+      });
+    });
+  });
+
+  it("restores a persisted craft sort", async () => {
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({ field: "craft", direction: "asc" }),
+    );
+
+    const { result } = renderHook(() => useBoardSort("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.sort).toEqual({
+        field: "craft",
+        direction: "asc",
+      });
+    });
+  });
+
   it("falls back to the default sort when the stored field is invalid", async () => {
     window.localStorage.setItem(
       storageKey,

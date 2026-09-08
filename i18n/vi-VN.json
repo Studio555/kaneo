@@ -526,7 +526,8 @@
 			"labels": "Nhãn",
 			"labelsDescription": "Hiển thị nhãn và thẻ của công việc",
 			"priority": "Mức ưu tiên",
-			"priorityDescription": "Hiển thị chỉ báo mức ưu tiên"
+			"priorityDescription": "Hiển thị chỉ báo mức ưu tiên",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Cài đặt nhà phát triển",
@@ -1606,7 +1607,8 @@
 		"boardSearchPlaceholder": "Tìm phiếu...",
 		"view": {
 			"board": "Bảng",
-			"list": "Danh sách"
+			"list": "Danh sách",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Chọn công việc",
@@ -1862,7 +1864,8 @@
 				"priority": "Mức ưu tiên",
 				"dueDate": "Ngày đến hạn",
 				"title": "Tiêu đề",
-				"number": "Số công việc"
+				"number": "Số công việc",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2017,6 +2020,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

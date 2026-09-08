@@ -526,7 +526,8 @@
 			"labels": "Мітки",
 			"labelsDescription": "Показувати мітки та теґи завдань",
 			"priority": "Пріоритет",
-			"priorityDescription": "Відображати індикатори пріоритету"
+			"priorityDescription": "Відображати індикатори пріоритету",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Налаштування розробника",
@@ -1621,7 +1622,8 @@
 		"boardSearchPlaceholder": "Пошук тікетів...",
 		"view": {
 			"board": "Дошка",
-			"list": "Список"
+			"list": "Список",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Обрати завдання",
@@ -1877,7 +1879,8 @@
 				"priority": "Пріоритет",
 				"dueDate": "Дата завершення",
 				"title": "Назва",
-				"number": "Номер завдання"
+				"number": "Номер завдання",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2035,6 +2038,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

@@ -526,7 +526,8 @@
 			"labels": "Labels",
 			"labelsDescription": "Show task labels and tags",
 			"priority": "Priority",
-			"priorityDescription": "Display priority indicators"
+			"priorityDescription": "Display priority indicators",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Developer Settings",
@@ -1651,7 +1652,8 @@
 		"boardSearchPlaceholder": "Search tickets...",
 		"view": {
 			"board": "Board",
-			"list": "List"
+			"list": "List",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Select task",
@@ -1907,7 +1909,8 @@
 				"priority": "Priority",
 				"dueDate": "Due date",
 				"title": "Title",
-				"number": "Task number"
+				"number": "Task number",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2063,6 +2066,12 @@
 				"deleteRow": "Delete row",
 				"deleteTable": "Delete table"
 			}
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

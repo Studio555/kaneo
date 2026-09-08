@@ -526,7 +526,8 @@
 			"labels": "Метки",
 			"labelsDescription": "Показывать метки и теги задач",
 			"priority": "Приоритет",
-			"priorityDescription": "Показывать индикаторы приоритета"
+			"priorityDescription": "Показывать индикаторы приоритета",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Настройки разработчика",
@@ -1629,7 +1630,8 @@
 		"boardSearchPlaceholder": "Поиск задач...",
 		"view": {
 			"board": "Доска",
-			"list": "Список"
+			"list": "Список",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Выбрать задачу",
@@ -1889,7 +1891,8 @@
 				"priority": "Приоритет",
 				"dueDate": "Срок выполнения",
 				"title": "Название",
-				"number": "Номер задачи"
+				"number": "Номер задачи",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2091,6 +2094,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

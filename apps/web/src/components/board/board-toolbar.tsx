@@ -1,4 +1,4 @@
-import { Filter, PanelsTopLeft, Rows3, X } from "lucide-react";
+import { Filter, PanelsTopLeft, Rows3, Table2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import SortControl from "@/components/common/sort-control";
@@ -28,6 +28,18 @@ import { getPriorityIcon } from "@/lib/priority";
 import type { SortConfig } from "@/lib/sort-tasks";
 import type { ProjectWithTasks } from "@/types/project";
 
+export type BoardViewMode = "board" | "list" | "table";
+
+const VIEW_OPTIONS = [
+  { mode: "board", icon: PanelsTopLeft, labelKey: "tasks:view.board" },
+  { mode: "list", icon: Rows3, labelKey: "tasks:view.list" },
+  { mode: "table", icon: Table2, labelKey: "tasks:view.table" },
+] as const satisfies ReadonlyArray<{
+  mode: BoardViewMode;
+  icon: typeof Rows3;
+  labelKey: string;
+}>;
+
 type WorkspaceLabel = {
   id: string;
   name: string;
@@ -56,8 +68,8 @@ type BoardToolbarProps = {
   hasActiveFilters: boolean;
   users?: ActiveUsers;
   workspaceLabels: WorkspaceLabel[];
-  viewMode: "board" | "list";
-  setViewMode: (mode: "board" | "list") => void;
+  viewMode: BoardViewMode;
+  setViewMode: (mode: BoardViewMode) => void;
   sort: SortConfig;
   onSortChange: (sort: SortConfig) => void;
 };
@@ -723,30 +735,22 @@ export default function BoardToolbar({
           </div>
 
           <div className="inline-flex items-center gap-1">
-            <button
-              type="button"
-              className={`inline-flex h-6 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors ${
-                viewMode === "board"
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-              }`}
-              onClick={() => setViewMode("board")}
-            >
-              <PanelsTopLeft className="h-3 w-3" />
-              {t("tasks:view.board")}
-            </button>
-            <button
-              type="button"
-              className={`inline-flex h-6 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors ${
-                viewMode === "list"
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-              }`}
-              onClick={() => setViewMode("list")}
-            >
-              <Rows3 className="h-3 w-3" />
-              {t("tasks:view.list")}
-            </button>
+            {VIEW_OPTIONS.map(({ mode, icon: Icon, labelKey }) => (
+              <button
+                key={mode}
+                type="button"
+                aria-current={viewMode === mode ? "page" : undefined}
+                className={`inline-flex h-6 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors ${
+                  viewMode === mode
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                }`}
+                onClick={() => setViewMode(mode)}
+              >
+                <Icon className="h-3 w-3" />
+                {t(labelKey)}
+              </button>
+            ))}
           </div>
         </div>
       </div>

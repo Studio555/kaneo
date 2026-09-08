@@ -526,7 +526,8 @@
 			"labels": "Etiketler",
 			"labelsDescription": "Talep etiketlerini ve etiketleri göster",
 			"priority": "Öncelik",
-			"priorityDescription": "Öncelik göstergelerini görüntüle"
+			"priorityDescription": "Öncelik göstergelerini görüntüle",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Geliştirici Ayarları",
@@ -1611,7 +1612,8 @@
 		"boardSearchPlaceholder": "Talep ara...",
 		"view": {
 			"board": "Pano",
-			"list": "Liste"
+			"list": "Liste",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Talep seç",
@@ -1867,7 +1869,8 @@
 				"priority": "Öncelik",
 				"dueDate": "Bitiş tarihi",
 				"title": "Başlık",
-				"number": "Talep numarası"
+				"number": "Talep numarası",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2023,6 +2026,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

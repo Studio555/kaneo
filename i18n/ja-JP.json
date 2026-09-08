@@ -526,7 +526,8 @@
 			"labels": "ラベル",
 			"labelsDescription": "タスクのラベルとタグを表示します",
 			"priority": "優先度",
-			"priorityDescription": "優先度インジケーターを表示します"
+			"priorityDescription": "優先度インジケーターを表示します",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "開発者設定",
@@ -1606,7 +1607,8 @@
 		"boardSearchPlaceholder": "チケットを検索...",
 		"view": {
 			"board": "ボード",
-			"list": "リスト"
+			"list": "リスト",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "タスクを選択",
@@ -1862,7 +1864,8 @@
 				"priority": "優先度",
 				"dueDate": "期限",
 				"title": "タイトル",
-				"number": "タスク番号"
+				"number": "タスク番号",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2017,6 +2020,12 @@
 				"deleteRow": "行を削除",
 				"deleteTable": "表を削除"
 			}
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

@@ -1,17 +1,8 @@
 import {
   closestCorners,
   DndContext,
-  type DragEndEvent,
-  type DragOverEvent,
   DragOverlay,
-  type DragStartEvent,
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  type UniqueIdentifier,
   useDroppable,
-  useSensor,
-  useSensors,
 } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
@@ -27,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { priorityColorsTaskCard } from "@/constants/priority-colors";
 import { useUpdateTask } from "@/hooks/mutations/task/use-update-task";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useTaskColumnDnd } from "@/hooks/use-task-column-dnd";
 import { cn } from "@/lib/cn";
 import { getColumnIcon } from "@/lib/column";
 import { toast } from "@/lib/toast";
@@ -55,8 +47,16 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
   } = useBulkSelectionStore();
   const { mutate: updateTask } = useUpdateTask();
   const navigate = useNavigate();
-  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
-  const [overColumnId, setOverColumnId] = useState<string | null>(null);
+  const {
+    sensors,
+    activeId,
+    activeTask,
+    overColumnId,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleDragCancel,
+  } = useTaskColumnDnd(project, { disabled: disableDragDrop });
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >(() => {
@@ -118,125 +118,6 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
       },
     },
   });
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: { distance: disableDragDrop ? 999999 : 8 },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: disableDragDrop ? 999999 : 200,
-        tolerance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor),
-  );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id);
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-    if (!over || !activeId) {
-      setOverColumnId(null);
-      return;
-    }
-
-    if (project?.columns?.some((col) => col.id === over.id)) {
-      setOverColumnId(over.id.toString());
-      return;
-    }
-
-    const taskId = over.id.toString();
-    const columnWithTask = project?.columns?.find((col) =>
-      col.tasks.some((task) => task.id === taskId),
-    );
-
-    if (columnWithTask) {
-      setOverColumnId(columnWithTask.id);
-    } else {
-      setOverColumnId(null);
-    }
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    setOverColumnId(null);
-
-    if (!over || !project?.columns) return;
-
-    const activeTaskId = active.id.toString();
-    const overId = over.id.toString();
-
-    const updatedProject = produce(project, (draft) => {
-      const sourceColumn = draft?.columns?.find((col) =>
-        col.tasks.some((task) => task.id === activeTaskId),
-      );
-      const destinationColumn = draft?.columns?.find(
-        (col) =>
-          col.id === overId || col.tasks.some((task) => task.id === overId),
-      );
-
-      if (!sourceColumn || !destinationColumn) return;
-
-      const sourceTaskIndex = sourceColumn.tasks.findIndex(
-        (task) => task.id === activeTaskId,
-      );
-      const task = sourceColumn.tasks[sourceTaskIndex];
-
-      sourceColumn.tasks = sourceColumn.tasks.filter(
-        (t) => t.id !== activeTaskId,
-      );
-
-      if (sourceColumn.id === destinationColumn.id) {
-        let destinationIndex = destinationColumn.tasks.findIndex(
-          (t) => t.id === overId,
-        );
-        if (sourceTaskIndex <= destinationIndex) {
-          destinationIndex += 1;
-        }
-        destinationColumn.tasks.splice(destinationIndex, 0, task);
-
-        destinationColumn.tasks.forEach((t, index) => {
-          updateTask({
-            ...t,
-            status: destinationColumn.slug,
-            position: index,
-          });
-        });
-      } else {
-        // A task's status is a column slug. The column id is only the
-        // droppable identity here, and the two are interchangeable only
-        // because the tasks endpoint happens to return `id: column.slug`.
-        task.status = destinationColumn.slug;
-        const destinationIndex =
-          overId === destinationColumn.id
-            ? destinationColumn.tasks.length
-            : destinationColumn.tasks.findIndex((t) => t.id === overId) + 1;
-
-        destinationColumn.tasks.splice(destinationIndex, 0, task);
-
-        destinationColumn.tasks.forEach((t, index) => {
-          updateTask({
-            ...t,
-            status: destinationColumn.slug,
-            position: index,
-          });
-        });
-
-        sourceColumn.tasks.forEach((t, index) => {
-          updateTask({
-            ...t,
-            position: index,
-          });
-        });
-      }
-    });
-
-    setProject(updatedProject);
-  };
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => ({
@@ -388,13 +269,6 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
   if (!project?.columns) {
     return null;
   }
-
-  const activeTask = activeId
-    ? project.columns
-        ?.flatMap((col) => col.tasks)
-        .find((task) => task.id === activeId)
-    : null;
-
   return (
     <DndContext
       sensors={sensors}
@@ -402,6 +276,7 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
       modifiers={[snapCenterToCursor]}
     >
       <div className="w-full h-full overflow-auto bg-muted/20">

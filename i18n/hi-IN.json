@@ -526,7 +526,8 @@
 			"labels": "लेबल",
 			"labelsDescription": "कार्य लेबल और टैग दिखाएँ",
 			"priority": "प्राथमिकता",
-			"priorityDescription": "प्राथमिकता संकेतक दिखाएँ"
+			"priorityDescription": "प्राथमिकता संकेतक दिखाएँ",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "डेवलपर सेटिंग",
@@ -1611,7 +1612,8 @@
 		"boardSearchPlaceholder": "टिकट खोजें...",
 		"view": {
 			"board": "बोर्ड",
-			"list": "सूची"
+			"list": "सूची",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "कार्य चुनें",
@@ -1867,7 +1869,8 @@
 				"priority": "प्राथमिकता",
 				"dueDate": "नियत तारीख",
 				"title": "शीर्षक",
-				"number": "कार्य संख्या"
+				"number": "कार्य संख्या",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2023,6 +2026,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

@@ -1321,7 +1321,8 @@
 			"title": "Preferencje",
 			"weekStartsOnMonday": "Poniedziałek",
 			"weekStartsOnSaturday": "Sobota",
-			"weekStartsOnSunday": "Niedziela"
+			"weekStartsOnSunday": "Niedziela",
+			"table": "Table"
 		},
 		"projectGeneral": {
 			"dangerZone": "Strefa niebezpieczna",
@@ -2184,7 +2185,8 @@
 				"number": "Numer zadania",
 				"position": "Ręcznie (pozycja)",
 				"priority": "Priorytet",
-				"title": "Tytuł"
+				"title": "Tytuł",
+				"assignee": "Assignee"
 			},
 			"label": "Sortuj"
 		},
@@ -2216,7 +2218,14 @@
 		},
 		"view": {
 			"board": "Tablica",
-			"list": "Lista"
+			"list": "Lista",
+			"table": "Table"
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	}
 }

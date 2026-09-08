@@ -526,7 +526,8 @@
 			"labels": "Ετικέτες",
 			"labelsDescription": "Εμφάνιση ετικετών και tags εργασιών",
 			"priority": "Προτεραιότητα",
-			"priorityDescription": "Εμφάνιση ενδείξεων προτεραιότητας"
+			"priorityDescription": "Εμφάνιση ενδείξεων προτεραιότητας",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Ρυθμίσεις προγραμματιστή",
@@ -1611,7 +1612,8 @@
 		"boardSearchPlaceholder": "Αναζήτηση αιτημάτων...",
 		"view": {
 			"board": "Πίνακας",
-			"list": "Λίστα"
+			"list": "Λίστα",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Επιλέξτε εργασία",
@@ -1867,7 +1869,8 @@
 				"priority": "Προτεραιότητα",
 				"dueDate": "Ημερομηνία λήξης",
 				"title": "Τίτλος",
-				"number": "Αριθμός εργασίας"
+				"number": "Αριθμός εργασίας",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2023,6 +2026,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

@@ -423,7 +423,8 @@
 			"labels": "Etiquetas",
 			"labelsDescription": "Mostrar descripción y etiquetas de las tareas",
 			"priority": "Prioridad",
-			"priorityDescription": "Mostrar indicador de prioridad"
+			"priorityDescription": "Mostrar indicador de prioridad",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Ajustes de Desarrollador",
@@ -1616,7 +1617,8 @@
 		"boardSearchPlaceholder": "Buscar tickets...",
 		"view": {
 			"board": "Tablero",
-			"list": "Lista"
+			"list": "Lista",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Seleccionar tarea",
@@ -1861,7 +1863,8 @@
 				"priority": "Prioridad",
 				"dueDate": "Fecha de vencimiento",
 				"title": "Título",
-				"number": "Número de tarea"
+				"number": "Número de tarea",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2029,6 +2032,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

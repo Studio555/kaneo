@@ -526,7 +526,8 @@
 			"labels": "Label",
 			"labelsDescription": "Tampilkan label dan tag tugas",
 			"priority": "Prioritas",
-			"priorityDescription": "Tampilkan indikator prioritas"
+			"priorityDescription": "Tampilkan indikator prioritas",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Pengaturan Pengembang",
@@ -1606,7 +1607,8 @@
 		"boardSearchPlaceholder": "Cari tiket...",
 		"view": {
 			"board": "Papan",
-			"list": "Daftar"
+			"list": "Daftar",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Pilih tugas",
@@ -1862,7 +1864,8 @@
 				"priority": "Prioritas",
 				"dueDate": "Tenggat",
 				"title": "Judul",
-				"number": "Nomor tugas"
+				"number": "Nomor tugas",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -2017,6 +2020,12 @@
 			"title": "Calendar",
 			"today": "Today",
 			"loadError": "Failed to load tasks."
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {
