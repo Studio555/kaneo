@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/menu";
 import useGetCraftsByWorkspace from "@/hooks/queries/craft/use-get-crafts-by-workspace";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import {
   type BoardFilters,
   DUE_DATE_FILTER_VALUES,
@@ -158,6 +159,7 @@ export default function BoardToolbar({
   onSortChange,
 }: BoardToolbarProps) {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
   const selectedStatusIds = filters.status ?? [];
   const selectedPriorityIds = filters.priority ?? [];
   const selectedAssigneeIds = filters.assignee ?? [];
@@ -440,58 +442,61 @@ export default function BoardToolbar({
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
 
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="h-8 rounded-md text-sm">
-                    {t("tasks:boardFilters.subjects.dueDate")}
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-56">
-                    <div className="grid grid-cols-1 gap-1 p-1">
-                      <button
-                        className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-left text-xs ${
-                          selectedDueDateFilters.length === 0
-                            ? "bg-accent text-accent-foreground"
-                            : "text-foreground/90 hover:bg-accent/60 hover:text-foreground"
-                        }`}
-                        onClick={() => updateFilter("dueDate", null)}
-                        type="button"
-                      >
-                        <CheckSlot
-                          checked={selectedDueDateFilters.length === 0}
-                        />
-                        {t("tasks:boardFilters.allDueDates")}
-                      </button>
-                      {[
-                        DUE_DATE_FILTER_VALUES.dueThisWeek,
-                        DUE_DATE_FILTER_VALUES.dueNextWeek,
-                        DUE_DATE_FILTER_VALUES.noDueDate,
-                      ].map((dueDate) => (
+                {datesEnabled && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="h-8 rounded-md text-sm">
+                      {t("tasks:boardFilters.subjects.dueDate")}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-56">
+                      <div className="grid grid-cols-1 gap-1 p-1">
                         <button
-                          key={dueDate}
                           className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-left text-xs ${
-                            selectedDueDateFilters.includes(dueDate)
+                            selectedDueDateFilters.length === 0
                               ? "bg-accent text-accent-foreground"
                               : "text-foreground/90 hover:bg-accent/60 hover:text-foreground"
                           }`}
-                          onClick={() => toggleDueDateFilter(dueDate)}
+                          onClick={() => updateFilter("dueDate", null)}
                           type="button"
                         >
                           <CheckSlot
-                            checked={selectedDueDateFilters.includes(dueDate)}
+                            checked={selectedDueDateFilters.length === 0}
                           />
-                          {t(
-                            `tasks:backlog.filters.${
-                              dueDate === DUE_DATE_FILTER_VALUES.dueThisWeek
-                                ? "dueThisWeek"
-                                : dueDate === DUE_DATE_FILTER_VALUES.dueNextWeek
-                                  ? "dueNextWeek"
-                                  : "noDueDate"
-                            }`,
-                          )}
+                          {t("tasks:boardFilters.allDueDates")}
                         </button>
-                      ))}
-                    </div>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                        {[
+                          DUE_DATE_FILTER_VALUES.dueThisWeek,
+                          DUE_DATE_FILTER_VALUES.dueNextWeek,
+                          DUE_DATE_FILTER_VALUES.noDueDate,
+                        ].map((dueDate) => (
+                          <button
+                            key={dueDate}
+                            className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-left text-xs ${
+                              selectedDueDateFilters.includes(dueDate)
+                                ? "bg-accent text-accent-foreground"
+                                : "text-foreground/90 hover:bg-accent/60 hover:text-foreground"
+                            }`}
+                            onClick={() => toggleDueDateFilter(dueDate)}
+                            type="button"
+                          >
+                            <CheckSlot
+                              checked={selectedDueDateFilters.includes(dueDate)}
+                            />
+                            {t(
+                              `tasks:backlog.filters.${
+                                dueDate === DUE_DATE_FILTER_VALUES.dueThisWeek
+                                  ? "dueThisWeek"
+                                  : dueDate ===
+                                      DUE_DATE_FILTER_VALUES.dueNextWeek
+                                    ? "dueNextWeek"
+                                    : "noDueDate"
+                              }`,
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
 
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="h-8 rounded-md text-sm">

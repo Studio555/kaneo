@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/menu";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import type { SortConfig, SortDirection, SortField } from "@/lib/sort-tasks";
 
 type SortControlProps = {
@@ -32,18 +33,25 @@ function CheckSlot({ checked }: { checked: boolean }) {
 
 export default function SortControl({ sort, onSortChange }: SortControlProps) {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
   const sortFields: { field: SortField; label: string }[] = [
     { field: "position", label: t("tasks:sort.fields.position") },
     { field: "createdAt", label: t("tasks:sort.fields.createdAt") },
     { field: "priority", label: t("tasks:sort.fields.priority") },
-    { field: "dueDate", label: t("tasks:sort.fields.dueDate") },
+    ...(datesEnabled
+      ? [{ field: "dueDate" as const, label: t("tasks:sort.fields.dueDate") }]
+      : []),
     { field: "title", label: t("tasks:sort.fields.title") },
     { field: "number", label: t("tasks:sort.fields.number") },
     { field: "assignee", label: t("tasks:sort.fields.assignee") },
     { field: "craft", label: t("tasks:properties.craft") },
   ];
   const isActive = sort.field !== "position";
-  const activeLabel = sortFields.find((f) => f.field === sort.field)?.label;
+  // Falls back to the generic label rather than rendering blank when a
+  // previously persisted sort field (e.g. dueDate) is no longer offered.
+  const activeLabel =
+    sortFields.find((f) => f.field === sort.field)?.label ??
+    t("tasks:sort.label");
 
   const handleFieldChange = (field: SortField) => {
     if (field === "position" || field === sort.field) {
