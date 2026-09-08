@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import db from "../../database";
 import { timeEntryTable } from "../../database/schema";
+import { areDatesEnabled } from "../../utils/dates-enabled";
 import { resolveDuration } from "../duration";
 
 type UpdateTimeEntryParams = {
@@ -12,6 +13,12 @@ type UpdateTimeEntryParams = {
 };
 
 async function updateTimeEntry(params: UpdateTimeEntryParams) {
+  if (!areDatesEnabled()) {
+    throw new HTTPException(422, {
+      message: "Date fields are disabled on this instance",
+    });
+  }
+
   const { timeEntryId, startTime, endTime, description } = params;
 
   const [existingTimeEntry] = await db

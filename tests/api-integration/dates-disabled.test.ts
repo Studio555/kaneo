@@ -162,4 +162,63 @@ describe("API integration: dates disabled", () => {
     const task = (await res.json()) as { dueDate: string | null };
     expect(task.dueDate).not.toBeNull();
   });
+
+  it("rejects creating a time entry while dates are disabled", async () => {
+    process.env.DISABLE_DATES = "true";
+    const res = await app.request("/api/time-entry", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        taskId: seededTaskId,
+        startTime: A_DATE,
+      }),
+    });
+    expect(res.status).toBe(422);
+    expect(await res.text()).toContain(DISABLED_MESSAGE);
+  });
+
+  it("still reads time entries while dates are disabled", async () => {
+    // Create one with the flag off, then read it back with the flag on.
+    delete process.env.DISABLE_DATES;
+    const created = await app.request("/api/time-entry", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        taskId: seededTaskId,
+        startTime: A_DATE,
+      }),
+    });
+    expect(created.status).toBe(200);
+    const entryId = ((await created.json()) as { id: string }).id;
+
+    process.env.DISABLE_DATES = "true";
+    const read = await app.request(`/api/time-entry/${entryId}`, {
+      headers: JSON_HEADERS,
+    });
+    expect(read.status).toBe(200);
+  });
+
+  it("rejects updating a time entry while dates are disabled", async () => {
+    // Create one with the flag off so the workspace-access lookup succeeds,
+    // then attempt to update it with the flag on.
+    delete process.env.DISABLE_DATES;
+    const created = await app.request("/api/time-entry", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        taskId: seededTaskId,
+        startTime: A_DATE,
+      }),
+    });
+    expect(created.status).toBe(200);
+    const entryId = ((await created.json()) as { id: string }).id;
+
+    process.env.DISABLE_DATES = "true";
+    const res = await app.request(`/api/time-entry/${entryId}`, {
+      method: "PUT",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ startTime: A_DATE }),
+    });
+    expect(res.status).toBe(422);
+  });
 });
