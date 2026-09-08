@@ -33,7 +33,7 @@ export async function runCli(): Promise<void> {
 }
 
 async function startMcpServer(): Promise<void> {
-  const server = createMcpServer();
+  const server = await createMcpServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

@@ -39,8 +39,37 @@ function run(fn: () => Promise<unknown>): Promise<CallToolResult> {
 export function registerTools(
   server: McpServer,
   ctx: { client: KaneoClient },
+  options: { datesEnabled: boolean } = { datesEnabled: true },
 ): void {
   const { client } = ctx;
+  const { datesEnabled } = options;
+
+  // Cast to the "enabled" shape so handler bodies can read `args.startDate` /
+  // `args.dueDate` unconditionally: when disabled the key is genuinely absent
+  // from the schema (so the field is never advertised or accepted), which
+  // makes the parsed value `undefined` anyway, consistent with this type.
+  const dateInputFields = (
+    datesEnabled
+      ? {
+          startDate: optionalIsoDateTimeSchema,
+          dueDate: optionalIsoDateTimeSchema,
+        }
+      : {}
+  ) as {
+    startDate: typeof optionalIsoDateTimeSchema;
+    dueDate: typeof optionalIsoDateTimeSchema;
+  };
+  const nullableDateInputFields = (
+    datesEnabled
+      ? {
+          startDate: nullableOptionalIsoDateTimeSchema,
+          dueDate: nullableOptionalIsoDateTimeSchema,
+        }
+      : {}
+  ) as {
+    startDate: typeof nullableOptionalIsoDateTimeSchema;
+    dueDate: typeof nullableOptionalIsoDateTimeSchema;
+  };
 
   server.registerTool(
     "whoami",
@@ -245,8 +274,7 @@ export function registerTools(
         description: z.string(),
         priority: prioritySchema,
         status: nonEmptyString,
-        startDate: optionalIsoDateTimeSchema,
-        dueDate: optionalIsoDateTimeSchema,
+        ...dateInputFields,
         userId: optionalNonEmptyString,
       }),
     },
@@ -283,8 +311,7 @@ export function registerTools(
     priority: prioritySchema.optional(),
     projectId: optionalNonEmptyString,
     position: z.number().optional(),
-    startDate: nullableOptionalIsoDateTimeSchema,
-    dueDate: nullableOptionalIsoDateTimeSchema,
+    ...nullableDateInputFields,
     userId: nullableOptionalNonEmptyString,
   });
 
@@ -764,98 +791,104 @@ export function registerTools(
       ),
   );
 
-  server.registerTool(
-    "update_task_due_date",
-    {
-      description: "Set a task's due date. Omit dueDate to clear it.",
-      inputSchema: z.object({
-        taskId: nonEmptyString,
-        dueDate: optionalIsoDateTimeSchema,
-      }),
-    },
-    async (args) =>
-      run(() =>
-        client.json(`/api/task/due-date/${encodeURIComponent(args.taskId)}`, {
-          method: "PUT",
-          body: JSON.stringify(
-            args.dueDate === undefined ? {} : { dueDate: args.dueDate },
+  if (datesEnabled) {
+    server.registerTool(
+      "update_task_due_date",
+      {
+        description: "Set a task's due date. Omit dueDate to clear it.",
+        inputSchema: z.object({
+          taskId: nonEmptyString,
+          dueDate: optionalIsoDateTimeSchema,
+        }),
+      },
+      async (args) =>
+        run(() =>
+          client.json(`/api/task/due-date/${encodeURIComponent(args.taskId)}`, {
+            method: "PUT",
+            body: JSON.stringify(
+              args.dueDate === undefined ? {} : { dueDate: args.dueDate },
+            ),
+          }),
+        ),
+    );
+
+    server.registerTool(
+      "list_task_time_entries",
+      {
+        description: "List the time entries logged against a task.",
+        inputSchema: z.object({ taskId: nonEmptyString }),
+      },
+      async (args) =>
+        run(() =>
+          client.json(
+            `/api/time-entry/task/${encodeURIComponent(args.taskId)}`,
           ),
+        ),
+    );
+
+    server.registerTool(
+      "get_time_entry",
+      {
+        description: "Get a single time entry by ID.",
+        inputSchema: z.object({ id: nonEmptyString }),
+      },
+      async (args) =>
+        run(() =>
+          client.json(`/api/time-entry/${encodeURIComponent(args.id)}`),
+        ),
+    );
+
+    server.registerTool(
+      "create_time_entry",
+      {
+        description:
+          "Log time against a task. Omit endTime to leave the entry running.",
+        inputSchema: z.object({
+          taskId: nonEmptyString,
+          startTime: isoDateTimeSchema,
+          endTime: optionalIsoDateTimeSchema,
+          description: optionalNonEmptyString,
         }),
-      ),
-  );
-
-  server.registerTool(
-    "list_task_time_entries",
-    {
-      description: "List the time entries logged against a task.",
-      inputSchema: z.object({ taskId: nonEmptyString }),
-    },
-    async (args) =>
-      run(() =>
-        client.json(`/api/time-entry/task/${encodeURIComponent(args.taskId)}`),
-      ),
-  );
-
-  server.registerTool(
-    "get_time_entry",
-    {
-      description: "Get a single time entry by ID.",
-      inputSchema: z.object({ id: nonEmptyString }),
-    },
-    async (args) =>
-      run(() => client.json(`/api/time-entry/${encodeURIComponent(args.id)}`)),
-  );
-
-  server.registerTool(
-    "create_time_entry",
-    {
-      description:
-        "Log time against a task. Omit endTime to leave the entry running.",
-      inputSchema: z.object({
-        taskId: nonEmptyString,
-        startTime: isoDateTimeSchema,
-        endTime: optionalIsoDateTimeSchema,
-        description: optionalNonEmptyString,
-      }),
-    },
-    async (args) =>
-      run(() =>
-        client.json("/api/time-entry", {
-          method: "POST",
-          body: JSON.stringify({
-            taskId: args.taskId,
-            startTime: args.startTime,
-            ...(args.endTime ? { endTime: args.endTime } : {}),
-            ...(args.description ? { description: args.description } : {}),
+      },
+      async (args) =>
+        run(() =>
+          client.json("/api/time-entry", {
+            method: "POST",
+            body: JSON.stringify({
+              taskId: args.taskId,
+              startTime: args.startTime,
+              ...(args.endTime ? { endTime: args.endTime } : {}),
+              ...(args.description ? { description: args.description } : {}),
+            }),
           }),
-        }),
-      ),
-  );
+        ),
+    );
 
-  server.registerTool(
-    "update_time_entry",
-    {
-      description:
-        "Update a time entry. startTime is required; omitting endTime keeps the stored one. startTime cannot be later than the end time.",
-      inputSchema: z.object({
-        id: nonEmptyString,
-        startTime: isoDateTimeSchema,
-        endTime: optionalIsoDateTimeSchema,
-        description: optionalNonEmptyString,
-      }),
-    },
-    async (args) =>
-      run(() =>
-        client.json(`/api/time-entry/${encodeURIComponent(args.id)}`, {
-          method: "PUT",
-          body: JSON.stringify({
-            startTime: args.startTime,
-            ...(args.endTime ? { endTime: args.endTime } : {}),
-            ...(args.description ? { description: args.description } : {}),
-          }),
+    server.registerTool(
+      "update_time_entry",
+      {
+        description:
+          "Update a time entry. startTime is required; omitting endTime keeps the stored one. startTime cannot be later than the end time.",
+        inputSchema: z.object({
+          id: nonEmptyString,
+          startTime: isoDateTimeSchema,
+          endTime: optionalIsoDateTimeSchema,
+          description: optionalNonEmptyString,
         }),
-      ),
-  );
+      },
+      async (args) =>
+        run(() =>
+          client.json(`/api/time-entry/${encodeURIComponent(args.id)}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              startTime: args.startTime,
+              ...(args.endTime ? { endTime: args.endTime } : {}),
+              ...(args.description ? { description: args.description } : {}),
+            }),
+          }),
+        ),
+    );
+  }
 
   server.registerTool(
     "list_task_activity",
