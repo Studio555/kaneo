@@ -243,6 +243,16 @@ export const auth = betterAuth({
       // email with a password account and retain access after the victim signs
       // in through a trusted OAuth/OIDC provider.
       requireLocalEmailVerified: true,
+      // Connecting a GitHub account from settings is how a user proves which
+      // GitHub identity is theirs, and people sign in to Kaneo with a work
+      // address while their GitHub carries a personal one. Requiring the two
+      // to match would refuse exactly the accounts worth connecting.
+      //
+      // This is narrower than it looks: the requireLocalEmailVerified check
+      // above still governs an unauthenticated sign-in claiming an existing
+      // account. This clause only lets an already authenticated user attach a
+      // provider account they just consented to.
+      allowDifferentEmails: true,
     },
   },
   emailAndPassword: {

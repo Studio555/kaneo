@@ -29,11 +29,10 @@ async function findGithubSsoAccount(userId: string) {
   });
 }
 
-export async function storeIdentity(params: {
+async function storeIdentity(params: {
   userId: string;
   githubUserId: string;
   githubLogin: string;
-  verified: boolean;
 }) {
   await db
     .insert(userGithubIdentityTable)
@@ -43,7 +42,6 @@ export async function storeIdentity(params: {
       set: {
         githubUserId: params.githubUserId,
         githubLogin: params.githubLogin,
-        verified: params.verified,
         updatedAt: new Date(),
       },
     });
@@ -52,7 +50,6 @@ export async function storeIdentity(params: {
 export type GithubIdentity = {
   githubUserId: string;
   githubLogin: string;
-  verified: boolean;
 };
 
 /**
@@ -74,7 +71,6 @@ export async function resolveGithubIdentity(
     return {
       githubUserId: identity.githubUserId,
       githubLogin: identity.githubLogin,
-      verified: identity.verified,
     };
   }
 
@@ -105,14 +101,9 @@ export async function resolveGithubIdentity(
     userId,
     githubUserId: account.accountId,
     githubLogin: login,
-    verified: true,
   });
 
-  return {
-    githubUserId: account.accountId,
-    githubLogin: login,
-    verified: true,
-  };
+  return { githubUserId: account.accountId, githubLogin: login };
 }
 
 /** The GitHub handle to assign for a Kaneo user, or null when we cannot name one. */
@@ -125,34 +116,20 @@ export async function getGithubLoginForUser(
 }
 
 /**
- * The Kaneo user behind a GitHub account, or null when nobody has proven they
- * own it. Keyed on the numeric id because handles get renamed; a rename
- * refreshes the cached handle on the way through.
+ * The Kaneo user behind a GitHub account, or null when nobody has connected
+ * it.
  *
- * Only an OAuth-proven link counts here. A hand-typed handle is an assertion
- * that this GitHub account is mine, and trusting it inbound would let anyone
- * receive the tasks of whoever they named.
+ * This reads the Better Auth account row rather than our own cache, because
+ * that row *is* the proof: GitHub only issues it to whoever completed the
+ * OAuth flow, and it disappears the moment they disconnect. Reading it
+ * directly means inbound assignment stops immediately on disconnect, with no
+ * cache to invalidate.
  */
 export async function getUserIdForGithubUser(githubUser: {
   id: number;
   login: string;
 }): Promise<string | null> {
   const githubUserId = githubUser.id.toString();
-
-  const identity = await db.query.userGithubIdentityTable.findFirst({
-    where: eq(userGithubIdentityTable.githubUserId, githubUserId),
-  });
-
-  if (identity?.verified) {
-    if (identity.githubLogin !== githubUser.login) {
-      await db
-        .update(userGithubIdentityTable)
-        .set({ githubLogin: githubUser.login, updatedAt: new Date() })
-        .where(eq(userGithubIdentityTable.id, identity.id));
-    }
-
-    return identity.userId;
-  }
 
   const account = await db.query.accountTable.findFirst({
     where: and(
@@ -165,20 +142,12 @@ export async function getUserIdForGithubUser(githubUser: {
     return null;
   }
 
-  // GitHub SSO proves ownership, so it supersedes an unverified claim on the
-  // same account. Without this the squatter's row would hold the unique
-  // constraint and lock the real owner out for good.
-  if (identity && identity.userId !== account.userId) {
-    await db
-      .delete(userGithubIdentityTable)
-      .where(eq(userGithubIdentityTable.id, identity.id));
-  }
-
+  // The event names the current handle, so it is a free chance to correct a
+  // cache that a rename has left stale.
   await storeIdentity({
     userId: account.userId,
     githubUserId,
     githubLogin: githubUser.login,
-    verified: true,
   });
 
   return account.userId;

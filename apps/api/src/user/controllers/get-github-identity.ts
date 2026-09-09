@@ -32,7 +32,6 @@ async function getGithubIdentity(userId: string) {
     ? {
         githubUserId: identity.githubUserId,
         githubLogin: identity.githubLogin,
-        verified: identity.verified,
       }
     : null;
 }

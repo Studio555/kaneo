@@ -1,65 +1,88 @@
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { GithubIcon } from "@/components/icons/github-icon";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import useLinkGithubIdentity from "@/hooks/mutations/user/use-link-github-identity";
 import useUnlinkGithubIdentity from "@/hooks/mutations/user/use-unlink-github-identity";
+import useGetConfig from "@/hooks/queries/config/use-get-config";
 import useGetGithubIdentity from "@/hooks/queries/user/use-get-github-identity";
+import { authClient } from "@/lib/auth-client";
 import { toast } from "@/lib/toast";
 
 /**
- * Links the signed-in user to a GitHub account so assigning a task also
- * assigns the linked GitHub issue to the same person. Signing in with GitHub
- * fills this in on its own; the field is here for everyone else.
+ * Connects the signed-in user's GitHub account so assignment can name the same
+ * person on both sides.
+ *
+ * Connecting runs GitHub's OAuth flow for the account already signed in, which
+ * is what proves the GitHub account is theirs. It is not a way to sign in, and
+ * it does not change how they log in.
  */
 function GithubIdentityCard() {
   const { t } = useTranslation();
+  const { data: config } = useGetConfig();
   const { data, isPending } = useGetGithubIdentity();
-  const { mutateAsync: linkIdentity, isPending: isLinking } =
-    useLinkGithubIdentity();
-  const { mutateAsync: unlinkIdentity, isPending: isUnlinking } =
-    useUnlinkGithubIdentity();
+  const { mutateAsync: forgetIdentity } = useUnlinkGithubIdentity();
+  const [isWorking, setIsWorking] = useState(false);
 
   const linkedLogin = data?.identity?.githubLogin ?? null;
-  const isVerified = data?.identity?.verified ?? false;
-  const [login, setLogin] = useState("");
+  const canConnect = config?.hasGithubSignIn ?? false;
 
-  // The link can arrive after first paint, and is seeded from GitHub SSO
-  // without the user typing anything, so the field follows the server value.
-  useEffect(() => {
-    setLogin(linkedLogin ?? "");
-  }, [linkedLogin]);
-
-  const trimmedLogin = login.trim();
-  const isBusy = isLinking || isUnlinking;
-  const canSave = trimmedLogin !== "" && trimmedLogin !== linkedLogin;
-
-  const handleSave = async () => {
+  const handleConnect = async () => {
+    setIsWorking(true);
     try {
-      await linkIdentity({ login: trimmedLogin });
-      toast.success(t("settings:informationPage.githubIdentity.linked"));
+      const result = await authClient.linkSocial({
+        provider: "github",
+        callbackURL: window.location.href,
+      });
+      if (result.error) throw new Error(result.error.message);
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : t("settings:informationPage.githubIdentity.linkFailed"),
+          : t("settings:informationPage.githubIdentity.connectFailed"),
       );
+    } finally {
+      setIsWorking(false);
     }
   };
 
-  const handleUnlink = async () => {
+  const handleDisconnect = async () => {
+    setIsWorking(true);
     try {
-      await unlinkIdentity();
-      setLogin("");
-      toast.success(t("settings:informationPage.githubIdentity.unlinked"));
+      // Revoking the provider account is the real disconnect; our own row is
+      // only a cache of the handle, and would be seeded again from the
+      // account row on the next read if it were the only thing removed.
+      const result = await authClient.unlinkAccount({ providerId: "github" });
+
+      if (result.error) {
+        // Unlinking needs a fresh session, the same as deleting an account.
+        if (result.error.code === "SESSION_EXPIRED") {
+          toast.error(
+            t("settings:informationPage.githubIdentity.sessionTooOld"),
+          );
+          return;
+        }
+
+        // Refused when GitHub is the only way this user can sign in, which
+        // would otherwise lock them out of Kaneo entirely.
+        if (result.error.code === "FAILED_TO_UNLINK_LAST_ACCOUNT") {
+          toast.error(t("settings:informationPage.githubIdentity.onlyAccount"));
+          return;
+        }
+
+        throw new Error(result.error.message);
+      }
+
+      await forgetIdentity();
+      toast.success(t("settings:informationPage.githubIdentity.disconnected"));
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : t("settings:informationPage.githubIdentity.unlinkFailed"),
+          : t("settings:informationPage.githubIdentity.disconnectFailed"),
       );
+    } finally {
+      setIsWorking(false);
     }
   };
 
@@ -75,66 +98,54 @@ function GithubIdentityCard() {
       </div>
 
       <div className="space-y-4 border border-border rounded-md p-4 bg-sidebar">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-          <div className="w-full space-y-2 sm:w-auto sm:flex-1">
-            <Label
-              htmlFor="github-identity-login"
-              className="text-sm font-medium"
-            >
-              {t("settings:informationPage.githubIdentity.label")}
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="github-identity-login"
-                className="w-full sm:w-64"
-                autoComplete="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                disabled={isPending || isBusy}
-                value={login}
-                onChange={(event) => setLogin(event.target.value)}
-                placeholder={t(
-                  "settings:informationPage.githubIdentity.placeholder",
-                )}
-              />
-              {isPending ? (
-                <Loader2 className="size-4 animate-spin text-muted-foreground" />
-              ) : null}
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex items-center gap-3">
+            <GithubIcon className="size-5 shrink-0" />
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">
+                {linkedLogin
+                  ? t("settings:informationPage.githubIdentity.connectedAs", {
+                      login: linkedLogin,
+                    })
+                  : t("settings:informationPage.githubIdentity.notConnected")}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {!canConnect
+                  ? t("settings:informationPage.githubIdentity.unavailable")
+                  : linkedLogin
+                    ? t("settings:informationPage.githubIdentity.connectedHint")
+                    : t(
+                        "settings:informationPage.githubIdentity.notConnectedHint",
+                      )}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {linkedLogin
-                ? t(
-                    isVerified
-                      ? "settings:informationPage.githubIdentity.connectedVerified"
-                      : "settings:informationPage.githubIdentity.connectedUnverified",
-                    { login: linkedLogin },
-                  )
-                : t("settings:informationPage.githubIdentity.notConnected")}
-            </p>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {linkedLogin ? (
+            {isPending ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : linkedLogin ? (
               <Button
                 variant="ghost"
                 size="sm"
                 type="button"
-                disabled={isBusy}
-                onClick={handleUnlink}
+                disabled={isWorking}
+                onClick={handleDisconnect}
               >
-                {t("settings:informationPage.githubIdentity.unlink")}
+                {t("settings:informationPage.githubIdentity.disconnect")}
               </Button>
-            ) : null}
-            <Button
-              size="sm"
-              type="button"
-              disabled={isBusy || !canSave}
-              onClick={handleSave}
-            >
-              {isLinking
-                ? t("settings:informationPage.githubIdentity.linking")
-                : t("settings:informationPage.githubIdentity.link")}
-            </Button>
+            ) : (
+              <Button
+                size="sm"
+                type="button"
+                disabled={isWorking || !canConnect}
+                onClick={handleConnect}
+              >
+                {isWorking
+                  ? t("settings:informationPage.githubIdentity.connecting")
+                  : t("settings:informationPage.githubIdentity.connect")}
+              </Button>
+            )}
           </div>
         </div>
       </div>
