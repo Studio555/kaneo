@@ -2,7 +2,10 @@ import { eq } from "drizzle-orm";
 import db from "../../database";
 import { userGithubIdentityTable } from "../../database/schema";
 import { resolveGithubIdentity } from "../../plugins/github/services/user-link";
-import { getGithubApp } from "../../plugins/github/utils/github-app";
+import {
+  getAnyInstallationOctokit,
+  getGithubApp,
+} from "../../plugins/github/utils/github-app";
 
 /** The caller's GitHub link, or null when they have none. */
 async function getGithubIdentity(userId: string) {
@@ -14,7 +17,11 @@ async function getGithubIdentity(userId: string) {
   // account is sitting right there. Without the App there is nothing to
   // resolve a handle with, so fall back to whatever is already stored.
   if (githubApp) {
-    return resolveGithubIdentity(userId, githubApp.octokit);
+    // app.octokit cannot call /user/{account_id}; it needs an installation.
+    const octokit = await getAnyInstallationOctokit(githubApp);
+    if (octokit) {
+      return resolveGithubIdentity(userId, octokit);
+    }
   }
 
   const identity = await db.query.userGithubIdentityTable.findFirst({

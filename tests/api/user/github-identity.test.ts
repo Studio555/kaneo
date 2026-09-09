@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => {
   const mockIdentityFindFirst = vi.fn();
   const mockRequest = vi.fn();
   const mockGetGithubApp = vi.fn();
+  const mockGetAnyInstallationOctokit = vi.fn();
 
   const inserted: Array<Record<string, unknown>> = [];
   const deletes: number[] = [];
@@ -37,6 +38,7 @@ const mocks = vi.hoisted(() => {
     mockAccountFindFirst,
     mockRequest,
     mockGetGithubApp,
+    mockGetAnyInstallationOctokit,
     mockDb,
     inserted,
     deletes,
@@ -47,6 +49,9 @@ vi.mock("../../../apps/api/src/database", () => ({ default: mocks.mockDb }));
 
 vi.mock("../../../apps/api/src/plugins/github/utils/github-app", () => ({
   getGithubApp: () => mocks.mockGetGithubApp(),
+  // The controllers must reach GitHub through an installation client; the
+  // app-level one throws before sending anything outside /app*.
+  getAnyInstallationOctokit: () => mocks.mockGetAnyInstallationOctokit(),
 }));
 
 beforeEach(() => {
@@ -55,8 +60,9 @@ beforeEach(() => {
   mocks.deletes.length = 0;
   mocks.mockIdentityFindFirst.mockResolvedValue(undefined);
   mocks.mockAccountFindFirst.mockResolvedValue(undefined);
-  mocks.mockGetGithubApp.mockReturnValue({
-    octokit: { request: (...args: unknown[]) => mocks.mockRequest(...args) },
+  mocks.mockGetGithubApp.mockReturnValue({ octokit: {} });
+  mocks.mockGetAnyInstallationOctokit.mockResolvedValue({
+    request: (...args: unknown[]) => mocks.mockRequest(...args),
   });
   mocks.mockRequest.mockResolvedValue({
     data: { id: 4242, login: "ada" },
@@ -209,5 +215,18 @@ describe("getGithubIdentity", () => {
 
   it("returns null when the user has no link of any kind", async () => {
     await expect(getGithubIdentity("user-1")).resolves.toBeNull();
+  });
+});
+
+describe("linkGithubIdentity without an installation", () => {
+  it("refuses when the App is installed on no repository", async () => {
+    // Without an installation there is no client that can read a user, so
+    // there is no way to verify the handle.
+    mocks.mockGetAnyInstallationOctokit.mockResolvedValue(null);
+
+    await expect(
+      linkGithubIdentity({ userId: "user-1", login: "ada" }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(mocks.inserted).toHaveLength(0);
   });
 });
