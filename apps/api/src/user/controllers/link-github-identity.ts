@@ -2,7 +2,10 @@ import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import db from "../../database";
 import { userGithubIdentityTable } from "../../database/schema";
-import { getGithubApp } from "../../plugins/github/utils/github-app";
+import {
+  getAnyInstallationOctokit,
+  getGithubApp,
+} from "../../plugins/github/utils/github-app";
 
 function isNotFound(error: unknown): boolean {
   return (
@@ -41,9 +44,19 @@ async function linkGithubIdentity({
     });
   }
 
+  // Not app.octokit: that client only works for /app* routes and throws
+  // before sending anything else.
+  const octokit = await getAnyInstallationOctokit(githubApp);
+  if (!octokit) {
+    throw new HTTPException(503, {
+      message:
+        "The GitHub App is not installed on any repository yet, so usernames cannot be verified",
+    });
+  }
+
   let githubUser: { id: number; login: string };
   try {
-    const response = await githubApp.octokit.request("GET /users/{username}", {
+    const response = await octokit.request("GET /users/{username}", {
       username: login,
     });
     githubUser = { id: response.data.id, login: response.data.login };
