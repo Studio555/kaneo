@@ -49,15 +49,13 @@ import { generateDemoName } from "./utils/generate-demo-name";
 import { getDefaultCookieAttributes } from "./utils/get-default-cookie-attributes";
 import { getInvitationEmailSubject } from "./utils/get-invitation-email-subject";
 import { getWorkspaceInvitationEmailCopy } from "./utils/get-workspace-invitation-email-copy";
-import { getGithubSsoOAuthCredentials } from "./utils/github-sso-env";
+import { getGithubSocialProvider } from "./utils/github-sso-env";
 import { isCloud } from "./utils/is-cloud";
 import { isDisposableEmail } from "./utils/is-disposable-email";
 import { isLocalSignInPath } from "./utils/is-local-sign-in-path";
 import { verifyTurnstile } from "./utils/verify-turnstile";
 
 config();
-
-const githubSso = getGithubSsoOAuthCredentials();
 
 const isRegistrationDisabled = process.env.DISABLE_REGISTRATION === "true";
 const isPasswordRegistrationDisabled =
@@ -268,11 +266,7 @@ export const auth = betterAuth({
     },
   },
   socialProviders: {
-    github: {
-      clientId: githubSso.clientId,
-      clientSecret: githubSso.clientSecret,
-      scope: ["user:email"],
-    },
+    github: getGithubSocialProvider(),
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",

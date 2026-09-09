@@ -22,3 +22,26 @@ export function isGithubSsoConfigured(): boolean {
   const { clientId, clientSecret } = getGithubSsoOAuthCredentials();
   return Boolean(clientId && clientSecret);
 }
+
+/**
+ * The Better Auth social provider config for GitHub.
+ *
+ * `disableSignUp` is the point of this helper. GitHub is configured so people
+ * can connect a GitHub account to the Kaneo account they already have, not so
+ * that anybody holding a GitHub account can create one. Allowing sign-up would
+ * add a registration path that an instance's real identity provider never
+ * sees, and Kaneo's DISABLE_REGISTRATION check does not cover it: that check
+ * only guards `/sign-up/email`.
+ *
+ * Existing users can still sign in with GitHub once they have connected it.
+ */
+export function getGithubSocialProvider() {
+  const { clientId, clientSecret } = getGithubSsoOAuthCredentials();
+
+  return {
+    clientId,
+    clientSecret,
+    scope: ["user:email"],
+    disableSignUp: true,
+  };
+}

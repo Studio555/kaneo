@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  getGithubSocialProvider,
   getGithubSsoOAuthCredentials,
   isGithubSsoConfigured,
 } from "../../../apps/api/src/utils/github-sso-env";
@@ -70,6 +71,31 @@ describe("github-sso-env", () => {
     expect(getGithubSsoOAuthCredentials()).toEqual({
       clientId: "legacy-id",
       clientSecret: "legacy-secret",
+    });
+  });
+});
+
+describe("getGithubSocialProvider", () => {
+  it("refuses to create accounts from a GitHub sign-in", () => {
+    // GitHub is configured so that people can connect an existing Kaneo
+    // account, not so that anyone with a GitHub account can make one. Without
+    // this, enabling GitHub adds a registration path that whatever identity
+    // provider an instance actually gates on never sees, and Kaneo's
+    // DISABLE_REGISTRATION check only covers /sign-up/email.
+    process.env.GITHUB_OAUTH_CLIENT_ID = "Iv23li-test";
+    process.env.GITHUB_OAUTH_CLIENT_SECRET = "secret";
+
+    expect(getGithubSocialProvider().disableSignUp).toBe(true);
+  });
+
+  it("carries the configured credentials and email scope", () => {
+    process.env.GITHUB_OAUTH_CLIENT_ID = "Iv23li-test";
+    process.env.GITHUB_OAUTH_CLIENT_SECRET = "secret";
+
+    expect(getGithubSocialProvider()).toMatchObject({
+      clientId: "Iv23li-test",
+      clientSecret: "secret",
+      scope: ["user:email"],
     });
   });
 });
