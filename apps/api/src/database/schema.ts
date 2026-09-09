@@ -140,11 +140,6 @@ export const userGithubIdentityTable = pgTable("user_github_identity", {
     .notNull()
     .unique("user_github_identity_github_user_id_unique"),
   githubLogin: text("github_login").notNull(),
-  // Whether GitHub itself proved this account belongs to the user, through an
-  // OAuth sign-in. A hand-typed handle is only an assertion, so it drives
-  // assignment out to GitHub but is never trusted to route GitHub's own events
-  // back to a Kaneo user.
-  verified: boolean("verified").notNull().default(false),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" })
     .defaultNow()

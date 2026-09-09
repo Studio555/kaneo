@@ -296,24 +296,29 @@ Assigning a task also assigns the linked GitHub issue to the same person, and
 assigning the issue on GitHub assigns the Kaneo task. This needs to know which
 GitHub account belongs to which Kaneo user.
 
-**Linking a GitHub account**
+**Connecting a GitHub account**
 
-- Anyone who signs in with GitHub is linked automatically, with no action needed.
-  GitHub itself proved the account is theirs, so the link is **confirmed**.
-- Everyone else links their account under **Settings → Account → Information**
-  by entering their GitHub username. The username is checked against GitHub and
-  its numeric account id is stored, so a later GitHub rename keeps working.
+Each person connects their own account under **Settings → Account → Information**
+by pressing **Connect GitHub**. That runs GitHub's OAuth flow once for the
+account they are already signed in as, which is what proves the GitHub account
+is theirs. It is not a way to sign in, and it does not change how they sign in
+to Kaneo.
 
-Each GitHub account links to at most one Kaneo user.
+Because it uses the same OAuth client as "Sign in with GitHub", the instance
+needs `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET` set. Without
+them the settings card says so and no accounts can be connected, which means no
+assignee synchronisation in either direction. These are separate from the
+GitHub App credentials that drive the rest of the integration.
 
-<Warning>
-Typing a username asserts that the account is yours but does not prove it, so
-an unconfirmed link works in one direction only: assignments you make in Kaneo
-are mirrored to GitHub, but GitHub's own assignments are never routed back to
-an unconfirmed user. Otherwise anyone could receive the tasks of the person
-whose handle they typed. Signing in with GitHub confirms the link, and takes
-over an unconfirmed claim on the same account.
-</Warning>
+The connection is keyed on GitHub's numeric account id rather than the
+username, so renaming a GitHub account does not break it. Each GitHub account
+connects to at most one Kaneo user, and disconnecting stops inbound assignment
+immediately.
+
+<Note>
+People commonly sign in to Kaneo with a work address while their GitHub account
+carries a personal one, so connecting does not require the two to match.
+</Note>
 
 **What syncs**
 
@@ -335,13 +340,13 @@ changes in Kaneo.
 
 An assignment is skipped, and the reason written to the API logs, when:
 
-- The Kaneo assignee has no linked GitHub account.
+- The Kaneo assignee has not connected a GitHub account.
 - The linked GitHub user cannot be assigned on that repository. GitHub only
   accepts assignees with repository access, and silently drops the rest, so
   Kaneo checks first rather than reporting a success that did not happen.
 - An inbound GitHub assignee is not a member of the project's workspace. The
   workspace boundary holds regardless of what the webhook says.
-- An inbound GitHub assignee's Kaneo link is unconfirmed, as described above.
+- An inbound GitHub assignee has not connected their account to Kaneo.
 
 ### Multiple Organizations
 If you need to connect repositories from multiple GitHub organizations:

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import db, { schema } from "../../apps/api/src/database";
@@ -59,17 +58,18 @@ describe("API integration: GitHub user linking", () => {
       expect(stored).toMatchObject({
         githubUserId: "4242",
         githubLogin: "ada",
-        verified: true,
       });
     });
 
     it("resolves a renamed handle by numeric id and refreshes the cache", async () => {
+      // The numeric id is the identity, so a GitHub rename still resolves,
+      // and the stale handle must not be left behind for outbound assignment.
       const { user } = await createWorkspaceMember();
+      await seedGithubAccount(user.id, "4242");
       await db.insert(schema.userGithubIdentityTable).values({
         userId: user.id,
         githubUserId: "4242",
         githubLogin: "ada",
-        verified: true,
       });
 
       await expect(
@@ -136,46 +136,32 @@ describe("API integration: GitHub user linking", () => {
   });
 
   describe("inbound authority", () => {
-    it("does not route GitHub events to an unverified claim", async () => {
-      // Somebody typing another person's handle must not receive that
-      // person's task assignments.
-      const impostor = await createWorkspaceMember();
-      await db.insert(schema.userGithubIdentityTable).values({
-        userId: impostor.user.id,
-        githubUserId: "4242",
-        githubLogin: "ada",
-        verified: false,
-      });
+    it("routes GitHub events only to a connected account", async () => {
+      const { user } = await createWorkspaceMember();
+      await seedGithubAccount(user.id, "4242");
+
+      await expect(
+        getUserIdForGithubUser({ id: 4242, login: "ada" }),
+      ).resolves.toBe(user.id);
+    });
+
+    it("stops routing as soon as the account is disconnected", async () => {
+      // Disconnecting removes the Better Auth account row. Our cached handle
+      // may still be around, and must not keep the door open.
+      const { user } = await createWorkspaceMember();
+      await seedGithubAccount(user.id, "4242");
+      await getUserIdForGithubUser({ id: 4242, login: "ada" });
+
+      await db
+        .delete(schema.accountTable)
+        .where(eq(schema.accountTable.userId, user.id));
 
       await expect(
         getUserIdForGithubUser({ id: 4242, login: "ada" }),
       ).resolves.toBeNull();
     });
 
-    it("lets GitHub SSO take over an unverified claim on the same account", async () => {
-      const impostor = await createWorkspaceMember();
-      const owner = await createWorkspaceMember();
-      await db.insert(schema.userGithubIdentityTable).values({
-        userId: impostor.user.id,
-        githubUserId: "4242",
-        githubLogin: "ada",
-        verified: false,
-      });
-      await seedGithubAccount(owner.user.id, "4242");
-
-      await expect(
-        getUserIdForGithubUser({ id: 4242, login: "ada" }),
-      ).resolves.toBe(owner.user.id);
-
-      const rows = await db.select().from(schema.userGithubIdentityTable);
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({
-        userId: owner.user.id,
-        verified: true,
-      });
-    });
-
-    it("defaults a stored link to unverified", async () => {
+    it("ignores a cached handle that no account row backs", async () => {
       const { user } = await createWorkspaceMember();
       await db.insert(schema.userGithubIdentityTable).values({
         userId: user.id,
@@ -183,10 +169,9 @@ describe("API integration: GitHub user linking", () => {
         githubLogin: "ada",
       });
 
-      const stored = await db.query.userGithubIdentityTable.findFirst({
-        where: eq(schema.userGithubIdentityTable.userId, user.id),
-      });
-      expect(stored?.verified).toBe(false);
+      await expect(
+        getUserIdForGithubUser({ id: 4242, login: "ada" }),
+      ).resolves.toBeNull();
     });
   });
 
@@ -273,7 +258,7 @@ describe("API integration: GitHub user linking", () => {
 
       const linked = await app.request("/api/user/github-identity");
       expect(await linked.json()).toEqual({
-        identity: { githubUserId: "4242", githubLogin: "ada", verified: false },
+        identity: { githubUserId: "4242", githubLogin: "ada" },
       });
 
       const removed = await app.request("/api/user/github-identity", {
@@ -285,36 +270,6 @@ describe("API integration: GitHub user linking", () => {
           where: eq(schema.userGithubIdentityTable.userId, user.id),
         }),
       ).toBeUndefined();
-    });
-
-    it("rejects a malformed GitHub username before reaching GitHub", async () => {
-      const { user } = await createWorkspaceMember();
-      mockAuthenticatedSession(user as never);
-      const { app } = createApp();
-
-      const response = await app.request("/api/user/github-identity", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login: "not a username" }),
-      });
-
-      expect(response.status).toBe(400);
-    });
-
-    it("reports the GitHub App being unconfigured rather than storing blind", async () => {
-      // This instance has no GitHub App env, so verification is impossible and
-      // storing an unverified handle would only fail later, invisibly.
-      const { user } = await createWorkspaceMember();
-      mockAuthenticatedSession(user as never);
-      const { app } = createApp();
-
-      const response = await app.request("/api/user/github-identity", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login: `ada-${randomUUID().slice(0, 8)}` }),
-      });
-
-      expect(response.status).toBe(503);
     });
 
     it("requires authentication", async () => {

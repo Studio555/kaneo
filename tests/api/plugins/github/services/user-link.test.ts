@@ -127,39 +127,9 @@ describe("getGithubLoginForUser", () => {
 });
 
 describe("getUserIdForGithubUser", () => {
-  it("resolves the Kaneo user from the GitHub numeric id", async () => {
-    mocks.mockIdentityFindFirst.mockResolvedValue({
-      id: "identity-1",
-      userId: "user-1",
-      githubUserId: "4242",
-      githubLogin: "ada",
-      verified: true,
-    });
-
-    await expect(
-      getUserIdForGithubUser({ id: 4242, login: "ada" }),
-    ).resolves.toBe("user-1");
-    expect(mocks.updated).toHaveLength(0);
-  });
-
-  it("refreshes the cached login when the handle was renamed", async () => {
-    // The numeric id is the identity, so a rename must still resolve, and the
-    // stale handle must not be left behind for outbound assignment to use.
-    mocks.mockIdentityFindFirst.mockResolvedValue({
-      id: "identity-1",
-      userId: "user-1",
-      githubUserId: "4242",
-      githubLogin: "ada",
-      verified: true,
-    });
-
-    await expect(
-      getUserIdForGithubUser({ id: 4242, login: "ada-lovelace" }),
-    ).resolves.toBe("user-1");
-    expect(mocks.updated[0]).toMatchObject({ githubLogin: "ada-lovelace" });
-  });
-
-  it("seeds the identity from a GitHub SSO account", async () => {
+  it("resolves the Kaneo user from the Better Auth account row", async () => {
+    // That row is the proof: GitHub only issues it to whoever completed the
+    // OAuth flow, and it is gone the moment they disconnect.
     mocks.mockAccountFindFirst.mockResolvedValue({
       userId: "user-1",
       providerId: "github",
@@ -169,30 +139,16 @@ describe("getUserIdForGithubUser", () => {
     await expect(
       getUserIdForGithubUser({ id: 4242, login: "ada" }),
     ).resolves.toBe("user-1");
-    expect(mocks.inserted[0]).toMatchObject({
+  });
+
+  it("ignores a cached handle with no account row behind it", async () => {
+    // A cache row that outlived its account row must not keep routing
+    // assignments to somebody who has disconnected.
+    mocks.mockIdentityFindFirst.mockResolvedValue({
+      id: "identity-1",
       userId: "user-1",
       githubUserId: "4242",
       githubLogin: "ada",
-    });
-  });
-
-  it("returns null for a GitHub user nobody has linked", async () => {
-    await expect(
-      getUserIdForGithubUser({ id: 4242, login: "ada" }),
-    ).resolves.toBeNull();
-  });
-});
-
-describe("inbound authority", () => {
-  it("ignores an unverified claim when mapping a GitHub user to Kaneo", async () => {
-    // A typed handle is only somebody asserting it is theirs. Trusting it for
-    // inbound would let anyone receive the tasks of the person they named.
-    mocks.mockIdentityFindFirst.mockResolvedValue({
-      id: "identity-1",
-      userId: "impostor",
-      githubUserId: "4242",
-      githubLogin: "ada",
-      verified: false,
     });
 
     await expect(
@@ -200,56 +156,25 @@ describe("inbound authority", () => {
     ).resolves.toBeNull();
   });
 
-  it("maps a GitHub user through an OAuth-proven link", async () => {
-    mocks.mockIdentityFindFirst.mockResolvedValue({
-      id: "identity-1",
-      userId: "user-1",
-      githubUserId: "4242",
-      githubLogin: "ada",
-      verified: true,
-    });
-
-    await expect(
-      getUserIdForGithubUser({ id: 4242, login: "ada" }),
-    ).resolves.toBe("user-1");
-  });
-
-  it("supersedes an unverified claim with the account GitHub SSO proves", async () => {
-    // Otherwise a squatter's claim would permanently block the real owner,
-    // because one GitHub account can only be linked once.
-    mocks.mockIdentityFindFirst.mockResolvedValue({
-      id: "identity-1",
-      userId: "impostor",
-      githubUserId: "4242",
-      githubLogin: "ada",
-      verified: false,
-    });
+  it("refreshes the cached handle from the event that named it", async () => {
     mocks.mockAccountFindFirst.mockResolvedValue({
       userId: "user-1",
       providerId: "github",
       accountId: "4242",
     });
 
-    await expect(
-      getUserIdForGithubUser({ id: 4242, login: "ada" }),
-    ).resolves.toBe("user-1");
+    await getUserIdForGithubUser({ id: 4242, login: "ada-lovelace" });
+
     expect(mocks.inserted[0]).toMatchObject({
       userId: "user-1",
       githubUserId: "4242",
-      verified: true,
+      githubLogin: "ada-lovelace",
     });
   });
 
-  it("marks an SSO-seeded identity as verified", async () => {
-    mocks.mockAccountFindFirst.mockResolvedValue({
-      userId: "user-1",
-      providerId: "github",
-      accountId: "4242",
-    });
-    mocks.mockRequest.mockResolvedValue({ data: { login: "ada" } });
-
-    await getGithubLoginForUser("user-1", octokit);
-
-    expect(mocks.inserted[0]).toMatchObject({ verified: true });
+  it("returns null for a GitHub user nobody has connected", async () => {
+    await expect(
+      getUserIdForGithubUser({ id: 4242, login: "ada" }),
+    ).resolves.toBeNull();
   });
 });

@@ -330,6 +330,13 @@
       "when": 1788900854654,
       "tag": "0046_crazy_salo",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1788942438769,
+      "tag": "0047_foamy_mother_askani",
+      "breakpoints": true
     }
   ]
 }
