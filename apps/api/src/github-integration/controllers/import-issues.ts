@@ -462,6 +462,7 @@ async function linkPullRequestToTask(
       state: pr.state,
       branch: pr.head.ref,
       author: pr.user?.login,
+      repository: `${config.repositoryOwner}/${config.repositoryName}`,
     },
   });
 }

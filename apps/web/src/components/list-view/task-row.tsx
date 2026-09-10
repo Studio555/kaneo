@@ -38,6 +38,7 @@ import {
   getDueDateStatus,
   isTaskCompleted,
 } from "@/lib/due-date-status";
+import { getLinkRepository } from "@/lib/external-link-repository";
 import { getInitials } from "@/lib/get-initials";
 import { getPriorityIcon } from "@/lib/priority";
 import { toast } from "@/lib/toast";
@@ -289,10 +290,7 @@ function TaskRow({ task, projectSlug }: TaskRowProps) {
                           >
                             {pullRequests.map((pr, index) => {
                               const prInfo = getPRInfo(pr);
-                              const repoMatch = pr.url.match(
-                                /github\.com\/([^/]+\/[^/]+)\/pull/,
-                              );
-                              const repoName = repoMatch ? repoMatch[1] : null;
+                              const repoName = getLinkRepository(pr);
                               return (
                                 <div key={pr.id}>
                                   {index > 0 && (

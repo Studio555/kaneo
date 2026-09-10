@@ -14,6 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { getLinkRepositoryName } from "@/lib/external-link-repository";
 import type { ExternalLink } from "@/types/external-link";
 
 interface ExternalLinksAccordionProps {
@@ -138,6 +139,9 @@ export function ExternalLinksAccordion({
                 {link.title || link.externalId}
                 {link.resourceType !== "branch" && (
                   <span className="text-muted-foreground ml-2">
+                    {link.resourceType === "pull_request"
+                      ? getLinkRepositoryName(link)
+                      : null}
                     #{link.externalId}
                   </span>
                 )}

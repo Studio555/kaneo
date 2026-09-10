@@ -95,6 +95,9 @@ export function useProjectWebSocket(projectId: string) {
               queryClient.invalidateQueries({
                 queryKey: ["task", message.taskId],
               });
+              queryClient.invalidateQueries({
+                queryKey: ["external-links", message.taskId],
+              });
             }
 
             if (message.type === "TASK_LABEL_UPDATED") {

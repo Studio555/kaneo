@@ -6,6 +6,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/preview-card";
+import { getLinkRepository } from "@/lib/external-link-repository";
 import type { ExternalLink } from "@/types/external-link";
 
 type PublicPRBadgeProps = {
@@ -115,8 +116,7 @@ export function PublicPRBadge({ externalLinks }: PublicPRBadgeProps) {
         >
           {pullRequests.map((pr, index) => {
             const prInfo = getPRInfo(pr);
-            const repoMatch = pr.url.match(/github\.com\/([^/]+\/[^/]+)\/pull/);
-            const repoName = repoMatch ? repoMatch[1] : null;
+            const repoName = getLinkRepository(pr);
             return (
               <div key={pr.id}>
                 {index > 0 && <hr className="border-border my-1" />}

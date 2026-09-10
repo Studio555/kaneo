@@ -147,8 +147,8 @@ export async function findIntegrationByRepo(owner: string, repo: string) {
   return integrations[0] || null;
 }
 
-export async function findAllIntegrationsByRepo(owner: string, repo: string) {
-  const integrations = await db.query.integrationTable.findMany({
+export async function findAllActiveGithubIntegrations() {
+  return db.query.integrationTable.findMany({
     where: and(
       eq(integrationTable.type, "github"),
       eq(integrationTable.isActive, true),
@@ -157,6 +157,10 @@ export async function findAllIntegrationsByRepo(owner: string, repo: string) {
       project: true,
     },
   });
+}
+
+export async function findAllIntegrationsByRepo(owner: string, repo: string) {
+  const integrations = await findAllActiveGithubIntegrations();
 
   return integrations.filter((integration) => {
     try {

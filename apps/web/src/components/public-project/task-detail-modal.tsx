@@ -18,6 +18,7 @@ import {
   getDueDateStatus,
   isTaskCompleted,
 } from "@/lib/due-date-status";
+import { getLinkRepository } from "@/lib/external-link-repository";
 import { formatDateMedium, formatDateShort } from "@/lib/format";
 import { getInitials } from "@/lib/get-initials";
 import { getPriorityIcon } from "@/lib/priority";
@@ -195,10 +196,7 @@ export function PublicTaskDetailModal({
                   <div className="space-y-2">
                     {pullRequests.map((pr) => {
                       const status = getPRStatus(pr);
-                      const repoMatch = pr.url.match(
-                        /github\.com\/([^/]+\/[^/]+)\/pull/,
-                      );
-                      const repoName = repoMatch ? repoMatch[1] : null;
+                      const repoName = getLinkRepository(pr);
                       return (
                         <a
                           key={pr.id}

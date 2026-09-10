@@ -198,6 +198,24 @@ export function setupWebhookHandlers() {
     }
   });
 
+  // The `Closes owner/repo#12` line that links a pull request from another
+  // repository is often added after the pull request is opened.
+  githubApp.webhooks.on("pull_request.edited", async ({ payload }) => {
+    console.log("[GitHub Webhook] Handling pull_request.edited");
+    try {
+      await handlePullRequestOpened(
+        payload as Parameters<typeof handlePullRequestOpened>[0],
+      );
+      console.log("[GitHub Webhook] pull_request.edited handled successfully");
+    } catch (error) {
+      console.error(
+        "[GitHub Webhook] pull_request.edited handler error:",
+        error,
+      );
+      throw error;
+    }
+  });
+
   githubApp.webhooks.on("pull_request.reopened", async ({ payload }) => {
     console.log("[GitHub Webhook] Handling pull_request.reopened");
     try {

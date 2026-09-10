@@ -1,6 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import db from "../../../database";
 import { externalLinkTable } from "../../../database/schema";
+import { parseLinkMetadata } from "../utils/parse-link-metadata";
+import { sameRepository } from "../utils/repository";
 
 export type CreateExternalLinkParams = {
   taskId: string;
@@ -10,6 +12,21 @@ export type CreateExternalLinkParams = {
   url: string;
   title?: string | null;
   metadata?: Record<string, unknown>;
+};
+
+export type PullRequestLinkMetadata = {
+  state?: string;
+  draft?: boolean;
+  merged?: boolean;
+  mergedAt?: string | null;
+  branch?: string;
+  author?: string;
+  /**
+   * `owner/name` of the repository the pull request lives in. Absent on rows
+   * written before pull requests from other repositories could be linked;
+   * those can only have come from the integration's own repository.
+   */
+  repository?: string;
 };
 
 export type UpdateExternalLinkParams = {
@@ -53,6 +70,38 @@ export async function findExternalLink(
       eq(externalLinkTable.resourceType, resourceType),
       eq(externalLinkTable.externalId, externalId),
     ),
+  });
+}
+
+/**
+ * The links for one pull request. A pull request number is only unique within
+ * its repository, and one integration now sees pull requests from many, so the
+ * bare `externalId` is not enough on its own. Returns every match because one
+ * pull request may be linked to several tasks.
+ */
+export async function findPullRequestLinks(
+  integrationId: string,
+  pullRequestNumber: number,
+  repositoryFullName: string,
+  integrationRepositoryFullName: string,
+) {
+  const candidates = await db.query.externalLinkTable.findMany({
+    where: and(
+      eq(externalLinkTable.integrationId, integrationId),
+      eq(externalLinkTable.resourceType, "pull_request"),
+      eq(externalLinkTable.externalId, pullRequestNumber.toString()),
+    ),
+  });
+
+  return candidates.filter((link) => {
+    const metadata = parseLinkMetadata<PullRequestLinkMetadata>(link.metadata, {
+      externalLinkId: link.id,
+      source: "find_pull_request_links",
+    });
+    return sameRepository(
+      metadata.repository ?? integrationRepositoryFullName,
+      repositoryFullName,
+    );
   });
 }
 

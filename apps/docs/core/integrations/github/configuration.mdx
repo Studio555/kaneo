@@ -253,6 +253,21 @@ You can also provide a custom regex pattern for more complex matching.
 The `{slug}` variable is your project's slug (case-insensitive), `{number}` is the task number, and `{title}` is an optional slug of the task title.
 </Tip>
 
+### Linking Pull Requests From Other Repositories
+
+A task's work often lands in a different repository than the one that holds its issue. A pull request in any repository the GitHub App is installed on links to the task when its branch name, title, or description references the task's issue in the project's connected repository:
+
+- `owner/repo#123`, for example `Closes Studio555/s555-atlas#123`
+- the issue URL, for example `https://github.com/Studio555/s555-atlas/issues/123`
+
+A bare `#123` is not enough, because on GitHub it means an issue in the pull request's own repository. References are picked up when the pull request is opened, reopened, or edited, so the line can be added after the fact. One pull request may reference several issues and links to each of their tasks.
+
+Linked pull requests drive the same status transitions as pull requests in the connected repository: the task moves to the "PR opened" status when the first one opens, and to the "PR merged" status once every linked pull request, in every repository, has merged. Each pull request shows its repository name on the task.
+
+<Info>
+The GitHub App needs the **Pull requests** webhook event on the other repositories too; installing it on the whole organization covers them. Only pull requests from the same installation as the connected repository are linked.
+</Info>
+
 ### Status Transition Configuration
 
 Customize when tasks automatically change status:
