@@ -302,6 +302,37 @@ describe("handleReactionAdded", () => {
     ).rejects.toThrow("connection lost");
   });
 
+  // The channel name is decoration; reading it needs channels:read, which the
+  // Slack app does not necessarily hold. Losing it must not lose the task.
+  it("files the task when the channel name cannot be read", async () => {
+    const client = slackClient({
+      getChannelName: vi.fn(async () => {
+        throw new Error("missing_scope");
+      }),
+    });
+
+    await handleReactionAdded(reaction, { client });
+
+    expect(mocks.createTask).toHaveBeenCalledTimes(1);
+    const args = mocks.createTask.mock.calls[0]?.[0] as Record<string, string>;
+    expect(args.description).not.toContain("#");
+    expect(args.description).toContain("posted by Alex.");
+  });
+
+  it("files the task when the author's name cannot be read", async () => {
+    const client = slackClient({
+      getUserName: vi.fn(async () => {
+        throw new Error("user_not_found");
+      }),
+    });
+
+    await handleReactionAdded(reaction, { client });
+
+    expect(mocks.createTask).toHaveBeenCalledTimes(1);
+    const args = mocks.createTask.mock.calls[0]?.[0] as Record<string, string>;
+    expect(args.description).toContain("an unknown user");
+  });
+
   it("still creates the task when the thread reply fails", async () => {
     const client = slackClient({
       postThreadReply: vi.fn(async () => {

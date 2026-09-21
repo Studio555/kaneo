@@ -43,6 +43,49 @@ describe("createSlackClient", () => {
     });
   });
 
+  // Slack answers invalid_arguments when a read method is given a JSON body;
+  // only the chat.* write methods accept JSON. Form-encoding works for all of
+  // them, so every call uses it.
+  it("sends form-encoded parameters rather than a JSON body", async () => {
+    const calls = stubSlack({
+      "conversations.replies": {
+        ok: true,
+        messages: [{ text: "hi", user: "U1", ts: "1700000000.000100" }],
+      },
+    });
+
+    await createSlackClient("xoxb").getMessage({
+      channel: "C1",
+      ts: "1700000000.000100",
+    });
+
+    expect(calls[0]?.init.headers).toMatchObject({
+      "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+    });
+
+    const params = new URLSearchParams(String(calls[0]?.init.body));
+    expect(params.get("channel")).toBe("C1");
+    expect(params.get("ts")).toBe("1700000000.000100");
+    expect(params.get("oldest")).toBe("1700000000.000100");
+    expect(params.get("inclusive")).toBe("true");
+    expect(params.get("limit")).toBe("1");
+  });
+
+  it("form-encodes the thread reply too", async () => {
+    const calls = stubSlack({ "chat.postMessage": { ok: true } });
+
+    await createSlackClient("xoxb").postThreadReply({
+      channel: "C1",
+      threadTs: "1700000000.000100",
+      text: "Created PS-7",
+    });
+
+    const params = new URLSearchParams(String(calls[0]?.init.body));
+    expect(params.get("channel")).toBe("C1");
+    expect(params.get("thread_ts")).toBe("1700000000.000100");
+    expect(params.get("text")).toBe("Created PS-7");
+  });
+
   it("posts a reply into the thread it was given", async () => {
     const calls = stubSlack({ "chat.postMessage": { ok: true } });
 
@@ -53,11 +96,6 @@ describe("createSlackClient", () => {
     });
 
     expect(calls[0]?.url).toContain("chat.postMessage");
-    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
-      channel: "C1",
-      thread_ts: "1700000000.000100",
-      text: "Created PS-7",
-    });
   });
 
   it("throws when Slack reports a failure in an HTTP 200 body", async () => {

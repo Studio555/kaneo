@@ -99,6 +99,20 @@ async function resolveFirstColumnSlug(projectId: string): Promise<string> {
   return column?.slug ?? "to-do";
 }
 
+/**
+ * Decoration the task can do without: the channel name needs channels:read and
+ * the author name needs the user to still exist. Neither is worth losing the
+ * task over, and the description already reads correctly without them.
+ */
+async function optional<T>(work: Promise<T | null>): Promise<T | null> {
+  try {
+    return await work;
+  } catch (error) {
+    console.error("[Slack App] Optional message detail unavailable:", error);
+    return null;
+  }
+}
+
 async function replyQuietly(
   client: SlackClient,
   params: { channel: string; threadTs: string; text: string },
@@ -188,9 +202,9 @@ export async function handleReactionAdded(
     const [assigneeId, permalink, channelName, authorName] = await Promise.all([
       resolveKaneoUserId(client, event.userId, integration.projectId),
       client.getPermalink({ channel: event.channel, ts: event.ts }),
-      client.getChannelName(event.channel),
+      optional(client.getChannelName(event.channel)),
       message.userId
-        ? client.getUserName(message.userId)
+        ? optional(client.getUserName(message.userId))
         : Promise.resolve(null),
     ]);
 

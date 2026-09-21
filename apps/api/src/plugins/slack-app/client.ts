@@ -27,8 +27,11 @@ export type SlackClient = {
 };
 
 /**
- * The Web API answers 200 with `{ ok: false, error }` for application-level
- * failures, so the HTTP status alone never tells you whether a call worked.
+ * Two Web API rules this has to respect. It answers 200 with
+ * `{ ok: false, error }` for application-level failures, so the HTTP status
+ * alone never tells you whether a call worked. And only the chat.* write
+ * methods accept a JSON body: a read method such as conversations.replies
+ * rejects one with `invalid_arguments`, so every call is form-encoded.
  */
 async function callSlack<T>(
   botToken: string,
@@ -45,13 +48,18 @@ async function callSlack<T>(
       data: { integration: "slack-app", method },
     });
 
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(body)) {
+      params.set(key, String(value));
+    }
+
     const response = await fetch(`${SLACK_API_BASE}/${method}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${botToken}`,
-        "Content-Type": "application/json; charset=utf-8",
+        "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
       },
-      body: JSON.stringify(body),
+      body: params.toString(),
       signal: controller.signal,
     });
 
