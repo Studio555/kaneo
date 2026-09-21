@@ -995,6 +995,11 @@ export const externalLinkTable = pgTable(
     index("external_link_integrationId_idx").on(table.integrationId),
     index("external_link_externalId_idx").on(table.externalId),
     index("external_link_resourceType_idx").on(table.resourceType),
+    // Only Slack messages: a pull request legitimately links to several tasks,
+    // so this cannot be a unique constraint across every resource type.
+    uniqueIndex("external_link_slack_message_unique")
+      .on(table.integrationId, table.externalId)
+      .where(sql`${table.resourceType} = 'slack_message'`),
   ],
 );
 

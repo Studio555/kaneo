@@ -7,7 +7,7 @@ import { sameRepository } from "../utils/repository";
 export type CreateExternalLinkParams = {
   taskId: string;
   integrationId: string;
-  resourceType: "issue" | "pull_request" | "branch";
+  resourceType: "issue" | "pull_request" | "branch" | "slack_message";
   externalId: string;
   url: string;
   title?: string | null;

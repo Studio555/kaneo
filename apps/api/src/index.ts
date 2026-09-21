@@ -48,6 +48,9 @@ import project from "./project";
 import { getPublicProject } from "./project/controllers/get-public-project";
 import { initializeScheduler, shutdownScheduler } from "./scheduler";
 import search from "./search";
+import slackAppIntegration, {
+  handleSlackAppEventsRoute,
+} from "./slack-app-integration";
 import slackIntegration from "./slack-integration";
 import { getPrivateObject } from "./storage/s3";
 import task from "./task";
@@ -233,6 +236,8 @@ export function createApp() {
   });
 
   api.post("/github-integration/webhook", handleGithubWebhookRoute);
+
+  api.post("/slack-app/events", handleSlackAppEventsRoute);
 
   api.post(
     "/gitea-integration/webhook/:integrationId",
@@ -606,6 +611,10 @@ export function createApp() {
     mattermostIntegration,
   );
   const slackIntegrationApi = api.route("/slack-integration", slackIntegration);
+  const slackAppIntegrationApi = api.route(
+    "/slack-app-integration",
+    slackAppIntegration,
+  );
   const telegramIntegrationApi = api.route(
     "/telegram-integration",
     telegramIntegration,
@@ -776,6 +785,7 @@ export function createApp() {
     searchApi,
     mattermostIntegrationApi,
     slackIntegrationApi,
+    slackAppIntegrationApi,
     taskApi,
     taskRelationApi,
     telegramIntegrationApi,
@@ -896,6 +906,7 @@ const {
   publicProjectApi,
   searchApi,
   slackIntegrationApi,
+  slackAppIntegrationApi,
   taskApi,
   taskRelationApi,
   telegramIntegrationApi,
@@ -936,6 +947,7 @@ export type AppType =
   | typeof discordIntegrationApi
   | typeof mattermostIntegrationApi
   | typeof slackIntegrationApi
+  | typeof slackAppIntegrationApi
   | typeof telegramIntegrationApi
   | typeof taskRelationApi
   | typeof externalLinkApi

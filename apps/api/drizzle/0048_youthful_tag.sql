@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "external_link_slack_message_unique" ON "external_link" USING btree ("integration_id","external_id") WHERE "external_link"."resource_type" = 'slack_message';
