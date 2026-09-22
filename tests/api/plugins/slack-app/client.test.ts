@@ -98,6 +98,47 @@ describe("createSlackClient", () => {
     expect(calls[0]?.url).toContain("chat.postMessage");
   });
 
+  it("reacts to a message by channel and timestamp", async () => {
+    const calls = stubSlack({ "reactions.add": { ok: true } });
+
+    await createSlackClient("xoxb").addReaction({
+      channel: "C1",
+      ts: "1700000000.000100",
+      name: "white_check_mark",
+    });
+
+    expect(calls[0]?.url).toContain("reactions.add");
+    const params = new URLSearchParams(String(calls[0]?.init.body));
+    expect(params.get("channel")).toBe("C1");
+    expect(params.get("timestamp")).toBe("1700000000.000100");
+    expect(params.get("name")).toBe("white_check_mark");
+  });
+
+  // A task can reach a final column more than once, and Slack redelivers.
+  it("treats an existing reaction as success", async () => {
+    stubSlack({ "reactions.add": { ok: false, error: "already_reacted" } });
+
+    await expect(
+      createSlackClient("xoxb").addReaction({
+        channel: "C1",
+        ts: "1",
+        name: "white_check_mark",
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("still throws when reacting fails for a real reason", async () => {
+    stubSlack({ "reactions.add": { ok: false, error: "missing_scope" } });
+
+    await expect(
+      createSlackClient("xoxb").addReaction({
+        channel: "C1",
+        ts: "1",
+        name: "white_check_mark",
+      }),
+    ).rejects.toThrow("missing_scope");
+  });
+
   it("throws when Slack reports a failure in an HTTP 200 body", async () => {
     stubSlack({ "chat.postMessage": { ok: false, error: "not_in_channel" } });
 

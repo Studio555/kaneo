@@ -6,13 +6,20 @@ import type { PluginContext, TaskStatusChangedEvent } from "../types";
 import { createSlackClient } from "./client";
 import { SLACK_MESSAGE_RESOURCE_TYPE } from "./reaction-added";
 
-type ThreadReplier = {
+type CompletionReporter = {
   postThreadReply(params: {
     channel: string;
     threadTs: string;
     text: string;
   }): Promise<void>;
+  addReaction(params: {
+    channel: string;
+    ts: string;
+    name: string;
+  }): Promise<void>;
 };
+
+const DONE_REACTION = "white_check_mark";
 
 type SlackMessageLinkMetadata = {
   channel?: string;
@@ -40,7 +47,7 @@ function parseMetadata(metadata: unknown): SlackMessageLinkMetadata | null {
 export async function notifyTaskCompleted(
   event: TaskStatusChangedEvent,
   context: PluginContext,
-  client: ThreadReplier,
+  client: CompletionReporter,
 ): Promise<void> {
   const columns = await db.query.columnTable.findMany({
     where: eq(columnTable.projectId, event.projectId),
@@ -83,16 +90,37 @@ export async function notifyTaskCompleted(
 
   const identifier = `${project.slug.toUpperCase()}-${task.number}`;
 
-  try {
-    await client.postThreadReply({
-      channel: metadata.channel,
-      threadTs,
-      text: `✅ ${identifier} is done.`,
-    });
-  } catch (error) {
-    // Plugin handlers run off the event bus; a Slack outage must not surface as
-    // a failed status change for the person who moved the card.
-    console.error("[Slack App] Failed to post completion reply:", error);
+  // Independent of each other: the reply and the checkmark each say the task is
+  // done, and losing one is no reason to lose the other. Plugin handlers run off
+  // the event bus, so neither may surface as a failed status change for the
+  // person who moved the card.
+  const announcements: Array<[string, Promise<void>]> = [
+    [
+      "completion reply",
+      client.postThreadReply({
+        channel: metadata.channel,
+        threadTs,
+        text: `✅ ${identifier} is done.`,
+      }),
+    ],
+    [
+      "completion reaction",
+      client.addReaction({
+        channel: metadata.channel,
+        // The message that was reacted to, so the checkmark lands beside the
+        // reaction that filed it rather than on the thread's parent.
+        ts: metadata.messageTs ?? threadTs,
+        name: DONE_REACTION,
+      }),
+    ],
+  ];
+
+  for (const [what, work] of announcements) {
+    try {
+      await work;
+    } catch (error) {
+      console.error(`[Slack App] Failed to post ${what}:`, error);
+    }
   }
 }
 

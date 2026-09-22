@@ -26,8 +26,12 @@ vi.mock(
   }),
 );
 
-function slackClient() {
-  return { postThreadReply: vi.fn(async () => undefined) };
+function slackClient(overrides: Record<string, unknown> = {}) {
+  return {
+    postThreadReply: vi.fn(async () => undefined),
+    addReaction: vi.fn(async () => undefined),
+    ...overrides,
+  };
 }
 
 const context = {
@@ -80,6 +84,54 @@ describe("notifyTaskCompleted", () => {
     });
   });
 
+  it("marks the original message done with a checkmark", async () => {
+    const client = slackClient();
+
+    await notifyTaskCompleted(statusChanged, context, client);
+
+    expect(client.addReaction).toHaveBeenCalledWith({
+      channel: "C1",
+      ts: "1700000000.000100",
+      name: "white_check_mark",
+    });
+  });
+
+  it("still replies in the thread when the checkmark cannot be added", async () => {
+    const client = slackClient({
+      addReaction: vi.fn(async () => {
+        throw new Error("missing_scope");
+      }),
+    });
+
+    await notifyTaskCompleted(statusChanged, context, client);
+
+    expect(client.postThreadReply).toHaveBeenCalledTimes(1);
+  });
+
+  it("still adds the checkmark when the thread reply fails", async () => {
+    const client = slackClient({
+      postThreadReply: vi.fn(async () => {
+        throw new Error("channel_not_found");
+      }),
+    });
+
+    await notifyTaskCompleted(statusChanged, context, client);
+
+    expect(client.addReaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not mark anything when the column is not final", async () => {
+    const client = slackClient();
+
+    await notifyTaskCompleted(
+      { ...statusChanged, newStatus: "in-progress" },
+      context,
+      client,
+    );
+
+    expect(client.addReaction).not.toHaveBeenCalled();
+  });
+
   it("stays quiet when the new column is not a final one", async () => {
     const client = slackClient();
 
@@ -127,11 +179,14 @@ describe("notifyTaskCompleted", () => {
   });
 
   it("does not let a Slack failure escape into the event bus", async () => {
-    const client = {
+    const client = slackClient({
       postThreadReply: vi.fn(async () => {
         throw new Error("channel_not_found");
       }),
-    };
+      addReaction: vi.fn(async () => {
+        throw new Error("missing_scope");
+      }),
+    });
 
     await expect(
       notifyTaskCompleted(statusChanged, context, client),

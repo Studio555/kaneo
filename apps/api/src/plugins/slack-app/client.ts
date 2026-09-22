@@ -24,6 +24,11 @@ export type SlackClient = {
     threadTs: string;
     text: string;
   }): Promise<void>;
+  addReaction(params: {
+    channel: string;
+    ts: string;
+    name: string;
+  }): Promise<void>;
 };
 
 /**
@@ -168,6 +173,27 @@ export function createSlackClient(botToken: string): SlackClient {
         thread_ts: threadTs,
         text,
       });
+    },
+
+    async addReaction({ channel, ts, name }) {
+      try {
+        await callSlack(botToken, "reactions.add", {
+          channel,
+          timestamp: ts,
+          name,
+        });
+      } catch (error) {
+        // The reaction is already where it should be; a task reaching a final
+        // column twice, or a Slack redelivery, is not a failure.
+        if (
+          error instanceof Error &&
+          error.message.includes("already_reacted")
+        ) {
+          return;
+        }
+
+        throw error;
+      }
     },
   };
 }
