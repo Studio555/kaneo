@@ -6,12 +6,12 @@ export type TaskRelationEdge = {
 
 export type SubtaskRow<T> = {
   task: T;
-  /** Nesting level; 0 for a task in its own status group. */
+  /** Nesting level; 0 for a top-level row in its own status group. */
   depth: number;
   /**
-   * Unique per rendered row rather than per task. A child keeps its own
-   * top-level row and is repeated under each parent, so `task.id` appears more
-   * than once and cannot key a row or identify a drag target.
+   * Unique per rendered row rather than per task. A task with several parents
+   * is rendered under each of them, so `task.id` can appear more than once and
+   * cannot key a row or identify a drag target.
    */
   rowId: string;
   childCount: number;
@@ -58,6 +58,44 @@ export function buildSubtaskChildren(
 }
 
 /**
+ * The tasks that are shown only beneath a parent, not as rows of their own.
+ *
+ * A subtask whose parent is in view belongs under that parent, so listing it
+ * again at the top level would show it twice. Membership is decided by
+ * reachability from a task that has no parent in view: a task whose only
+ * parents form a cycle has no root to hang from and would otherwise vanish,
+ * so it keeps its top-level row.
+ */
+export function findNestedTaskIds<T extends { id: string }>(
+  children: Map<string, string[]>,
+  tasksById: Map<string, T>,
+): Set<string> {
+  const hasParent = new Set<string>();
+  for (const [parentId, childIds] of children) {
+    if (!tasksById.has(parentId)) continue;
+    for (const childId of childIds) {
+      if (childId !== parentId && tasksById.has(childId)) {
+        hasParent.add(childId);
+      }
+    }
+  }
+
+  const nested = new Set<string>();
+  const stack = [...tasksById.keys()].filter((id) => !hasParent.has(id));
+  while (stack.length > 0) {
+    const id = stack.pop() as string;
+    for (const childId of children.get(id) ?? []) {
+      if (hasParent.has(childId) && !nested.has(childId)) {
+        nested.add(childId);
+        stack.push(childId);
+      }
+    }
+  }
+
+  return nested;
+}
+
+/**
  * A task may have several parents, so expanding every occurrence enumerates
  * simple paths rather than tasks and can grow exponentially: twelve layers of
  * two tasks each, 24 tasks and 44 edges, reach 16,356 rows. Reaching that
@@ -70,24 +108,27 @@ export function buildSubtaskChildren(
 const MAX_NESTED_ROWS = 1000;
 
 /**
- * Expands a column's tasks into rows, repeating each subtask beneath its
+ * Expands a column's tasks into rows, rendering each subtask beneath its
  * parent when that parent is expanded.
  *
- * A child is not moved out of its own status group: it keeps its top-level row
- * and also appears, indented, under the parent. That leaves grouping, the
- * per-column counts and the existing drag targets untouched.
+ * A subtask with a parent in view is rendered only there, under the parent's
+ * status group, and not again in its own; see {@link findNestedTaskIds}.
+ * Pass `nestedTaskIds` when flattening several columns of one project, so it
+ * is computed once rather than per column.
  */
 export function flattenSubtaskRows<T extends { id: string }>({
   tasks,
   children,
   tasksById,
   isExpanded,
+  nestedTaskIds = findNestedTaskIds(children, tasksById),
   maxNestedRows = MAX_NESTED_ROWS,
 }: {
   tasks: readonly T[];
   children: Map<string, string[]>;
   tasksById: Map<string, T>;
   isExpanded: (rowId: string) => boolean;
+  nestedTaskIds?: Set<string>;
   maxNestedRows?: number;
 }): SubtaskRow<T>[] {
   const rows: SubtaskRow<T>[] = [];
@@ -133,10 +174,9 @@ export function flattenSubtaskRows<T extends { id: string }>({
     }
   };
 
-  // Top-level rows are always emitted; the cap governs nesting only, because
-  // the status grouping and the per-column counts depend on every task in the
-  // column having a row.
+  // Top-level rows are always emitted; the cap governs nesting only.
   for (const task of tasks) {
+    if (nestedTaskIds.has(task.id)) continue;
     walk(task, 0, new Set(), "");
   }
 

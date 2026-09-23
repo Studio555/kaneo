@@ -16,12 +16,22 @@ import { Archive, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateTask } from "@/hooks/mutations/task/use-update-task";
+import useGetProjectTaskRelations from "@/hooks/queries/task-relation/use-get-project-task-relations";
 import { useShowDueDates } from "@/hooks/use-dates-enabled";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useTaskColumnDnd } from "@/hooks/use-task-column-dnd";
 import { cn } from "@/lib/cn";
 import { getColumnIcon } from "@/lib/column";
+import {
+  readExpandedRows,
+  writeExpandedRows,
+} from "@/lib/expanded-rows-storage";
 import type { SortConfig } from "@/lib/sort-tasks";
+import {
+  buildSubtaskChildren,
+  findNestedTaskIds,
+  flattenSubtaskRows,
+} from "@/lib/subtask-tree";
 import { toast } from "@/lib/toast";
 import useBulkSelectionStore from "@/store/bulk-selection";
 import useProjectStore from "@/store/project";
@@ -41,12 +51,26 @@ type TableViewProps = {
   disableDragDrop?: boolean;
 };
 
+type Task = ProjectWithTasks["columns"][number]["tasks"][number];
+
+type SubtaskTree = {
+  children: Map<string, string[]>;
+  tasksById: Map<string, Task>;
+  nestedTaskIds: Set<string>;
+  expandedRows: Record<string, boolean>;
+  onToggleRow: (rowId: string) => void;
+  /** Relations still loading: hold the toggle slot so titles do not shift. */
+  isLoading: boolean;
+};
+
 type ColumnSectionProps = {
   column: ProjectWithTasks["columns"][number];
   columns: TableColumn[];
   projectSlug: string;
   isExpanded: boolean;
   isDropTarget: boolean;
+  activeTaskId: string | null;
+  subtaskTree: SubtaskTree;
   onToggle: (sectionId: string) => void;
   onAddTask: (sectionId: string) => void;
   onArchive: (column: ProjectWithTasks["columns"][number]) => void;
@@ -61,11 +85,34 @@ function ColumnSection({
   projectSlug,
   isExpanded,
   isDropTarget,
+  activeTaskId,
+  subtaskTree,
   onToggle,
   onAddTask,
   onArchive,
 }: ColumnSectionProps) {
   const { t } = useTranslation();
+
+  const rows = flattenSubtaskRows({
+    tasks: column.tasks,
+    children: subtaskTree.children,
+    tasksById: subtaskTree.tasksById,
+    nestedTaskIds: subtaskTree.nestedTaskIds,
+    // Nothing stays expanded during a drag: nested rows are not sortable, so
+    // they would stay put while the rows around them moved.
+    isExpanded: (rowId) =>
+      !activeTaskId && Boolean(subtaskTree.expandedRows[rowId]),
+  });
+
+  // A subtask renders under its parent instead of in its own group, so the
+  // group counts and sorts only the rows that are its own.
+  const topLevelTasks = rows
+    .filter((row) => row.depth === 0)
+    .map((row) => row.task);
+
+  const groupHasSubtasks =
+    subtaskTree.isLoading ||
+    rows.some((row) => row.childCount > 0 || row.depth > 0);
   const { setNodeRef } = useDroppable({
     id: column.id,
     data: {
@@ -98,7 +145,7 @@ function ColumnSection({
             <span className="flex items-center gap-1.5">
               <span>{column.name}</span>
               <span className="text-xs text-muted-foreground">
-                {column.tasks.length}
+                {topLevelTasks.length}
               </span>
             </span>
           </span>
@@ -130,29 +177,36 @@ function ColumnSection({
       {isExpanded && (
         <div ref={setNodeRef} className="bg-card">
           <SortableContext
-            items={column.tasks}
+            items={topLevelTasks}
             strategy={verticalListSortingStrategy}
           >
             <AnimatePresence initial={false} mode="popLayout">
-              {column.tasks.map((task) => (
+              {rows.map((row) => (
                 <motion.div
-                  key={task.id}
+                  key={row.rowId}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
                 >
                   <TaskTableRow
-                    task={task}
+                    task={row.task}
                     projectSlug={projectSlug}
                     columns={columns}
+                    depth={row.depth}
+                    rowId={row.rowId}
+                    childCount={row.childCount}
+                    isExpanded={row.isExpanded}
+                    onToggleExpanded={() => subtaskTree.onToggleRow(row.rowId)}
+                    reserveToggleSpace={groupHasSubtasks}
+                    isTaskDragging={activeTaskId === row.task.id}
                   />
                 </motion.div>
               ))}
             </AnimatePresence>
           </SortableContext>
 
-          {column.tasks.length === 0 && (
+          {rows.length === 0 && (
             <div className="px-4 py-6 text-center text-xs text-muted-foreground">
               {t("tasks:listView.noTasks")}
             </div>
@@ -207,6 +261,73 @@ function TableView({
   const [columnToArchive, setColumnToArchive] = useState<
     ProjectWithTasks["columns"][number] | null
   >(null);
+
+  // isLoading rather than isPending: a disabled query is also pending.
+  const { data: relations, isLoading: relationsLoading } =
+    useGetProjectTaskRelations(project?.id ?? "");
+
+  const subtaskChildren = useMemo(
+    () => buildSubtaskChildren(relations ?? []),
+    [relations],
+  );
+
+  const tasksById = useMemo(() => {
+    const index = new Map<string, Task>();
+    for (const column of project?.columns ?? []) {
+      for (const task of column.tasks) {
+        index.set(task.id, task);
+      }
+    }
+    return index;
+  }, [project?.columns]);
+
+  const nestedTaskIds = useMemo(
+    () => findNestedTaskIds(subtaskChildren, tasksById),
+    [subtaskChildren, tasksById],
+  );
+
+  // Shared with the list view through the same per-project storage key, so a
+  // parent opened in one view is open in the other.
+  const projectId = project?.id ?? "";
+  const [expandedRows, setExpandedRows] = useState(() => ({
+    projectId,
+    rows: readExpandedRows(projectId),
+  }));
+
+  // The route swaps this component's project rather than remounting it.
+  if (expandedRows.projectId !== projectId) {
+    setExpandedRows({ projectId, rows: readExpandedRows(projectId) });
+  }
+
+  useEffect(() => {
+    writeExpandedRows(expandedRows.projectId, expandedRows.rows);
+  }, [expandedRows]);
+
+  const toggleRow = useCallback((rowId: string) => {
+    setExpandedRows((previous) => ({
+      ...previous,
+      rows: { ...previous.rows, [rowId]: !previous.rows[rowId] },
+    }));
+  }, []);
+
+  const subtaskTree = useMemo<SubtaskTree>(
+    () => ({
+      children: subtaskChildren,
+      tasksById,
+      nestedTaskIds,
+      expandedRows: expandedRows.rows,
+      onToggleRow: toggleRow,
+      isLoading: relationsLoading,
+    }),
+    [
+      subtaskChildren,
+      tasksById,
+      nestedTaskIds,
+      expandedRows.rows,
+      toggleRow,
+      relationsLoading,
+    ],
+  );
 
   const columns = useMemo(
     () =>
@@ -342,6 +463,8 @@ function TableView({
               projectSlug={project.slug ?? ""}
               isExpanded={Boolean(expandedSections[column.id])}
               isDropTarget={Boolean(activeId) && overColumnId === column.id}
+              activeTaskId={activeId ? activeId.toString() : null}
+              subtaskTree={subtaskTree}
               onToggle={toggleSection}
               onAddTask={handleAddTaskClick}
               onArchive={handleArchiveClick}

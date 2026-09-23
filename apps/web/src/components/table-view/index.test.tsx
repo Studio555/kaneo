@@ -37,9 +37,38 @@ vi.mock("@/hooks/use-task-column-dnd", () => ({
   }),
 }));
 
+const relations = vi.hoisted(() => ({
+  current: [] as Array<{
+    sourceTaskId: string;
+    targetTaskId: string;
+    relationType: string;
+  }>,
+}));
+
+vi.mock("@/hooks/queries/task-relation/use-get-project-task-relations", () => ({
+  default: () => ({ data: relations.current, isLoading: false }),
+}));
+
 vi.mock("./task-table-row", () => ({
-  default: ({ task }: { task: Task }) => (
-    <div data-testid="task-row">{task.title}</div>
+  default: ({
+    task,
+    depth = 0,
+    childCount = 0,
+    onToggleExpanded,
+  }: {
+    task: Task;
+    depth?: number;
+    childCount?: number;
+    onToggleExpanded?: () => void;
+  }) => (
+    <div data-testid="task-row" data-depth={depth}>
+      {task.title}
+      {childCount > 0 && (
+        <button type="button" onClick={onToggleExpanded}>
+          toggle {task.title}
+        </button>
+      )}
+    </div>
   ),
 }));
 
@@ -52,6 +81,8 @@ vi.mock("../shared/modals/archive-tasks-modal", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  relations.current = [];
+  localStorage.clear();
 });
 
 function task(id: string, title: string, status: string): Task {
@@ -263,5 +294,48 @@ describe("TableView", () => {
     );
 
     expect(screen.getByText("tasks:listView.noTasks")).toBeInTheDocument();
+  });
+
+  describe("subtasks", () => {
+    // "Third task" (done) is a subtask of "First task" (to-do).
+    const nestThirdUnderFirst = () => {
+      relations.current = [
+        { sourceTaskId: "a", targetTaskId: "c", relationType: "subtask" },
+      ];
+    };
+
+    it("shows a subtask only under its parent, collapsed at first", () => {
+      nestThirdUnderFirst();
+      renderTable();
+
+      expect(screen.queryByText("Third task")).not.toBeInTheDocument();
+      expect(screen.getByText("tasks:listView.noTasks")).toBeInTheDocument();
+    });
+
+    it("reveals the subtask, once, when the parent is expanded", () => {
+      nestThirdUnderFirst();
+      renderTable();
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "toggle First task" }),
+      );
+
+      const rows = screen.getAllByTestId("task-row");
+      expect(rows.map((row) => row.firstChild?.textContent)).toEqual([
+        "First task",
+        "Third task",
+        "Second task",
+      ]);
+      expect(rows[1]).toHaveAttribute("data-depth", "1");
+    });
+
+    it("counts only the rows a section shows as its own", () => {
+      nestThirdUnderFirst();
+      renderTable();
+
+      // To Do keeps 2; Done's only task lives under its parent.
+      expect(screen.getByText("2")).toBeInTheDocument();
+      expect(screen.getByText("0")).toBeInTheDocument();
+    });
   });
 });

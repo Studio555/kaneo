@@ -2,7 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { Calendar, CalendarClock, CalendarX } from "lucide-react";
+import { Calendar, CalendarClock, CalendarX, ChevronRight } from "lucide-react";
 import { type CSSProperties, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -50,6 +50,24 @@ type TaskTableRowProps = {
   task: Task;
   projectSlug: string;
   columns: TableColumn[];
+  /** Nesting level; 0 for a task shown in its own status group. */
+  depth?: number;
+  /**
+   * Identifies the row rather than the task: a task with several parents is
+   * rendered under each, so the task id is not unique and cannot be the drag
+   * identity.
+   */
+  rowId?: string;
+  childCount?: number;
+  isExpanded?: boolean;
+  onToggleExpanded?: () => void;
+  /**
+   * Keeps the toggle slot on rows without a toggle, so titles in a group that
+   * has subtasks stay on one vertical line.
+   */
+  reserveToggleSpace?: boolean;
+  /** True while this task is being dragged from another of its rows. */
+  isTaskDragging?: boolean;
 };
 
 /**
@@ -88,9 +106,24 @@ function CellTrigger({
   );
 }
 
-function TaskTableRow({ task, projectSlug, columns }: TaskTableRowProps) {
+function TaskTableRow({
+  task,
+  projectSlug,
+  columns,
+  depth = 0,
+  rowId,
+  childCount = 0,
+  isExpanded = false,
+  onToggleExpanded,
+  reserveToggleSpace = false,
+  isTaskDragging = false,
+}: TaskTableRowProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // Only top-level rows are drag sources. A nested row is not in the
+  // SortableContext, and one task may be nested under several parents.
+  const isNested = depth > 0;
+  const showToggleSlot = isNested || childCount > 0 || reserveToggleSpace;
   const {
     attributes,
     listeners,
@@ -98,7 +131,7 @@ function TaskTableRow({ task, projectSlug, columns }: TaskTableRowProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: rowId ?? task.id, disabled: isNested });
 
   const { data: workspace } = useActiveWorkspace();
   const { data: projectColumns = [] } = useGetColumns(task.projectId);
@@ -159,6 +192,14 @@ function TaskTableRow({ task, projectSlug, columns }: TaskTableRowProps) {
       handleClick(e as unknown as React.MouseEvent);
       return;
     }
+    // A nested row has no drag to start, so Space opens it like a button.
+    if (isNested) {
+      if (e.key === " ") {
+        handleClick(e as unknown as React.MouseEvent);
+        e.preventDefault();
+      }
+      return;
+    }
     listeners?.onKeyDown?.(e);
   };
 
@@ -178,6 +219,55 @@ function TaskTableRow({ task, projectSlug, columns }: TaskTableRowProps) {
       case "name":
         return (
           <div className="flex min-w-0 items-center gap-2 px-1.5">
+            {showToggleSlot && (
+              <span className="flex shrink-0 items-center">
+                {isNested && (
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0"
+                    // Capped so a deep chain cannot push the title out of
+                    // the cell; the chevrons still convey the nesting.
+                    style={{ width: `${Math.min(depth, 6) * 1.25}rem` }}
+                  />
+                )}
+                {childCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleExpanded?.();
+                    }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                    aria-expanded={isExpanded}
+                    aria-label={
+                      isExpanded
+                        ? t("tasks:listView.collapseSubtasks", {
+                            title: task.title,
+                          })
+                        : t("tasks:listView.expandSubtasks", {
+                            title: task.title,
+                          })
+                    }
+                    className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    <ChevronRight
+                      className={cn(
+                        "size-3 transition-transform",
+                        isExpanded && "rotate-90",
+                      )}
+                    />
+                  </button>
+                ) : (
+                  <span aria-hidden="true" className="w-5 shrink-0" />
+                )}
+              </span>
+            )}
+            {isNested && (
+              <span className="sr-only">
+                {t("tasks:listView.subtaskLevel", { level: depth })}
+              </span>
+            )}
             {showTaskNumbers && (
               <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
                 {projectSlug}-{task.number}
@@ -343,7 +433,7 @@ function TaskTableRow({ task, projectSlug, columns }: TaskTableRowProps) {
       style={style}
       className={cn(
         "border-b border-border/50 transition-colors duration-150",
-        isDragging && "opacity-50",
+        (isDragging || isTaskDragging) && "opacity-50",
         isTaskSelected &&
           "bg-accent/60 shadow-sm ring-1 ring-inset ring-ring/30",
         isTaskFocused && "ring-2 ring-inset ring-ring/50",
@@ -358,8 +448,11 @@ function TaskTableRow({ task, projectSlug, columns }: TaskTableRowProps) {
               "group grid cursor-pointer items-center gap-2 px-2 py-1 transition-colors",
               isTaskSelected ? "bg-accent/45" : "hover:bg-accent/60",
             )}
-            {...attributes}
-            {...listeners}
+            // A nested row keeps button semantics but none of dnd-kit's
+            // attributes, which would mark it aria-disabled.
+            {...(isNested
+              ? { role: "button" as const, tabIndex: 0 }
+              : { ...attributes, ...listeners })}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
           >

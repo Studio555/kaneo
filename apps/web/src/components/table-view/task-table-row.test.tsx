@@ -6,6 +6,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type Task from "@/types/task";
 import { getVisibleTableColumns } from "./columns";
@@ -328,5 +329,65 @@ describe("TaskTableRow", () => {
     expect(navigate).toHaveBeenCalledWith(
       expect.objectContaining({ search: { taskId: "task-1" } }),
     );
+  });
+
+  describe("subtasks", () => {
+    function renderTreeRow(
+      props: Partial<ComponentProps<typeof TaskTableRow>>,
+    ) {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <TaskTableRow
+            task={task}
+            projectSlug="KAN"
+            columns={allColumns}
+            {...props}
+          />
+        </QueryClientProvider>,
+      );
+    }
+
+    it("toggles a parent's subtasks without opening the task", () => {
+      const onToggleExpanded = vi.fn();
+      renderTreeRow({ childCount: 2, onToggleExpanded });
+
+      const toggle = screen.getByRole("button", {
+        name: "tasks:listView.expandSubtasks",
+      });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+      fireEvent.click(toggle);
+
+      expect(onToggleExpanded).toHaveBeenCalledOnce();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it("marks an expanded parent as expanded", () => {
+      renderTreeRow({ childCount: 1, isExpanded: true });
+
+      expect(
+        screen.getByRole("button", { name: "tasks:listView.collapseSubtasks" }),
+      ).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("renders a nested row as an openable, non-draggable button", () => {
+      renderTreeRow({ depth: 1, rowId: "parent/task-1" });
+
+      const row = document.querySelector<HTMLElement>(
+        '[style*="grid-template-columns"]',
+      );
+      expect(row).toHaveAttribute("role", "button");
+      // dnd-kit's attributes would carry aria-roledescription "sortable".
+      expect(row).not.toHaveAttribute("aria-roledescription");
+      expect(
+        screen.getByText("tasks:listView.subtaskLevel"),
+      ).toBeInTheDocument();
+
+      fireEvent.click(row as HTMLElement);
+      expect(navigate).toHaveBeenCalled();
+    });
   });
 });

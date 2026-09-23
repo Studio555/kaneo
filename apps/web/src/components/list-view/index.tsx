@@ -26,7 +26,11 @@ import {
   readExpandedRows,
   writeExpandedRows,
 } from "@/lib/expanded-rows-storage";
-import { buildSubtaskChildren, flattenSubtaskRows } from "@/lib/subtask-tree";
+import {
+  buildSubtaskChildren,
+  findNestedTaskIds,
+  flattenSubtaskRows,
+} from "@/lib/subtask-tree";
 import { toast } from "@/lib/toast";
 import useBulkSelectionStore from "@/store/bulk-selection";
 import useProjectStore from "@/store/project";
@@ -103,6 +107,11 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
     }
     return index;
   }, [project?.columns]);
+
+  const nestedTaskIds = useMemo(
+    () => findNestedTaskIds(subtaskChildren, tasksById),
+    [subtaskChildren, tasksById],
+  );
 
   // Per viewer and per project, and only a convenience: a row that cannot be
   // restored simply starts collapsed.
@@ -242,6 +251,7 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
       tasks: column.tasks,
       children: subtaskChildren,
       tasksById,
+      nestedTaskIds,
       // Nothing stays expanded while a drag is in flight. Nested repeats are
       // not in the SortableContext, so they never receive the transforms
       // applied to the top-level rows: dragging any task past an expanded
@@ -255,6 +265,12 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
     // toggle column open means the chevrons appear in place instead of
     // shifting every title sideways, and aria-busy below says the region is
     // still resolving rather than settled and flat.
+    // A subtask renders under its parent instead of in its own group, so the
+    // group counts and sorts only the rows that are its own.
+    const topLevelTasks = rows
+      .filter((row) => row.depth === 0)
+      .map((row) => row.task);
+
     const groupHasSubtasks =
       relationsLoading ||
       rows.some((row) => row.childCount > 0 || row.depth > 0);
@@ -283,7 +299,7 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
               <div className="flex items-center gap-1">
                 <span className="mt-1 mr-1">{column.name}</span>
                 <span className="text-xs text-muted-foreground mt-0.5">
-                  {column.tasks.length}
+                  {topLevelTasks.length}
                 </span>
               </div>
             </div>
@@ -320,10 +336,10 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
             ref={setNodeRef}
             className="bg-card transition-[translate,opacity] duration-150 ease-out starting:-translate-y-1 starting:opacity-0 motion-reduce:starting:translate-y-0"
           >
-            {/* Only the top-level rows are sortable; the nested repeats share
-                their task id with one of them. */}
+            {/* Only the top-level rows are sortable; a nested row can share its
+                task id with a row under another parent. */}
             <SortableContext
-              items={column.tasks}
+              items={topLevelTasks}
               strategy={verticalListSortingStrategy}
             >
               <AnimatePresence initial={false} mode="popLayout">
@@ -351,7 +367,7 @@ function ListView({ project, disableDragDrop = false }: ListViewProps) {
               </AnimatePresence>
             </SortableContext>
 
-            {column.tasks.length === 0 && (
+            {rows.length === 0 && (
               <div className="py-6 px-4 text-center text-xs text-muted-foreground">
                 {t("tasks:listView.noTasks")}
               </div>

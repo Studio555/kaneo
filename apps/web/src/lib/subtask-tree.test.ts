@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSubtaskChildren,
+  findNestedTaskIds,
   flattenSubtaskRows,
   type TaskRelationEdge,
 } from "./subtask-tree";
@@ -66,16 +67,30 @@ describe("flattenSubtaskRows", () => {
     ]);
   });
 
-  it("repeats a child under its parent without moving it", () => {
+  it("shows a child only under its parent", () => {
     const tasks = [task("parent"), task("child")];
     const rows = flatten(tasks, [subtask("parent", "child")]);
 
-    // The child keeps its own top-level row and appears again, indented.
     expect(rows.map((row) => [row.rowId, row.depth])).toEqual([
       ["parent", 0],
       ["parent/child", 1],
-      ["child", 0],
     ]);
+  });
+
+  it("shows a child under a parent from another status group", () => {
+    // Each column is flattened on its own; the child's column skips it
+    // because its parent, in view elsewhere, renders it.
+    const parent = task("parent");
+    const child = task("child");
+    const all = [parent, child];
+    const relations = [subtask("parent", "child")];
+
+    expect(
+      flatten([child], relations, { all }).map((row) => row.rowId),
+    ).toEqual([]);
+    expect(
+      flatten([parent], relations, { all }).map((row) => row.rowId),
+    ).toEqual(["parent", "parent/child"]);
   });
 
   it("reports a child count but no nested row while collapsed", () => {
@@ -87,7 +102,7 @@ describe("flattenSubtaskRows", () => {
       },
     );
 
-    expect(rows.map((row) => row.rowId)).toEqual(["parent", "child"]);
+    expect(rows.map((row) => row.rowId)).toEqual(["parent"]);
     expect(rows[0].childCount).toBe(1);
   });
 
@@ -95,9 +110,7 @@ describe("flattenSubtaskRows", () => {
     const tasks = [task("a"), task("b"), task("c")];
     const rows = flatten(tasks, [subtask("a", "b"), subtask("b", "c")]);
 
-    expect(rows.filter((row) => row.depth > 0).map((row) => row.rowId)).toEqual(
-      ["a/b", "a/b/c", "b/c"],
-    );
+    expect(rows.map((row) => row.rowId)).toEqual(["a", "a/b", "a/b/c"]);
   });
 
   it("terminates on a cycle instead of recursing forever", () => {
@@ -132,7 +145,6 @@ describe("flattenSubtaskRows", () => {
       "p1/shared",
       "p2",
       "p2/shared",
-      "shared",
     ]);
   });
 
@@ -182,7 +194,8 @@ describe("flattenSubtaskRows", () => {
     // the walk itself has to terminate regardless of who calls it.
     const nested = rows.filter((row) => row.depth > 0);
     expect(nested.length).toBeLessThan(400);
-    expect(rows.filter((row) => row.depth === 0)).toHaveLength(tasks.length);
+    // Only the first level has no parent, so only it is top-level.
+    expect(rows.filter((row) => row.depth === 0)).toHaveLength(WIDTH);
   });
 
   it("caps a single parent with more children than the budget", () => {
@@ -247,7 +260,7 @@ describe("flattenSubtaskRows", () => {
     expect(rows.map((row) => row.rowId)).not.toContain("a/b/c");
   });
 
-  it("leaves every task a top-level row even when nesting is capped", () => {
+  it("keeps the root row even when nesting is capped", () => {
     const tasks = [task("a"), task("b"), task("c")];
     const rows = flattenSubtaskRows({
       tasks,
@@ -257,9 +270,7 @@ describe("flattenSubtaskRows", () => {
       maxNestedRows: 0,
     });
 
-    // Status grouping and the per-column counts depend on these rows, so the
-    // cap drops nesting and never a task's own row.
-    expect(rows.map((row) => row.rowId)).toEqual(["a", "b", "c"]);
+    expect(rows.map((row) => row.rowId)).toEqual(["a"]);
   });
 
   it("ignores a child the view is not rendering", () => {
@@ -281,11 +292,52 @@ describe("flattenSubtaskRows", () => {
       { expanded: (rowId) => rowId === "p1" },
     );
 
-    expect(rows.map((row) => row.rowId)).toEqual([
-      "p1",
-      "p1/shared",
-      "p2",
-      "shared",
-    ]);
+    expect(rows.map((row) => row.rowId)).toEqual(["p1", "p1/shared", "p2"]);
+  });
+});
+
+describe("findNestedTaskIds", () => {
+  const byId = (...ids: string[]) =>
+    new Map(ids.map((id) => [id, task(id)] as const));
+
+  it("marks tasks below a root at any depth", () => {
+    const nested = findNestedTaskIds(
+      buildSubtaskChildren([subtask("a", "b"), subtask("b", "c")]),
+      byId("a", "b", "c"),
+    );
+
+    expect([...nested].sort()).toEqual(["b", "c"]);
+  });
+
+  it("keeps a child top-level when its parent is not in view", () => {
+    const nested = findNestedTaskIds(
+      buildSubtaskChildren([subtask("archived", "child")]),
+      byId("child"),
+    );
+
+    expect(nested.size).toBe(0);
+  });
+
+  it("keeps tasks top-level when their only parents form a cycle", () => {
+    // Neither has a root above it; hiding both would lose them from the view.
+    const nested = findNestedTaskIds(
+      buildSubtaskChildren([subtask("a", "b"), subtask("b", "a")]),
+      byId("a", "b"),
+    );
+
+    expect(nested.size).toBe(0);
+  });
+
+  it("nests a cycle hanging below a root", () => {
+    const nested = findNestedTaskIds(
+      buildSubtaskChildren([
+        subtask("root", "a"),
+        subtask("a", "b"),
+        subtask("b", "a"),
+      ]),
+      byId("root", "a", "b"),
+    );
+
+    expect([...nested].sort()).toEqual(["a", "b"]);
   });
 });
