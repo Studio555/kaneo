@@ -15,6 +15,7 @@ import type {
   TaskDueDateChangedEvent,
   TaskMovedEvent,
   TaskPriorityChangedEvent,
+  TaskRelationChangedEvent,
   TaskStatusChangedEvent,
   TaskTitleChangedEvent,
   TaskUnassignedEvent,
@@ -283,6 +284,22 @@ export function initializeEventSubscriptions(): void {
       title: data.title,
     });
   });
+
+  for (const [eventType, hook] of [
+    ["task-relation.created", "onTaskRelationCreated"],
+    ["task-relation.deleted", "onTaskRelationDeleted"],
+  ] as const) {
+    subscribeToEvent<TaskRelationChangedEvent>(eventType, async (data) => {
+      await broadcastTaskRelationChanged(eventType, hook, {
+        sourceTaskId: data.sourceTaskId,
+        targetTaskId: data.targetTaskId,
+        relationType: data.relationType,
+        projectId: data.projectId,
+        userId: data.userId,
+        origin: data.origin,
+      });
+    });
+  }
 
   eventSubscriptionsInitialized = true;
   console.log("✓ Plugin event subscriptions initialized");
@@ -617,6 +634,28 @@ export async function broadcastTaskUnassigned(
       await plugin.onTaskUnassigned(event, context);
     } catch (error) {
       console.error(`Plugin ${plugin.type} error on task.unassigned:`, error);
+    }
+  }
+}
+
+export async function broadcastTaskRelationChanged(
+  eventType: "task-relation.created" | "task-relation.deleted",
+  hook: "onTaskRelationCreated" | "onTaskRelationDeleted",
+  event: TaskRelationChangedEvent,
+): Promise<void> {
+  const integrations = await getActiveIntegrations(event.projectId);
+
+  for (const integration of integrations) {
+    const plugin = getPlugin(integration.type);
+    const handler = plugin?.[hook];
+    if (!plugin || !handler) continue;
+
+    const context = createContext(integration);
+
+    try {
+      await handler(event, context);
+    } catch (error) {
+      console.error(`Plugin ${plugin.type} error on ${eventType}:`, error);
     }
   }
 }

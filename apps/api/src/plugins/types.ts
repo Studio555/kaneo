@@ -116,6 +116,21 @@ export type TaskCraftChangedEvent = {
 };
 
 /**
+ * A relation between two tasks was added or removed. `projectId` is the
+ * source task's project; for a subtask the source is the parent.
+ */
+export type TaskRelationChangedEvent = {
+  sourceTaskId: string;
+  targetTaskId: string;
+  /** Absent when the relation went with a deleted task. */
+  relationType?: string;
+  projectId: string;
+  userId: string | null;
+  /** Set to an integration's name when that integration made the change. */
+  origin?: string;
+};
+
+/**
  * A craft rename or delete, fanned out per project. Craft is workspace-scoped
  * but integrations are project-scoped, so the registry resolves the affected
  * tasks and hands each plugin only the ones in its own project.
@@ -148,7 +163,8 @@ export type TaskEvent =
   | TaskMovedEvent
   | TaskDueDateChangedEvent
   | TaskAssigneeChangedEvent
-  | TaskUnassignedEvent;
+  | TaskUnassignedEvent
+  | TaskRelationChangedEvent;
 
 export type ExternalMetadata = {
   type: "issue" | "pull_request" | "branch";
@@ -196,6 +212,8 @@ export type IntegrationPlugin = {
   onTaskDueDateChanged?: TaskEventHandler<TaskDueDateChangedEvent>;
   onTaskAssigneeChanged?: TaskEventHandler<TaskAssigneeChangedEvent>;
   onTaskUnassigned?: TaskEventHandler<TaskUnassignedEvent>;
+  onTaskRelationCreated?: TaskEventHandler<TaskRelationChangedEvent>;
+  onTaskRelationDeleted?: TaskEventHandler<TaskRelationChangedEvent>;
 
   handleWebhook?: WebhookHandler;
   getTaskMetadata?: MetadataProvider;

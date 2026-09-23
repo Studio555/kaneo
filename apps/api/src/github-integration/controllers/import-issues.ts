@@ -9,6 +9,7 @@ import {
   taskTable,
 } from "../../database/schema";
 import type { GitHubConfig } from "../../plugins/github/config";
+import { reconcileIssueHierarchy } from "../../plugins/github/services/issue-hierarchy";
 import {
   createExternalLink,
   findExternalLink,
@@ -151,6 +152,25 @@ export async function importIssues(projectId: string): Promise<ImportResult> {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       errors.push(`Issue #${issue.number}: ${errorMessage}`);
+    }
+  }
+
+  // Only once every issue has its task, so a sub-issue imported after its
+  // parent still finds the parent's task.
+  for (const issue of allIssues) {
+    const link = await findExternalLink(
+      integration.id,
+      "issue",
+      issue.number.toString(),
+    );
+    if (!link) continue;
+
+    try {
+      await reconcileIssueHierarchy(link.taskId);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      errors.push(`Issue #${issue.number} sub-issues: ${errorMessage}`);
     }
   }
 

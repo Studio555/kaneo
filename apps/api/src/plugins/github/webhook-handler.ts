@@ -10,6 +10,7 @@ import { handleLabelCreated } from "./webhooks/label-created";
 import { handlePullRequestClosed } from "./webhooks/pull-request-closed";
 import { handlePullRequestOpened } from "./webhooks/pull-request-opened";
 import { handlePush } from "./webhooks/push";
+import { handleSubIssueChanged } from "./webhooks/sub-issue-changed";
 
 export async function handleGitHubWebhook(
   body: string,
@@ -37,7 +38,8 @@ export async function handleGitHubWebhook(
         | "pull_request"
         | "push"
         | "label"
-        | "issue_comment",
+        | "issue_comment"
+        | "sub_issues",
       signature,
       payload: body,
     });
@@ -154,6 +156,26 @@ export function setupWebhookHandlers() {
       throw error;
     }
   });
+
+  for (const event of [
+    "sub_issues.sub_issue_added",
+    "sub_issues.sub_issue_removed",
+    "sub_issues.parent_issue_added",
+    "sub_issues.parent_issue_removed",
+  ] as const) {
+    githubApp.webhooks.on(event, async ({ payload }) => {
+      console.log(`[GitHub Webhook] Handling ${event}`);
+      try {
+        await handleSubIssueChanged(
+          payload as Parameters<typeof handleSubIssueChanged>[0],
+        );
+        console.log(`[GitHub Webhook] ${event} handled successfully`);
+      } catch (error) {
+        console.error(`[GitHub Webhook] ${event} handler error:`, error);
+        throw error;
+      }
+    });
+  }
 
   githubApp.webhooks.on("push", async ({ payload }) => {
     console.log("[GitHub Webhook] Handling push");

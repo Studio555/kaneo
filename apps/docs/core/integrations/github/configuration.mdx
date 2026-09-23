@@ -363,6 +363,32 @@ An assignment is skipped, and the reason written to the API logs, when:
   workspace boundary holds regardless of what the webhook says.
 - An inbound GitHub assignee has not connected their account to Kaneo.
 
+### Subtask Synchronization
+
+A Kaneo subtask and a GitHub sub-issue are kept as the same thing. Making a task
+a subtask of another in Kaneo makes the child's issue a sub-issue of the
+parent's issue, and adding or removing a sub-issue on GitHub adds or removes the
+subtask in Kaneo. It needs the **Sub issues** webhook event (see setup).
+
+| Change | Result |
+|--------|--------|
+| Subtask added in Kaneo | The child's issue becomes a sub-issue of the parent's issue |
+| Subtask removed in Kaneo | The sub-issue is removed from the parent issue |
+| Sub-issue added on GitHub | The child's task becomes a subtask of the parent's task |
+| Sub-issue removed on GitHub | The subtask relation is removed |
+
+<Note>
+A GitHub issue has at most one parent while a Kaneo task can have several. A
+parent chosen in Kaneo moves the issue to that parent on GitHub, which in turn
+removes the previous parent in Kaneo, so both sides settle on one parent.
+</Note>
+
+A task that sits in the backlog has no issue yet, so its subtasks reach GitHub
+when the issue is opened. Issues opened on GitHub pick up their existing parent
+and sub-issues the same way. **Import Issues** does both for every open issue,
+which is how an existing project is brought into agreement once. Subtasks are
+only related within one workspace.
+
 ### Multiple Organizations
 If you need to connect repositories from multiple GitHub organizations:
 

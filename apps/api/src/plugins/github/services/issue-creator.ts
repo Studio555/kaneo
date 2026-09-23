@@ -14,6 +14,7 @@ import {
 import { addLabelsToIssue } from "../utils/labels";
 import { parseLinkMetadata } from "../utils/parse-link-metadata";
 import { syncIssueAssignee } from "../utils/sync-issue-assignee";
+import { reconcileIssueHierarchySafely } from "./issue-hierarchy";
 import {
   createExternalLink,
   findExternalLinkByTaskAndType,
@@ -157,6 +158,10 @@ async function createIssue(
       "issue_created",
     );
   }
+
+  // Subtask relations made while the task sat in the backlog had no issue to
+  // attach to; this is the first moment they can reach GitHub.
+  await reconcileIssueHierarchySafely(source.taskId);
 
   return {
     externalLinkId: link.id,
