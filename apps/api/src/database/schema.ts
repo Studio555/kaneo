@@ -384,14 +384,28 @@ export const columnTable = pgTable(
     icon: text("icon"),
     color: text("color"),
     isFinal: boolean("is_final").default(false).notNull(),
+    // Board columns make up the board; backlog columns are the backlog's
+    // sections. Both are task statuses, so they share one slug namespace.
+    kind: text("kind").$type<ColumnKind>().default("board").notNull(),
+    // Marks the built-in "planned" and "archived" backlog sections, which
+    // every project has and which cannot be deleted.
+    systemKey: text("system_key").$type<BacklogSystemKey>(),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("column_projectId_idx").on(table.projectId)],
+  (table) => [
+    index("column_projectId_idx").on(table.projectId),
+    uniqueIndex("column_project_system_key_unique")
+      .on(table.projectId, table.systemKey)
+      .where(sql`${table.systemKey} is not null`),
+  ],
 );
+
+export type ColumnKind = "board" | "backlog";
+export type BacklogSystemKey = "planned" | "archived";
 
 export const workflowRuleTable = pgTable(
   "workflow_rule",

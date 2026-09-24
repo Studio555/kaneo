@@ -20,6 +20,20 @@ async function updateColumn(
     throw new HTTPException(404, { message: "Column not found" });
   }
 
+  // The built-in sections are named by the web app's translations, so a
+  // stored rename would show in API responses but never on screen.
+  if (existing.systemKey && data.name !== undefined) {
+    throw new HTTPException(400, {
+      message: "Built-in backlog sections cannot be renamed",
+    });
+  }
+
+  if (existing.kind === "backlog" && data.isFinal) {
+    throw new HTTPException(400, {
+      message: "A backlog section cannot be a final column",
+    });
+  }
+
   const [updated] = await db
     .update(columnTable)
     .set({

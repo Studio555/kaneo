@@ -21,11 +21,30 @@ import type { ProjectWithTasks } from "@/types/project";
 // push, so it is withheld outright while dragging is disabled.
 const UNREACHABLE_ACTIVATION = 999999;
 
-const SECTIONS = ["planned", "archived"] as const;
-type BacklogSection = (typeof SECTIONS)[number];
+// Section drop targets share dnd-kit's id space with the tasks inside them, so
+// they carry a prefix that no task id can have.
+const SECTION_DROP_PREFIX = "backlog-section:";
 
-function isBacklogSection(value: string): value is BacklogSection {
-  return SECTIONS.some((section) => section === value);
+export function backlogSectionDropId(slug: string) {
+  return `${SECTION_DROP_PREFIX}${slug}`;
+}
+
+function sectionSlugForDropId(
+  project: ProjectWithTasks,
+  id: string,
+): string | null {
+  if (id.startsWith(SECTION_DROP_PREFIX)) {
+    const slug = id.slice(SECTION_DROP_PREFIX.length);
+    return project.backlogSections.some((section) => section.slug === slug)
+      ? slug
+      : null;
+  }
+
+  return (
+    project.backlogSections.find((section) =>
+      section.tasks.some((task) => task.id === id),
+    )?.slug ?? null
+  );
 }
 
 type UseBacklogSectionDndOptions = {
@@ -33,10 +52,10 @@ type UseBacklogSectionDndOptions = {
 };
 
 /**
- * Drag behavior shared by the backlog's list and table views. The backlog has
- * two fixed sections rather than the project's status columns, and dropping
- * across them archives or un-archives the task, so this cannot reuse
- * useTaskColumnDnd.
+ * Drag behavior shared by the backlog's list and table views. Dropping a task
+ * on another section moves it there, which is a status change, and dropping it
+ * among its own section's tasks reorders them. The backlog's sections are not
+ * the board's columns, so this cannot reuse useTaskColumnDnd.
  */
 export function useBacklogSectionDnd(
   project: ProjectWithTasks | undefined,
@@ -70,26 +89,11 @@ export function useBacklogSectionDnd(
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
       const { over } = event;
-      if (!over) {
-        setOverSectionId(null);
-        return;
-      }
-
-      const overId = over.id.toString();
-      if (isBacklogSection(overId)) {
-        setOverSectionId(overId);
-        return;
-      }
-
-      if ((project?.plannedTasks ?? []).some((task) => task.id === overId)) {
-        setOverSectionId("planned");
-      } else if (
-        (project?.archivedTasks ?? []).some((task) => task.id === overId)
-      ) {
-        setOverSectionId("archived");
-      } else {
-        setOverSectionId(null);
-      }
+      setOverSectionId(
+        over && project
+          ? sectionSlugForDropId(project, over.id.toString())
+          : null,
+      );
     },
     [project],
   );
@@ -110,111 +114,54 @@ export function useBacklogSectionDnd(
       // it back one slot from the end.
       if (activeTaskId === overId) return;
 
-      const plannedTasks = project.plannedTasks || [];
-      const archivedTasks = project.archivedTasks || [];
-      const activeTask = [...plannedTasks, ...archivedTasks].find(
-        (task) => task.id === activeTaskId,
-      );
+      const sourceSlug = sectionSlugForDropId(project, activeTaskId);
+      const targetSlug = sectionSlugForDropId(project, overId);
 
-      if (!activeTask) return;
-
-      let targetSection = overId;
-      if (!isBacklogSection(overId)) {
-        if (plannedTasks.some((task) => task.id === overId)) {
-          targetSection = "planned";
-        } else if (archivedTasks.some((task) => task.id === overId)) {
-          targetSection = "archived";
-        } else {
-          return;
-        }
-      }
+      if (!sourceSlug || !targetSlug) return;
 
       const updatedProject = produce(project, (draft) => {
-        const sourceSection =
-          activeTask.status === "planned"
-            ? draft.plannedTasks || []
-            : draft.archivedTasks || [];
+        const source = draft.backlogSections.find(
+          (section) => section.slug === sourceSlug,
+        );
+        const target = draft.backlogSections.find(
+          (section) => section.slug === targetSlug,
+        );
+        if (!source || !target) return;
 
-        const sourceTaskIndex = sourceSection.findIndex(
+        const sourceTaskIndex = source.tasks.findIndex(
           (task) => task.id === activeTaskId,
         );
-        const task = sourceSection[sourceTaskIndex];
-
+        const [task] = source.tasks.splice(sourceTaskIndex, 1);
         if (!task) return;
 
-        if (activeTask.status === "planned") {
-          draft.plannedTasks =
-            draft.plannedTasks?.filter((t) => t.id !== activeTaskId) || [];
-        } else {
-          draft.archivedTasks =
-            draft.archivedTasks?.filter((t) => t.id !== activeTaskId) || [];
-        }
-
-        if (activeTask.status === targetSection) {
-          const targetSectionTasks =
-            activeTask.status === "planned"
-              ? draft.plannedTasks || []
-              : draft.archivedTasks || [];
-
-          let destinationIndex = targetSectionTasks.findIndex(
-            (t) => t.id === overId,
-          );
-
-          if (sourceTaskIndex <= destinationIndex) {
+        if (source === target) {
+          // Over the section itself rather than one of its tasks means the
+          // empty space below them, so the task goes to the end.
+          let destinationIndex = target.tasks.findIndex((t) => t.id === overId);
+          if (destinationIndex === -1) {
+            destinationIndex = target.tasks.length;
+          } else if (sourceTaskIndex <= destinationIndex) {
             destinationIndex += 1;
           }
 
-          if (activeTask.status === "planned") {
-            draft.plannedTasks?.splice(destinationIndex, 0, task);
-          } else {
-            draft.archivedTasks?.splice(destinationIndex, 0, task);
-          }
+          target.tasks.splice(destinationIndex, 0, task);
 
-          const finalTasks =
-            activeTask.status === "planned"
-              ? draft.plannedTasks || []
-              : draft.archivedTasks || [];
-
-          finalTasks.forEach((t, index) => {
-            updateTask({
-              ...t,
-              position: index,
-            });
+          target.tasks.forEach((t, index) => {
+            updateTask({ ...t, position: index });
           });
-        } else {
-          task.status = targetSection;
-
-          if (targetSection === "planned") {
-            draft.plannedTasks = [...(draft.plannedTasks || []), task];
-          } else {
-            draft.archivedTasks = [...(draft.archivedTasks || []), task];
-          }
-
-          const updatedTasks =
-            targetSection === "planned"
-              ? draft.plannedTasks || []
-              : draft.archivedTasks || [];
-
-          updatedTasks.forEach((t, index) => {
-            updateTask({
-              ...t,
-              status: targetSection,
-              position: index,
-            });
-          });
-
-          const sourceTasks =
-            activeTask.status === "planned"
-              ? draft.plannedTasks || []
-              : draft.archivedTasks || [];
-
-          sourceTasks.forEach((t, index) => {
-            updateTask({
-              ...t,
-              position: index,
-            });
-          });
+          return;
         }
+
+        task.status = targetSlug;
+        target.tasks.push(task);
+
+        target.tasks.forEach((t, index) => {
+          updateTask({ ...t, status: targetSlug, position: index });
+        });
+
+        source.tasks.forEach((t, index) => {
+          updateTask({ ...t, position: index });
+        });
       });
 
       setProject(updatedProject);
@@ -230,10 +177,9 @@ export function useBacklogSectionDnd(
   const activeTask = useMemo(() => {
     if (!activeId) return null;
     return (
-      [
-        ...(project?.plannedTasks ?? []),
-        ...(project?.archivedTasks ?? []),
-      ].find((task) => task.id === activeId) ?? null
+      project?.backlogSections
+        .flatMap((section) => section.tasks)
+        .find((task) => task.id === activeId) ?? null
     );
   }, [activeId, project]);
 

@@ -661,17 +661,26 @@
               "$ref": "#/components/schemas/BoardColumn"
             }
           },
+          "backlogSections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardBacklogSection"
+            },
+            "description": "The backlog's sections in display order: Planned first, custom sections by position, Archived last."
+          },
           "archivedTasks": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BoardTask"
-            }
+            },
+            "description": "Deprecated: the tasks of the Archived entry in backlogSections."
           },
           "plannedTasks": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BoardTask"
-            }
+            },
+            "description": "Deprecated: the tasks of the Planned entry in backlogSections."
           }
         },
         "required": [
@@ -683,8 +692,68 @@
           "isPublic",
           "workspaceId",
           "columns",
+          "backlogSections",
           "archivedTasks",
           "plannedTasks"
+        ]
+      },
+      "BoardBacklogSection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The section's slug."
+          },
+          "columnId": {
+            "type": "string",
+            "description": "The section's column id, for the column endpoints that update or delete it."
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "systemKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "planned",
+              "archived",
+              null
+            ],
+            "description": "Set on the built-in Planned and Archived sections, which cannot be renamed or deleted."
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardTask"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "columnId",
+          "slug",
+          "name",
+          "icon",
+          "color",
+          "systemKey",
+          "tasks"
         ]
       },
       "BoardPagination": {
@@ -1079,7 +1148,7 @@
           },
           "position": {
             "type": "number",
-            "description": "Board order, ascending. Columns are always returned sorted by it."
+            "description": "Order within the column's kind, ascending. Columns are always returned sorted by it."
           },
           "icon": {
             "type": [
@@ -1096,6 +1165,26 @@
           "isFinal": {
             "type": "boolean",
             "description": "Marks the column as a done state, which stops overdue reminders for tasks in it."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "board",
+              "backlog"
+            ],
+            "description": "`board` columns make up the board; `backlog` columns are the backlog's sections."
+          },
+          "systemKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "planned",
+              "archived",
+              null
+            ],
+            "description": "Set on the two built-in backlog sections every project has. They cannot be renamed or deleted."
           },
           "createdAt": {
             "type": "string",
@@ -1115,6 +1204,8 @@
           "icon",
           "color",
           "isFinal",
+          "kind",
+          "systemKey",
           "createdAt",
           "updatedAt"
         ]
@@ -6272,7 +6363,7 @@
           "Tasks"
         ],
         "summary": "List tasks",
-        "description": "Get a project's board: its columns, each with the tasks in it, plus the archived and planned buckets. Filter and paginate with the query parameters.",
+        "description": "Get a project's board: its columns, each with the tasks in it, plus the backlog's sections. Filter and paginate with the query parameters.",
         "parameters": [
           {
             "schema": {
@@ -7894,7 +7985,7 @@
           "Columns"
         ],
         "summary": "Get columns",
-        "description": "Get a project's board columns, ordered by position.",
+        "description": "Get a project's board columns, or with `kind=backlog` its backlog sections, ordered by position.",
         "parameters": [
           {
             "schema": {
@@ -7903,6 +7994,20 @@
             "required": true,
             "name": "projectId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "board",
+                "backlog"
+              ],
+              "description": "Which columns to list. Defaults to `board`."
+            },
+            "required": false,
+            "description": "Which columns to list. Defaults to `board`.",
+            "name": "kind",
+            "in": "query"
           }
         ],
         "responses": {
@@ -7950,7 +8055,7 @@
           "Columns"
         ],
         "summary": "Create column",
-        "description": "Add a column to the end of a project's board. The slug is derived from the name.",
+        "description": "Add a column to the end of a project's board, or with `kind: backlog` a section to its backlog. The slug is derived from the name and must be unique across both.",
         "parameters": [
           {
             "schema": {
@@ -7978,7 +8083,16 @@
                     "type": "string"
                   },
                   "isFinal": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "Not allowed for backlog sections."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "board",
+                      "backlog"
+                    ],
+                    "description": "Defaults to `board`. Cannot be changed after creation."
                   }
                 },
                 "required": [
@@ -8000,7 +8114,7 @@
             }
           },
           "400": {
-            "description": "Invalid body, or unknown project",
+            "description": "Invalid body, unknown project, or a final backlog section",
             "content": {
               "text/plain": {
                 "schema": {
@@ -8042,7 +8156,7 @@
           "Columns"
         ],
         "summary": "Reorder columns",
-        "description": "Set new positions for a project's columns and return the whole board in its new order.",
+        "description": "Set new positions for a project's columns and return all of its columns, board and backlog, in their new order.",
         "parameters": [
           {
             "schema": {
@@ -8153,7 +8267,8 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Built-in backlog sections cannot be renamed."
                   },
                   "icon": {
                     "type": [
@@ -8187,7 +8302,7 @@
             }
           },
           "400": {
-            "description": "Invalid body, or unknown column",
+            "description": "Invalid body, unknown column, a renamed built-in section, or a final backlog section",
             "content": {
               "text/plain": {
                 "schema": {
@@ -8217,7 +8332,7 @@
           "Columns"
         ],
         "summary": "Delete column",
-        "description": "Delete an empty column. A column holding tasks is refused until they are moved or deleted.",
+        "description": "Delete an empty column or backlog section. A column holding tasks is refused until they are moved or deleted, and the built-in Planned and Archived sections cannot be deleted.",
         "parameters": [
           {
             "schema": {
@@ -8263,7 +8378,7 @@
             }
           },
           "409": {
-            "description": "The column still contains tasks",
+            "description": "The column still contains tasks, or is a built-in backlog section",
             "content": {
               "text/plain": {
                 "schema": {

@@ -44,8 +44,28 @@ describe("removeTaskFromProject", () => {
           tasks: [task("delete-me", "to-do"), task("keep-me", "to-do")],
         },
       ],
-      plannedTasks: [task("delete-me", "planned")],
-      archivedTasks: [task("delete-me", "archived")],
+      backlogSections: [
+        {
+          id: "planned",
+          columnId: "column-planned",
+          slug: "planned",
+          name: "Planned",
+          icon: null,
+          color: null,
+          systemKey: "planned" as const,
+          tasks: [task("delete-me", "planned")],
+        },
+        {
+          id: "archived",
+          columnId: "column-archived",
+          slug: "archived",
+          name: "Archived",
+          icon: null,
+          color: null,
+          systemKey: "archived" as const,
+          tasks: [task("delete-me", "archived")],
+        },
+      ],
     };
 
     const updatedProject = removeTaskFromProject(baseProject, "delete-me");
@@ -53,7 +73,9 @@ describe("removeTaskFromProject", () => {
     expect(updatedProject.columns[0]?.tasks.map(({ id }) => id)).toEqual([
       "keep-me",
     ]);
-    expect(updatedProject.plannedTasks).toEqual([]);
-    expect(updatedProject.archivedTasks).toEqual([]);
+    expect(updatedProject.backlogSections.map(({ tasks }) => tasks)).toEqual([
+      [],
+      [],
+    ]);
   });
 });

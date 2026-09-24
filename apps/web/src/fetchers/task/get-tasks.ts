@@ -13,8 +13,15 @@ async function getTasks(projectId: string) {
   }
 
   const json = await response.json();
+  // Deprecated duplicates of two backlogSections entries; dropping them keeps
+  // one copy of each backlog task for cache updates to keep in step.
+  const {
+    plannedTasks: _planned,
+    archivedTasks: _archived,
+    ...board
+  } = json.data;
 
-  return json.data;
+  return board;
 }
 
 export default getTasks;

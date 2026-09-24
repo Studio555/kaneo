@@ -7,7 +7,10 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectWithTasks } from "@/types/project";
 import type Task from "@/types/task";
-import { useBacklogSectionDnd } from "./use-backlog-section-dnd";
+import {
+  backlogSectionDropId,
+  useBacklogSectionDnd,
+} from "./use-backlog-section-dnd";
 
 const updateTask = vi.fn();
 const setProject = vi.fn();
@@ -54,13 +57,33 @@ function project(): ProjectWithTasks {
     slug: "KAN",
     workspaceId: "workspace-1",
     columns: [],
-    plannedTasks: [
-      task("p1", "planned", 0),
-      task("p2", "planned", 1),
-      task("p3", "planned", 2),
+    backlogSections: [
+      section("planned", "planned", [
+        task("p1", "planned", 0),
+        task("p2", "planned", 1),
+        task("p3", "planned", 2),
+      ]),
+      section("icebox", null, [task("i1", "icebox", 0)]),
+      section("archived", "archived", [task("a1", "archived", 0)]),
     ],
-    archivedTasks: [task("a1", "archived", 0)],
   } as unknown as ProjectWithTasks;
+}
+
+function section(
+  slug: string,
+  systemKey: "planned" | "archived" | null,
+  tasks: Task[],
+) {
+  return {
+    id: slug,
+    columnId: `column-${slug}`,
+    slug,
+    name: slug,
+    icon: null,
+    color: null,
+    systemKey,
+    tasks,
+  };
 }
 
 const start = (id: string) => ({ active: { id } }) as DragStartEvent;
@@ -82,7 +105,7 @@ describe("useBacklogSectionDnd", () => {
 
     act(() => {
       result.current.handleDragStart(start("p1"));
-      result.current.handleDragEnd(end("p1", "archived"));
+      result.current.handleDragEnd(end("p1", backlogSectionDropId("archived")));
     });
 
     expect(updateTask).toHaveBeenCalledWith(
@@ -95,7 +118,7 @@ describe("useBacklogSectionDnd", () => {
 
     act(() => {
       result.current.handleDragStart(start("a1"));
-      result.current.handleDragEnd(end("a1", "planned"));
+      result.current.handleDragEnd(end("a1", backlogSectionDropId("planned")));
     });
 
     expect(updateTask).toHaveBeenCalledWith(
@@ -103,12 +126,69 @@ describe("useBacklogSectionDnd", () => {
     );
   });
 
+  it("moves a task into a custom section", () => {
+    const { result } = renderHook(() => useBacklogSectionDnd(project()));
+
+    act(() => {
+      result.current.handleDragStart(start("p2"));
+      result.current.handleDragEnd(end("p2", "i1"));
+    });
+
+    expect(updateTask).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "p2", status: "icebox", position: 1 }),
+    );
+    expect(
+      payloads()
+        .filter((payload) => payload.status === "planned")
+        .map((payload) => [payload.id, payload.position]),
+    ).toEqual([
+      ["p1", 0],
+      ["p3", 1],
+    ]);
+  });
+
+  it("moves a task out of a custom section", () => {
+    const { result } = renderHook(() => useBacklogSectionDnd(project()));
+
+    act(() => {
+      result.current.handleDragStart(start("i1"));
+      result.current.handleDragEnd(end("i1", backlogSectionDropId("archived")));
+    });
+
+    expect(updateTask).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "i1", status: "archived" }),
+    );
+  });
+
+  it("moves a task to the end when dropped on its own section's empty space", () => {
+    const { result } = renderHook(() => useBacklogSectionDnd(project()));
+
+    act(() => {
+      result.current.handleDragStart(start("p1"));
+      result.current.handleDragEnd(end("p1", backlogSectionDropId("planned")));
+    });
+
+    expect(payloads().map((payload) => payload.id)).toEqual(["p2", "p3", "p1"]);
+  });
+
+  it("ignores a drop on a section the project does not have", () => {
+    const { result } = renderHook(() => useBacklogSectionDnd(project()));
+
+    act(() => {
+      result.current.handleDragStart(start("p1"));
+      result.current.handleDragEnd(end("p1", backlogSectionDropId("gone")));
+    });
+
+    expect(updateTask).not.toHaveBeenCalled();
+    expect(setProject).not.toHaveBeenCalled();
+  });
+
   it("reindexes the destination section so positions stay contiguous", () => {
     const { result } = renderHook(() => useBacklogSectionDnd(project()));
 
     act(() => {
       result.current.handleDragStart(start("p1"));
-      result.current.handleDragEnd(end("p1", "archived"));
+      result.current.handleDragEnd(end("p1", backlogSectionDropId("archived")));
     });
 
     const archived = payloads().filter(
@@ -187,7 +267,7 @@ describe("useBacklogSectionDnd", () => {
       result.current.handleDragStart(start("p1"));
     });
     act(() => {
-      result.current.handleDragOver(over("planned"));
+      result.current.handleDragOver(over(backlogSectionDropId("planned")));
     });
 
     expect(result.current.overSectionId).toBe("planned");
@@ -200,10 +280,10 @@ describe("useBacklogSectionDnd", () => {
       result.current.handleDragStart(start("p1"));
     });
     act(() => {
-      result.current.handleDragOver(over("archived"));
+      result.current.handleDragOver(over(backlogSectionDropId("archived")));
     });
     act(() => {
-      result.current.handleDragEnd(end("p1", "archived"));
+      result.current.handleDragEnd(end("p1", backlogSectionDropId("archived")));
     });
 
     expect(result.current.activeId).toBeNull();
@@ -217,7 +297,7 @@ describe("useBacklogSectionDnd", () => {
       result.current.handleDragStart(start("p1"));
     });
     act(() => {
-      result.current.handleDragOver(over("archived"));
+      result.current.handleDragOver(over(backlogSectionDropId("archived")));
     });
     act(() => {
       result.current.handleDragCancel();

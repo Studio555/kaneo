@@ -1,5 +1,5 @@
+import { isBacklogStatus } from "../../backlog-status";
 import type { PluginContext, TaskCreatedEvent } from "../../types";
-import { isVirtualStatus } from "../../virtual-status";
 import type { GitHubConfig } from "../config";
 import { ensureIssueForTask } from "../services/issue-creator";
 import { getGithubApp, getInstallationIdForRepo } from "../utils/github-app";
@@ -8,7 +8,7 @@ export async function handleTaskCreated(
   event: TaskCreatedEvent,
   context: PluginContext,
 ): Promise<void> {
-  if (isVirtualStatus(event.status)) {
+  if (await isBacklogStatus(event.projectId, event.status)) {
     return;
   }
 

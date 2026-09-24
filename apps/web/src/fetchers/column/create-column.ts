@@ -2,7 +2,13 @@ import { client } from "@kaneo/libs";
 
 async function createColumn(
   projectId: string,
-  data: { name: string; icon?: string; color?: string; isFinal?: boolean },
+  data: {
+    name: string;
+    icon?: string;
+    color?: string;
+    isFinal?: boolean;
+    kind?: "board" | "backlog";
+  },
 ) {
   const response = await client.column[":projectId"].$post({
     param: { projectId },

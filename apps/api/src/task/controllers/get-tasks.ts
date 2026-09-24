@@ -10,6 +10,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { orderBacklogSections } from "../../column/backlog-sections";
 import db from "../../database";
 import {
   columnTable,
@@ -197,16 +198,11 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
 
   const taskExternalLinksMap = new Map<
     string,
-    Array<{
-      id: string;
-      taskId: string;
-      integrationId: string;
-      resourceType: string;
-      externalId: string;
-      url: string;
-      title: string | null;
-      metadata: Record<string, unknown> | null;
-    }>
+    Array<
+      Omit<(typeof externalLinksData)[number], "metadata"> & {
+        metadata: Record<string, unknown> | null;
+      }
+    >
   >();
   for (const externalLink of externalLinksData) {
     if (!taskExternalLinksMap.has(externalLink.taskId)) {
@@ -239,36 +235,40 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
     .where(eq(columnTable.projectId, projectId))
     .orderBy(asc(columnTable.position));
 
-  const columns = projectColumns.map((column) => ({
-    id: column.slug,
-    slug: column.slug,
-    name: column.name,
-    icon: column.icon,
-    isFinal: column.isFinal,
-    tasks: withCraft
-      .filter((task) => task.status === column.slug)
-      .map((task) => ({
-        ...task,
-        labels: taskLabelsMap.get(task.id) || [],
-        externalLinks: taskExternalLinksMap.get(task.id) || [],
-      })),
+  const withRelations = (task: (typeof withCraft)[number]) => ({
+    ...task,
+    labels: taskLabelsMap.get(task.id) || [],
+    externalLinks: taskExternalLinksMap.get(task.id) || [],
+  });
+  const tasksWithStatus = (slug: string) =>
+    withCraft.filter((task) => task.status === slug).map(withRelations);
+
+  const columns = projectColumns
+    .filter((column) => column.kind === "board")
+    .map((column) => ({
+      id: column.slug,
+      slug: column.slug,
+      name: column.name,
+      icon: column.icon,
+      isFinal: column.isFinal,
+      tasks: tasksWithStatus(column.slug),
+    }));
+
+  const backlogSections = orderBacklogSections(
+    projectColumns.filter((column) => column.kind === "backlog"),
+  ).map((section) => ({
+    id: section.slug,
+    columnId: section.id,
+    slug: section.slug,
+    name: section.name,
+    icon: section.icon,
+    color: section.color,
+    systemKey: section.systemKey,
+    tasks: tasksWithStatus(section.slug),
   }));
 
-  const archivedTasks = withCraft
-    .filter((task) => task.status === "archived")
-    .map((task) => ({
-      ...task,
-      labels: taskLabelsMap.get(task.id) || [],
-      externalLinks: taskExternalLinksMap.get(task.id) || [],
-    }));
-
-  const plannedTasks = withCraft
-    .filter((task) => task.status === "planned")
-    .map((task) => ({
-      ...task,
-      labels: taskLabelsMap.get(task.id) || [],
-      externalLinks: taskExternalLinksMap.get(task.id) || [],
-    }));
+  const archivedTasks = tasksWithStatus("archived");
+  const plannedTasks = tasksWithStatus("planned");
 
   return {
     data: {
@@ -280,6 +280,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
       isPublic: project.isPublic,
       workspaceId: project.workspaceId,
       columns,
+      backlogSections,
       archivedTasks,
       plannedTasks,
     },

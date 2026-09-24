@@ -100,15 +100,45 @@ describe("toScheduledTasks", () => {
         ],
       },
     ],
-    plannedTasks: [
-      task("planned", "2026-08-10T00:00:00.000Z", "2026-08-11T00:00:00.000Z"),
+    backlogSections: [
+      {
+        systemKey: "planned",
+        tasks: [
+          task(
+            "planned",
+            "2026-08-10T00:00:00.000Z",
+            "2026-08-11T00:00:00.000Z",
+          ),
+        ],
+      },
+      {
+        systemKey: null,
+        tasks: [
+          task(
+            "icebox",
+            "2026-08-15T00:00:00.000Z",
+            "2026-08-16T00:00:00.000Z",
+          ),
+        ],
+      },
+      {
+        systemKey: "archived",
+        tasks: [
+          task(
+            "archived",
+            "2026-08-05T00:00:00.000Z",
+            "2026-08-06T00:00:00.000Z",
+          ),
+        ],
+      },
     ],
   };
 
-  it("flattens columns and planned tasks, sorted by start date", () => {
+  it("flattens columns and live backlog sections, sorted by start date", () => {
     expect(toScheduledTasks(source).map((entry) => entry.id)).toEqual([
       "early",
       "planned",
+      "icebox",
       "late",
     ]);
   });
@@ -116,6 +146,6 @@ describe("toScheduledTasks", () => {
   it("returns an empty list for missing data", () => {
     expect(toScheduledTasks(undefined)).toEqual([]);
     expect(toScheduledTasks(null)).toEqual([]);
-    expect(toScheduledTasks({ columns: [], plannedTasks: [] })).toEqual([]);
+    expect(toScheduledTasks({ columns: [], backlogSections: [] })).toEqual([]);
   });
 });

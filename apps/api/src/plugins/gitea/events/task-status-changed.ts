@@ -1,10 +1,10 @@
+import { isBacklogStatus } from "../../backlog-status";
 import {
   findExternalLinksByTask,
   updateExternalLink,
 } from "../../github/services/link-manager";
 import { findTaskWithCraft } from "../../github/services/task-service";
 import type { PluginContext, TaskStatusChangedEvent } from "../../types";
-import { isVirtualStatus } from "../../virtual-status";
 import type { GiteaConfig } from "../config";
 import {
   ensureIssueForTask,
@@ -34,7 +34,10 @@ export async function handleTaskStatusChanged(
 
     // A task that has never left the backlog has no issue yet: task.created
     // deliberately skipped it. Moving into a board column is what commits it.
-    if (!issueLink && isVirtualStatus(event.newStatus)) {
+    if (
+      !issueLink &&
+      (await isBacklogStatus(event.projectId, event.newStatus))
+    ) {
       return;
     }
 

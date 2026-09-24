@@ -1,8 +1,8 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import db from "../../database";
-import { columnTable } from "../../database/schema";
-import { VIRTUAL_STATUSES } from "../../task/validate-task-fields";
+import { type ColumnKind, columnTable } from "../../database/schema";
+import { SYSTEM_BACKLOG_STATUSES } from "../../task/validate-task-fields";
 
 export function toSlug(name: string): string {
   const slug = name
@@ -21,12 +21,14 @@ async function createColumn({
   icon,
   color,
   isFinal,
+  kind = "board",
 }: {
   projectId: string;
   name: string;
   icon?: string;
   color?: string;
   isFinal?: boolean;
+  kind?: ColumnKind;
 }) {
   const slug = toSlug(name);
 
@@ -36,9 +38,17 @@ async function createColumn({
     });
   }
 
-  if ((VIRTUAL_STATUSES as readonly string[]).includes(slug)) {
+  if ((SYSTEM_BACKLOG_STATUSES as readonly string[]).includes(slug)) {
     throw new HTTPException(409, {
-      message: `Column slug "${slug}" is reserved for virtual task statuses`,
+      message: `Column slug "${slug}" is reserved for a built-in backlog section`,
+    });
+  }
+
+  // A backlog section is never done work: a final one would stop reminders
+  // and close linked issues for tasks that were merely parked there.
+  if (kind === "backlog" && isFinal) {
+    throw new HTTPException(400, {
+      message: "A backlog section cannot be a final column",
     });
   }
 
@@ -60,7 +70,9 @@ async function createColumn({
       maxPosition: sql<number>`COALESCE(MAX(${columnTable.position}), -1)`,
     })
     .from(columnTable)
-    .where(eq(columnTable.projectId, projectId));
+    .where(
+      and(eq(columnTable.projectId, projectId), eq(columnTable.kind, kind)),
+    );
 
   const position = (maxPos?.maxPosition ?? -1) + 1;
 
@@ -74,6 +86,7 @@ async function createColumn({
       icon: icon || null,
       color: color || null,
       isFinal: isFinal ?? false,
+      kind,
     })
     .returning();
 

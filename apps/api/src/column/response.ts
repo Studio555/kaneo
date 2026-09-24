@@ -11,13 +11,21 @@ export const columnSchema = z
     }),
     position: z.number().openapi({
       description:
-        "Board order, ascending. Columns are always returned sorted by it.",
+        "Order within the column's kind, ascending. Columns are always returned sorted by it.",
     }),
     icon: z.string().nullable(),
     color: z.string().nullable(),
     isFinal: z.boolean().openapi({
       description:
         "Marks the column as a done state, which stops overdue reminders for tasks in it.",
+    }),
+    kind: z.enum(["board", "backlog"]).openapi({
+      description:
+        "`board` columns make up the board; `backlog` columns are the backlog's sections.",
+    }),
+    systemKey: z.enum(["planned", "archived"]).nullable().openapi({
+      description:
+        "Set on the two built-in backlog sections every project has. They cannot be renamed or deleted.",
     }),
     createdAt: responseTimestamp,
     updatedAt: responseTimestamp,

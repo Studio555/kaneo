@@ -17,7 +17,7 @@ export type Scheduled<TTask> = TTask & {
 
 export type ScheduleSource<TTask> = {
   columns: Array<{ tasks: TTask[] }>;
-  plannedTasks: TTask[];
+  backlogSections: Array<{ systemKey: string | null; tasks: TTask[] }>;
 };
 
 export function parseTaskDate(value: string | null | undefined) {
@@ -48,15 +48,17 @@ export function toScheduledTask<TTask extends SchedulableTask>(
 }
 
 /**
- * Flattens the board columns plus planned tasks into a date-sorted list.
- * Archived tasks are intentionally excluded from schedule views.
+ * Flattens the board columns plus the live backlog sections into a date-sorted
+ * list. Archived tasks are intentionally excluded from schedule views.
  */
 export function toScheduledTasks<TTask extends SchedulableTask>(
   source: ScheduleSource<TTask> | undefined | null,
 ): Array<Scheduled<TTask>> {
   const tasks = [
     ...(source?.columns.flatMap((column) => column.tasks) ?? []),
-    ...(source?.plannedTasks ?? []),
+    ...(source?.backlogSections
+      .filter((section) => section.systemKey !== "archived")
+      .flatMap((section) => section.tasks) ?? []),
   ];
 
   return tasks

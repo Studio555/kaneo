@@ -92,7 +92,10 @@ async function resolveKaneoUserId(
 
 async function resolveFirstColumnSlug(projectId: string): Promise<string> {
   const column = await db.query.columnTable.findFirst({
-    where: eq(columnTable.projectId, projectId),
+    where: and(
+      eq(columnTable.projectId, projectId),
+      eq(columnTable.kind, "board"),
+    ),
     orderBy: asc(columnTable.position),
   });
 

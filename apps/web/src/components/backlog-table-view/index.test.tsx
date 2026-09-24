@@ -16,7 +16,18 @@ vi.mock("@/hooks/use-keyboard-shortcuts", () => ({
   useRegisterShortcuts: vi.fn(),
 }));
 
+vi.mock("@/hooks/use-workspace-permission", () => ({
+  useWorkspacePermission: () => ({ canUpdateProjects: () => true }),
+}));
+
+vi.mock("../backlog-sections/backlog-section-menu", () => ({
+  BacklogSectionMenu: ({ section }: { section: { name: string } }) => (
+    <button type="button">menu:{section.name}</button>
+  ),
+}));
+
 vi.mock("@/hooks/use-backlog-section-dnd", () => ({
+  backlogSectionDropId: (slug: string) => `backlog-section:${slug}`,
   useBacklogSectionDnd: () => ({
     sensors: [],
     activeId: null,
@@ -71,11 +82,31 @@ function project(): ProjectWithTasks {
     slug: "KAN",
     workspaceId: "workspace-1",
     columns: [],
-    plannedTasks: [
-      task("p1", "Draft the spec", "planned"),
-      task("p2", "Spike the parser", "planned"),
+    backlogSections: [
+      {
+        id: "planned",
+        columnId: "column-planned",
+        slug: "planned",
+        name: "Planned",
+        icon: null,
+        color: null,
+        systemKey: "planned" as const,
+        tasks: [
+          task("p1", "Draft the spec", "planned"),
+          task("p2", "Spike the parser", "planned"),
+        ],
+      },
+      {
+        id: "archived",
+        columnId: "column-archived",
+        slug: "archived",
+        name: "Archived",
+        icon: null,
+        color: null,
+        systemKey: "archived" as const,
+        tasks: [task("a1", "Old idea", "archived")],
+      },
     ],
-    archivedTasks: [task("a1", "Old idea", "archived")],
   } as unknown as ProjectWithTasks;
 }
 
@@ -186,7 +217,11 @@ describe("BacklogTableView", () => {
         project={
           {
             ...project(),
-            archivedTasks: [],
+            backlogSections: project().backlogSections.map((section) =>
+              section.systemKey === "archived"
+                ? { ...section, tasks: [] }
+                : section,
+            ),
           } as unknown as ProjectWithTasks
         }
         sort={manualSort as never}
@@ -197,5 +232,50 @@ describe("BacklogTableView", () => {
     expect(
       screen.getByText("tasks:backlog.noTasksInSection"),
     ).toBeInTheDocument();
+  });
+
+  it("renders custom sections by name, with a menu only they get", () => {
+    const base = project();
+    const [planned, archived] = base.backlogSections;
+    render(
+      <BacklogTableView
+        project={
+          {
+            ...base,
+            backlogSections: [
+              planned,
+              {
+                id: "icebox",
+                columnId: "column-icebox",
+                slug: "icebox",
+                name: "Icebox",
+                icon: null,
+                color: null,
+                systemKey: null,
+                tasks: [task("i1", "Someday", "icebox")],
+              },
+              archived,
+            ],
+          } as unknown as ProjectWithTasks
+        }
+        sort={manualSort as never}
+        onSortChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Icebox")).toBeInTheDocument();
+    expect(
+      screen.getByText("tasks:backlog.sections.planned"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("tasks:backlog.sections.archived"),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole("button", { name: /^menu:/ })
+        .map((b) => b.textContent),
+    ).toEqual(["menu:Icebox"]);
+    // Every live section takes new tasks; the archive does not.
+    expect(screen.getAllByTitle("tasks:backlog.addTask")).toHaveLength(2);
   });
 });

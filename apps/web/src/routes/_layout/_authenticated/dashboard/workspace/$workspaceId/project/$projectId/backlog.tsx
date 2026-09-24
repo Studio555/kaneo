@@ -1,10 +1,19 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { produce } from "immer";
-import { ArrowRight, Calendar, Filter, Plus, User, X } from "lucide-react";
+import {
+  ArrowRight,
+  Calendar,
+  Filter,
+  Layers,
+  Plus,
+  User,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import BacklogListView from "@/components/backlog-list-view";
+import { BacklogSectionNameDialog } from "@/components/backlog-sections/backlog-section-name-dialog";
 import BacklogTableView from "@/components/backlog-table-view";
 import BacklogViewSwitcher from "@/components/backlog-table-view/backlog-view-switcher";
 import ProjectLayout from "@/components/common/project-layout";
@@ -25,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/menu";
 import { shortcuts } from "@/constants/shortcuts";
+import { useCreateColumn } from "@/hooks/mutations/column/use-create-column";
 import { useUpdateTask } from "@/hooks/mutations/task/use-update-task";
 import useGetLabelsByWorkspace from "@/hooks/queries/label/use-get-labels-by-workspace";
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
@@ -32,6 +42,8 @@ import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-
 import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { DUE_DATE_FILTER_VALUES } from "@/hooks/use-task-filters";
+import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
+import { findBacklogSection, mapBacklogSections } from "@/lib/backlog-sections";
 import { getInitials } from "@/lib/get-initials";
 import { getPriorityLabel } from "@/lib/i18n/domain";
 import { resolveLabelColor } from "@/lib/label-color";
@@ -65,7 +77,11 @@ function RouteComponent() {
   const { data } = useGetTasks(projectId);
   const { project, setProject } = useProjectStore();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isCreateSectionOpen, setIsCreateSectionOpen] = useState(false);
   const { mutate: updateTask } = useUpdateTask();
+  const { mutateAsync: createColumn } = useCreateColumn();
+  const { canUpdateProjects } = useWorkspacePermission();
+  const canManageSections = canUpdateProjects();
   const [sort, setSort] = useState<SortConfig>({
     field: "position",
     direction: "asc",
@@ -262,8 +278,7 @@ function RouteComponent() {
 
     return {
       ...project,
-      plannedTasks: filterTasks(project.plannedTasks || []),
-      archivedTasks: filterTasks(project.archivedTasks || []),
+      backlogSections: mapBacklogSections(project, filterTasks),
     };
   }, [project, filters, getTaskLabels]);
 
@@ -321,15 +336,30 @@ function RouteComponent() {
     if (!filteredProject || sort.field === "position") return filteredProject;
     return {
       ...filteredProject,
-      plannedTasks: sortTasks(filteredProject.plannedTasks || [], sort),
-      archivedTasks: sortTasks(filteredProject.archivedTasks || [], sort),
+      backlogSections: mapBacklogSections(filteredProject, (tasks) =>
+        sortTasks(tasks, sort),
+      ),
     };
   }, [filteredProject, sort]);
+
+  const handleCreateSection = async (name: string) => {
+    try {
+      await createColumn({ projectId, data: { name, kind: "backlog" } });
+      toast.success(t("tasks:backlog.sectionActions.created"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("tasks:backlog.sectionActions.createError"),
+      );
+      throw error;
+    }
+  };
 
   const handleMoveAllPlannedToTodo = () => {
     if (!project) return;
 
-    const plannedTasks = project.plannedTasks || [];
+    const plannedTasks = findBacklogSection(project, "planned")?.tasks ?? [];
 
     if (plannedTasks.length === 0) {
       toast.info(t("tasks:backlog.noTasksToMove"));
@@ -354,15 +384,16 @@ function RouteComponent() {
     const updatedProject = produce(project, (draft) => {
       // "to-do" is a column slug, so it can only be matched against slug.
       const todoColumn = draft.columns?.find((col) => col.slug === "to-do");
-      if (todoColumn && draft.plannedTasks) {
+      const planned = findBacklogSection(draft, "planned");
+      if (todoColumn && planned) {
         todoColumn.tasks.push(
-          ...draft.plannedTasks.map((task) => ({
+          ...planned.tasks.map((task) => ({
             ...task,
             status: "to-do",
           })),
         );
 
-        draft.plannedTasks = [];
+        planned.tasks = [];
       }
     });
 
@@ -395,6 +426,19 @@ function RouteComponent() {
                   <Plus className="h-3 w-3 mr-1" />
                   {t("tasks:backlog.plan")}
                 </Button>
+
+                {canManageSections && (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => setIsCreateSectionOpen(true)}
+                    className="h-6 px-2 text-xs text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    title={t("tasks:backlog.sectionActions.addTooltip")}
+                  >
+                    <Layers className="h-3 w-3 mr-1" />
+                    {t("tasks:backlog.sectionActions.add")}
+                  </Button>
+                )}
 
                 <Button
                   variant="ghost"
@@ -754,6 +798,14 @@ function RouteComponent() {
           projectId={projectId}
           onClose={() => setIsTaskModalOpen(false)}
           status="planned"
+        />
+
+        <BacklogSectionNameDialog
+          open={isCreateSectionOpen}
+          onOpenChange={setIsCreateSectionOpen}
+          title={t("tasks:backlog.sectionActions.createTitle")}
+          submitLabel={t("tasks:backlog.sectionActions.create")}
+          onSubmit={handleCreateSection}
         />
 
         <TaskDetailsSheet

@@ -11,7 +11,10 @@ export const VALID_PRIORITIES = [
   "urgent",
 ] as const;
 
-export const VIRTUAL_STATUSES = ["planned", "archived"] as const;
+// Every project has these two backlog sections, seeded as columns with a
+// matching system key. They stay valid statuses even for a project whose rows
+// are somehow missing, so a task can always be parked or archived.
+export const SYSTEM_BACKLOG_STATUSES = ["planned", "archived"] as const;
 
 export function assertValidPriority(priority: string): void {
   if (!(VALID_PRIORITIES as readonly string[]).includes(priority)) {
@@ -30,7 +33,9 @@ export async function getValidTaskStatuses(
     .where(eq(columnTable.projectId, projectId))
     .orderBy(asc(columnTable.position));
 
-  return [...columns.map((c) => c.slug), ...VIRTUAL_STATUSES];
+  return [
+    ...new Set([...columns.map((c) => c.slug), ...SYSTEM_BACKLOG_STATUSES]),
+  ];
 }
 
 export async function assertValidTaskStatus(

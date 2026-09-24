@@ -36,6 +36,7 @@ export async function migrateColumns() {
       .select({
         id: columnTable.id,
         slug: columnTable.slug,
+        kind: columnTable.kind,
       })
       .from(columnTable)
       .where(eq(columnTable.projectId, project.id));
@@ -47,7 +48,8 @@ export async function migrateColumns() {
     // Only seed missing default slugs for legacy projects that have no columns yet.
     // If the project already has columns, missing slugs are intentional (user removed them);
     // re-inserting on every startup would undo deletions after each API restart.
-    if (projectColumns.length === 0) {
+    // Backlog sections are seeded by a SQL migration and do not count here.
+    if (!projectColumns.some((column) => column.kind === "board")) {
       for (const defaultColumn of DEFAULT_COLUMNS) {
         if (columnMap.has(defaultColumn.slug)) {
           continue;

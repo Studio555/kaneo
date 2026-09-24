@@ -1904,6 +1904,26 @@
         "archived": "Archived"
       },
       "noTasksInSection": "No {{section}} tasks",
+      "sectionActions": {
+        "add": "Section",
+        "addTooltip": "Add a backlog section",
+        "menu": "Section options",
+        "rename": "Rename",
+        "delete": "Delete",
+        "createTitle": "New backlog section",
+        "renameTitle": "Rename section",
+        "namePlaceholder": "Section name",
+        "create": "Create section",
+        "save": "Save",
+        "created": "Section created",
+        "createError": "Failed to create section",
+        "renamed": "Section renamed",
+        "renameError": "Failed to rename section",
+        "deleteTitle": "Delete the \"{{name}}\" section?",
+        "deleteDescription": "Only an empty section can be deleted. Move its tasks to another section first.",
+        "deleted": "Section deleted",
+        "deleteError": "Failed to delete section"
+      },
       "filters": {
         "priority": "Priority: {{name}}",
         "assignee": "Assignee: {{name}}",

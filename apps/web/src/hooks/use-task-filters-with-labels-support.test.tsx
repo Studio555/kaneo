@@ -86,8 +86,28 @@ describe("useTaskFiltersWithLabelsSupport", () => {
           ],
         },
       ],
-      plannedTasks: [],
-      archivedTasks: [],
+      backlogSections: [
+        {
+          id: "planned",
+          columnId: "column-planned",
+          slug: "planned",
+          name: "Planned",
+          icon: null,
+          color: null,
+          systemKey: "planned" as const,
+          tasks: [],
+        },
+        {
+          id: "archived",
+          columnId: "column-archived",
+          slug: "archived",
+          name: "Archived",
+          icon: null,
+          color: null,
+          systemKey: "archived" as const,
+          tasks: [],
+        },
+      ],
     };
 
     const { result } = renderHook(() =>
@@ -168,8 +188,28 @@ describe("useTaskFiltersWithLabelsSupport", () => {
             ],
           },
         ],
-        plannedTasks: [],
-        archivedTasks: [],
+        backlogSections: [
+          {
+            id: "planned",
+            columnId: "column-planned",
+            slug: "planned",
+            name: "Planned",
+            icon: null,
+            color: null,
+            systemKey: "planned" as const,
+            tasks: [],
+          },
+          {
+            id: "archived",
+            columnId: "column-archived",
+            slug: "archived",
+            name: "Archived",
+            icon: null,
+            color: null,
+            systemKey: "archived" as const,
+            tasks: [],
+          },
+        ],
       };
 
       const { result } = renderHook(() =>

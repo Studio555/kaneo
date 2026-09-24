@@ -68,6 +68,8 @@ export default function TaskSubtasks({
   const { mutateAsync: updateTaskStatus } = useUpdateTaskStatus();
   const { data: columns = [], isLoading: isLoadingColumns } =
     useGetColumns(projectId);
+  const { data: backlogSections = [], isSuccess: backlogSectionsLoaded } =
+    useGetColumns(projectId, "backlog");
   const { canCreateTasks, canUpdateTasks } = useWorkspacePermission();
   const canEdit = canUpdateTasks();
   const canCreate = canCreateTasks();
@@ -77,8 +79,19 @@ export default function TaskSubtasks({
   // status is a final column.
   const doneSlug = columns.find((c) => c.isFinal)?.slug ?? "done";
   const todoSlug = columns.find((c) => !c.isFinal)?.slug;
+  // A subtask of a parked parent is parked beside it, in any backlog section
+  // but the archive.
+  const parentBacklogStatus =
+    parentStatus === "planned" ||
+    (parentStatus !== "archived" &&
+      backlogSections.some((section) => section.slug === parentStatus))
+      ? parentStatus
+      : null;
+  // Until the sections are known, a custom-section parent is indistinguishable
+  // from a board one, so the board fallback has to wait for them.
   const canCreateSubtask =
-    parentStatus === "planned" || (!isLoadingColumns && Boolean(todoSlug));
+    Boolean(parentBacklogStatus) ||
+    (backlogSectionsLoaded && !isLoadingColumns && Boolean(todoSlug));
   const isCompleted = (status: string) =>
     columns.length > 0
       ? (columns.find((c) => c.slug === status)?.isFinal ?? false)
@@ -259,8 +272,8 @@ export default function TaskSubtasks({
   ]);
 
   const handleAddSubtask = async () => {
-    if (!canCreate || !canEdit || !newTitle.trim()) return;
-    const initialStatus = parentStatus === "planned" ? "planned" : todoSlug;
+    if (!canCreate || !canEdit || !canCreateSubtask || !newTitle.trim()) return;
+    const initialStatus = parentBacklogStatus ?? todoSlug;
     if (!initialStatus) return;
 
     try {

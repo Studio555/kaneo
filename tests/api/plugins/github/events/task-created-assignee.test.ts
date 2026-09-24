@@ -1,6 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handleTaskCreated } from "../../../../../apps/api/src/plugins/github/events/task-created";
 
+// A custom backlog section is only known from its column row, so the mock
+// answers for the one this file uses; the built-in slugs need no lookup.
+const backlogStatus = vi.hoisted(() => ({
+  isBacklogStatus: vi.fn(async (_projectId: string, status: string) =>
+    ["planned", "archived", "icebox"].includes(status),
+  ),
+}));
+
+vi.mock(
+  "../../../../../apps/api/src/plugins/backlog-status",
+  () => backlogStatus,
+);
+
 const mocks = vi.hoisted(() => {
   const mockGetGithubApp = vi.fn();
   const mockGetInstallationOctokit = vi.fn();

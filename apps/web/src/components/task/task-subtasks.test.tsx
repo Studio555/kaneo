@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   createTask: vi.fn(),
   createRelation: vi.fn(),
   getColumns: vi.fn(),
+  getBacklogSections: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
@@ -36,7 +37,8 @@ vi.mock("@/hooks/mutations/task/use-update-task-status", () => ({
   useUpdateTaskStatus: () => ({ mutateAsync: vi.fn() }),
 }));
 vi.mock("@/hooks/queries/column/use-get-columns", () => ({
-  useGetColumns: () => mocks.getColumns(),
+  useGetColumns: (_projectId: string, kind?: string) =>
+    kind === "backlog" ? mocks.getBacklogSections() : mocks.getColumns(),
 }));
 vi.mock("@/hooks/queries/task-relation/use-get-task-relations", () => ({
   default: () => ({ data: [] }),
@@ -67,6 +69,20 @@ beforeEach(() => {
       { id: "done", slug: "done", name: "Done", isFinal: true },
     ],
     isLoading: false,
+  });
+  mocks.getBacklogSections.mockReturnValue({
+    data: [
+      { id: "planned", slug: "planned", name: "Planned", systemKey: "planned" },
+      { id: "icebox", slug: "icebox", name: "Icebox", systemKey: null },
+      {
+        id: "archived",
+        slug: "archived",
+        name: "Archived",
+        systemKey: "archived",
+      },
+    ],
+    isLoading: false,
+    isSuccess: true,
   });
 });
 
@@ -105,6 +121,38 @@ describe("TaskSubtasks", () => {
     await waitFor(() => expect(mocks.createTask).toHaveBeenCalledTimes(1));
     expect(mocks.createTask).toHaveBeenCalledWith(
       expect.objectContaining({ status: "planned" }),
+    );
+  });
+
+  it("creates a subtask in its parent's custom backlog section", async () => {
+    mocks.createTask.mockResolvedValue({ id: "subtask-3" });
+    mocks.createRelation.mockResolvedValue({});
+
+    render(
+      <TaskSubtasks
+        taskId="parent-3"
+        projectId="project-1"
+        workspaceId="workspace-1"
+        parentStatus="icebox"
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "tasks:subtasks.addAction tasks:subtasks.title",
+      }),
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("tasks:subtasks.inputPlaceholder"),
+      { target: { value: "Sketch the idea" } },
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "tasks:subtasks.addAction" }),
+    );
+
+    await waitFor(() => expect(mocks.createTask).toHaveBeenCalledTimes(1));
+    expect(mocks.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "icebox" }),
     );
   });
 
@@ -149,6 +197,29 @@ describe("TaskSubtasks", () => {
         projectId="project-1"
         workspaceId="workspace-1"
         parentStatus="in-progress"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "tasks:subtasks.addAction tasks:subtasks.title",
+      }),
+    ).toBeDisabled();
+  });
+
+  it("blocks creation until backlog sections are known", () => {
+    mocks.getBacklogSections.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isSuccess: false,
+    });
+
+    render(
+      <TaskSubtasks
+        taskId="parent-5"
+        projectId="project-1"
+        workspaceId="workspace-1"
+        parentStatus="icebox"
       />,
     );
 

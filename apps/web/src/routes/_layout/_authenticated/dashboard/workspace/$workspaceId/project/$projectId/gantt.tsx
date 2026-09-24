@@ -121,7 +121,9 @@ function RouteComponent() {
   const allTasks = useMemo(
     () => [
       ...(project?.columns.flatMap((column) => column.tasks) ?? []),
-      ...(project?.plannedTasks ?? []),
+      ...(project?.backlogSections
+        .filter((section) => section.systemKey !== "archived")
+        .flatMap((section) => section.tasks) ?? []),
     ],
     [project],
   );

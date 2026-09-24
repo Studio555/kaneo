@@ -26,10 +26,10 @@ vi.mock("../../../../../apps/api/src/database", () => ({
 }));
 
 const columns = [
-  { id: "col-todo", slug: "to-do" },
-  { id: "col-progress", slug: "in-progress" },
-  { id: "col-triage", slug: "triage" },
-  { id: "col-done", slug: "done" },
+  { id: "col-todo", slug: "to-do", kind: "board" },
+  { id: "col-progress", slug: "in-progress", kind: "board" },
+  { id: "col-triage", slug: "triage", kind: "board" },
+  { id: "col-done", slug: "done", kind: "board" },
 ];
 
 beforeEach(() => {
@@ -77,12 +77,41 @@ describe("resolveTargetStatus", () => {
 
   it("uses the first column when the fallback slug does not exist either", async () => {
     mocks.mockOrderBy.mockResolvedValue([
-      { id: "col-backlog", slug: "backlog" },
-      { id: "col-shipped", slug: "shipped" },
+      { id: "col-backlog", slug: "backlog", kind: "board" },
+      { id: "col-shipped", slug: "shipped", kind: "board" },
     ]);
 
     await expect(
       resolveTargetStatus("project-1", "issue_reopened", "to-do"),
     ).resolves.toBe("backlog");
+  });
+
+  it("never falls back to a backlog section, even one ordered first", async () => {
+    mocks.mockOrderBy.mockResolvedValue([
+      { id: "col-planned", slug: "planned", kind: "backlog" },
+      { id: "col-shipped", slug: "shipped", kind: "board" },
+    ]);
+
+    await expect(
+      resolveTargetStatus("project-1", "issue_reopened", "to-do"),
+    ).resolves.toBe("shipped");
+  });
+
+  it("honours a rule that targets a backlog section", async () => {
+    mocks.mockOrderBy.mockResolvedValue([
+      ...columns,
+      { id: "col-icebox", slug: "icebox", kind: "backlog" },
+    ]);
+    mocks.mockWorkflowRuleFindFirst.mockResolvedValue({
+      id: "rule-1",
+      projectId: "project-1",
+      integrationType: "github",
+      eventType: "issue_opened",
+      columnId: "col-icebox",
+    });
+
+    await expect(
+      resolveTargetStatus("project-1", "issue_opened", "to-do"),
+    ).resolves.toBe("icebox");
   });
 });

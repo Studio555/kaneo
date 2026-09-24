@@ -235,9 +235,14 @@ describe("API integration: task creation", () => {
 
   it("creates tasks without a column when the status has no matching project column", async () => {
     const member = await createWorkspaceMember();
-    const { project } = await createProjectFixture({
+    const { project, backlogSections } = await createProjectFixture({
       workspaceId: member.workspace.id,
     });
+    // Every project is seeded with a planned section, but "planned" must stay
+    // a valid status for one whose row has gone missing.
+    await db
+      .delete(schema.columnTable)
+      .where(eq(schema.columnTable.id, backlogSections.planned.id));
 
     mockAuthenticatedSession(member.user);
     const { app } = createApp();

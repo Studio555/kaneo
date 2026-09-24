@@ -7,11 +7,11 @@ import {
   taskTable,
   userTable,
 } from "../../../database/schema";
+import { SYSTEM_BACKLOG_STATUSES } from "../../../task/validate-task-fields";
 import {
   filterAssignableUsers,
   getProjectWorkspaceId,
 } from "../../../utils/assert-assignable-user";
-import { isVirtualStatus } from "../../virtual-status";
 
 export type TaskRow = InferSelectModel<typeof taskTable>;
 
@@ -78,7 +78,9 @@ export async function updateTaskStatus(
 
   if (column) {
     columnId = column.id;
-  } else if (!isVirtualStatus(newStatus)) {
+  } else if (
+    !(SYSTEM_BACKLOG_STATUSES as readonly string[]).includes(newStatus)
+  ) {
     console.warn(
       `[GitHub] Skipping status update for task ${taskId}: column "${newStatus}" not found in project ${task.projectId}`,
     );

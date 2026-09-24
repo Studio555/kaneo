@@ -98,6 +98,25 @@ export const boardColumnSchema = z
   })
   .openapi("BoardColumn");
 
+export const boardBacklogSectionSchema = z
+  .object({
+    id: z.string().openapi({ description: "The section's slug." }),
+    columnId: z.string().openapi({
+      description:
+        "The section's column id, for the column endpoints that update or delete it.",
+    }),
+    slug: z.string(),
+    name: z.string(),
+    icon: z.string().nullable(),
+    color: z.string().nullable(),
+    systemKey: z.enum(["planned", "archived"]).nullable().openapi({
+      description:
+        "Set on the built-in Planned and Archived sections, which cannot be renamed or deleted.",
+    }),
+    tasks: z.array(boardTaskSchema),
+  })
+  .openapi("BoardBacklogSection");
+
 export const boardSchema = z
   .object({
     data: z
@@ -110,8 +129,18 @@ export const boardSchema = z
         isPublic: z.boolean().nullable(),
         workspaceId: z.string(),
         columns: z.array(boardColumnSchema),
-        archivedTasks: z.array(boardTaskSchema),
-        plannedTasks: z.array(boardTaskSchema),
+        backlogSections: z.array(boardBacklogSectionSchema).openapi({
+          description:
+            "The backlog's sections in display order: Planned first, custom sections by position, Archived last.",
+        }),
+        archivedTasks: z.array(boardTaskSchema).openapi({
+          description:
+            "Deprecated: the tasks of the Archived entry in backlogSections.",
+        }),
+        plannedTasks: z.array(boardTaskSchema).openapi({
+          description:
+            "Deprecated: the tasks of the Planned entry in backlogSections.",
+        }),
       })
       .openapi("Board"),
     pagination: z

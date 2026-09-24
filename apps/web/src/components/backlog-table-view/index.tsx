@@ -11,17 +11,28 @@ import {
 } from "@dnd-kit/sortable";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { Archive, ChevronRight, Clock, Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useBacklogSectionDnd } from "@/hooks/use-backlog-section-dnd";
+import {
+  backlogSectionDropId,
+  useBacklogSectionDnd,
+} from "@/hooks/use-backlog-section-dnd";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
+import {
+  getBacklogSectionIcon,
+  getBacklogSectionLabel,
+} from "@/lib/backlog-sections";
 import { cn } from "@/lib/cn";
 import type { SortConfig } from "@/lib/sort-tasks";
 import useBacklogBulkSelectionStore from "@/store/backlog-bulk-selection";
 import { useUserPreferencesStore } from "@/store/user-preferences";
-import type { ProjectWithTasks } from "@/types/project";
-import type Task from "@/types/task";
+import type {
+  BacklogSection as BacklogSectionData,
+  ProjectWithTasks,
+} from "@/types/project";
+import { BacklogSectionMenu } from "../backlog-sections/backlog-section-menu";
 import BacklogBulkToolbar from "../bulk-selection/backlog-bulk-toolbar";
 import CreateTaskModal from "../shared/modals/create-task-modal";
 import {
@@ -39,14 +50,13 @@ type BacklogTableViewProps = {
 };
 
 type BacklogSectionProps = {
-  sectionId: "planned" | "archived";
-  icon: typeof Clock;
-  tasks: Task[];
+  section: BacklogSectionData;
   columns: TableColumn[];
+  projectId: string;
   projectSlug: string;
   isExpanded: boolean;
   isDropTarget: boolean;
-  showAddButton?: boolean;
+  canManage: boolean;
   onToggle: (sectionId: string) => void;
   onAddTask: (sectionId: string) => void;
 };
@@ -54,27 +64,32 @@ type BacklogSectionProps = {
 // Module scope on purpose: nested inside BacklogTableView this would be a new
 // component type every render, remounting every row whenever drag state changed.
 function BacklogSection({
-  sectionId,
-  icon: IconComponent,
-  tasks,
+  section,
   columns,
+  projectId,
   projectSlug,
   isExpanded,
   isDropTarget,
-  showAddButton = false,
+  canManage,
   onToggle,
   onAddTask,
 }: BacklogSectionProps) {
   const { t } = useTranslation();
+  const sectionId = section.slug;
+  const { tasks } = section;
+  // The whole section is the drop target, header included, so a task can
+  // still be dropped on a section that is collapsed.
   const { setNodeRef } = useDroppable({
-    id: sectionId,
+    id: backlogSectionDropId(sectionId),
     data: { type: "section", sectionId },
   });
 
-  const title = t(`tasks:backlog.sections.${sectionId}`);
+  const title = getBacklogSectionLabel(section, t);
+  const IconComponent = getBacklogSectionIcon(section);
 
   return (
     <div
+      ref={setNodeRef}
       className={cn(
         "border-b border-border/50 transition-colors duration-150",
         isDropTarget && "border-l-4 border-l-ring bg-accent/35",
@@ -103,20 +118,25 @@ function BacklogSection({
           </span>
         </button>
 
-        {showAddButton && (
-          <button
-            type="button"
-            onClick={() => onAddTask(sectionId)}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            title={t("tasks:backlog.addTask")}
-          >
-            <Plus className="size-3" />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {section.systemKey !== "archived" && (
+            <button
+              type="button"
+              onClick={() => onAddTask(sectionId)}
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              title={t("tasks:backlog.addTask")}
+            >
+              <Plus className="size-3" />
+            </button>
+          )}
+          {canManage && !section.systemKey && (
+            <BacklogSectionMenu projectId={projectId} section={section} />
+          )}
+        </div>
       </div>
 
       {isExpanded && (
-        <div ref={setNodeRef} className="bg-card">
+        <div className="bg-card">
           <SortableContext items={tasks} strategy={verticalListSortingStrategy}>
             <AnimatePresence initial={false} mode="popLayout">
               {tasks.map((task) => (
@@ -176,18 +196,19 @@ function BacklogTableView({
     handleDragEnd,
     handleDragCancel,
   } = useBacklogSectionDnd(project, { disabled: disableDragDrop });
-  const [expandedSections, setExpandedSections] = useState<
+  const { canUpdateProjects } = useWorkspacePermission();
+  const canManageSections = canUpdateProjects();
+  // Keyed by section slug; a section nobody has toggled yet starts open.
+  const [collapsedSections, setCollapsedSections] = useState<
     Record<string, boolean>
-  >({
-    planned: true,
-    archived: true,
-  });
+  >({});
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskModalStatus, setTaskModalStatus] = useState("planned");
 
-  // Status is deliberately absent: every task here is planned or archived, so
-  // the cell would only restate the section it sits in, and changing it would
-  // move the task onto the board and out of this view entirely. The row's
-  // context menu still offers it.
+  // Status is deliberately absent: every task here sits in a backlog section,
+  // so the cell would only restate the section it sits in, and changing it
+  // would move the task onto the board and out of this view entirely. The
+  // row's context menu still offers it.
   const columns = useMemo(
     () =>
       getVisibleTableColumns({
@@ -199,21 +220,15 @@ function BacklogTableView({
     [showAssignees, showDueDates, showLabels, showPriority],
   );
 
-  const plannedTasks = project?.plannedTasks ?? [];
-  const archivedTasks = project?.archivedTasks ?? [];
-
   useEffect(() => {
     if (!project) return;
 
-    const visibleTaskIds: string[] = [];
-    if (expandedSections.planned) {
-      visibleTaskIds.push(...(project.plannedTasks || []).map((t) => t.id));
-    }
-    if (expandedSections.archived) {
-      visibleTaskIds.push(...(project.archivedTasks || []).map((t) => t.id));
-    }
-    setAvailableTasks(visibleTaskIds);
-  }, [project, expandedSections, setAvailableTasks]);
+    setAvailableTasks(
+      project.backlogSections
+        .filter((section) => !collapsedSections[section.slug])
+        .flatMap((section) => section.tasks.map((task) => task.id)),
+    );
+  }, [project, collapsedSections, setAvailableTasks]);
 
   useEffect(() => {
     clearFocus();
@@ -251,13 +266,14 @@ function BacklogTableView({
   });
 
   const toggleSection = useCallback((sectionId: string) => {
-    setExpandedSections((prev) => ({
+    setCollapsedSections((prev) => ({
       ...prev,
       [sectionId]: !prev[sectionId],
     }));
   }, []);
 
-  const handleAddTaskClick = useCallback(() => {
+  const handleAddTaskClick = useCallback((sectionId: string) => {
+    setTaskModalStatus(sectionId);
     setIsTaskModalOpen(true);
   }, []);
 
@@ -283,29 +299,20 @@ function BacklogTableView({
         />
 
         <div className="min-w-fit divide-y divide-border/50">
-          <BacklogSection
-            sectionId="planned"
-            icon={Clock}
-            tasks={plannedTasks}
-            columns={columns}
-            projectSlug={project.slug ?? ""}
-            isExpanded={Boolean(expandedSections.planned)}
-            isDropTarget={Boolean(activeId) && overSectionId === "planned"}
-            showAddButton
-            onToggle={toggleSection}
-            onAddTask={handleAddTaskClick}
-          />
-          <BacklogSection
-            sectionId="archived"
-            icon={Archive}
-            tasks={archivedTasks}
-            columns={columns}
-            projectSlug={project.slug ?? ""}
-            isExpanded={Boolean(expandedSections.archived)}
-            isDropTarget={Boolean(activeId) && overSectionId === "archived"}
-            onToggle={toggleSection}
-            onAddTask={handleAddTaskClick}
-          />
+          {project.backlogSections.map((section) => (
+            <BacklogSection
+              key={section.slug}
+              section={section}
+              columns={columns}
+              projectId={project.id}
+              projectSlug={project.slug ?? ""}
+              isExpanded={!collapsedSections[section.slug]}
+              isDropTarget={Boolean(activeId) && overSectionId === section.slug}
+              canManage={canManageSections}
+              onToggle={toggleSection}
+              onAddTask={handleAddTaskClick}
+            />
+          ))}
         </div>
       </div>
 
@@ -328,7 +335,7 @@ function BacklogTableView({
         open={isTaskModalOpen}
         projectId={project.id}
         onClose={() => setIsTaskModalOpen(false)}
-        status="planned"
+        status={taskModalStatus}
       />
 
       <BacklogBulkToolbar />

@@ -89,7 +89,7 @@ const listTasksRoute = createRoute({
   tags: ["Tasks"],
   summary: "List tasks",
   description:
-    "Get a project's board: its columns, each with the tasks in it, plus the archived and planned buckets. Filter and paginate with the query parameters.",
+    "Get a project's board: its columns, each with the tasks in it, plus the backlog's sections. Filter and paginate with the query parameters.",
   middleware: [workspaceAccess.fromProject("projectId")] as const,
   request: { params: projectIdParam, query: listTasksQuery },
   responses: {

@@ -315,24 +315,25 @@ function CreateTaskModal({
           | (typeof draft.columns)[number]["tasks"][number]
           | undefined;
 
-        for (const column of draft.columns ?? []) {
-          const taskIndex = column.tasks.findIndex(
-            (columnTask) => columnTask.id === task.id,
+        const containers = [
+          ...(draft.columns ?? []),
+          ...(draft.backlogSections ?? []),
+        ];
+
+        for (const container of containers) {
+          const taskIndex = container.tasks.findIndex(
+            (containerTask) => containerTask.id === task.id,
           );
 
           if (taskIndex !== -1) {
-            existingTask = column.tasks[taskIndex];
-            column.tasks.splice(taskIndex, 1);
+            existingTask = container.tasks[taskIndex];
+            container.tasks.splice(taskIndex, 1);
             break;
           }
         }
 
-        if (task.status === "planned" || task.status === "archived") {
-          return;
-        }
-
-        const targetColumn = draft.columns?.find(
-          (column) => column.id === task.status,
+        const targetColumn = containers.find(
+          (container) => container.id === task.status,
         );
         if (!targetColumn) return;
 

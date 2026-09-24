@@ -72,11 +72,17 @@ describe("API integration: project creation", () => {
       slug: "roadmap",
     });
 
-    const columns = await db.query.columnTable.findMany({
+    const allColumns = await db.query.columnTable.findMany({
       where: eq(schema.columnTable.projectId, payload.id),
       orderBy: (column, { asc }) => [asc(column.position)],
     });
+    const columns = allColumns.filter((column) => column.kind === "board");
 
+    expect(
+      allColumns
+        .filter((column) => column.kind === "backlog")
+        .map((column) => column.systemKey),
+    ).toEqual(["planned", "archived"]);
     expect(columns).toHaveLength(4);
     expect(columns.map((column) => column.slug)).toEqual([
       "to-do",

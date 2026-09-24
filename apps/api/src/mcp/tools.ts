@@ -918,12 +918,22 @@ export function registerMcpTools(
     "list_project_columns",
     {
       description:
-        "List a project's columns. Their slugs are the values update_task_status and create_task accept as a status.",
-      inputSchema: z.object({ projectId: nonEmptyString }),
+        "List a project's board columns, or with kind=backlog its backlog sections (always including planned and archived). Both kinds of slug are values update_task_status and create_task accept as a status.",
+      inputSchema: z.object({
+        projectId: nonEmptyString,
+        kind: z
+          .enum(["board", "backlog"])
+          .optional()
+          .describe("Which columns to list. Defaults to board."),
+      }),
     },
     async (args) =>
       run(() =>
-        client.json(`/api/column/${encodeURIComponent(args.projectId)}`),
+        client.json(
+          `/api/column/${encodeURIComponent(args.projectId)}${
+            args.kind ? `?kind=${args.kind}` : ""
+          }`,
+        ),
       ),
   );
 
