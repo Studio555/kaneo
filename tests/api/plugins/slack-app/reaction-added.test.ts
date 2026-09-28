@@ -13,6 +13,12 @@ const mocks = vi.hoisted(() => ({
   filterAssignableUsers: vi.fn(),
   getProjectWorkspaceId: vi.fn(),
   deleteTask: vi.fn(),
+  startTaskEnrichment: vi.fn(),
+}));
+
+vi.mock("../../../../apps/api/src/plugins/slack-app/enrich-task", () => ({
+  startTaskEnrichment: (...args: unknown[]) =>
+    mocks.startTaskEnrichment(...args),
 }));
 
 vi.mock("../../../../apps/api/src/utils/assert-assignable-user", () => ({
@@ -102,6 +108,7 @@ beforeEach(() => {
     number: 7,
     projectId: "proj-1",
   });
+  mocks.startTaskEnrichment.mockReturnValue(undefined);
 });
 
 describe("handleReactionAdded", () => {
@@ -378,5 +385,83 @@ describe("handleReactionAdded on a message inside a thread", () => {
     expect(client.postThreadReply).toHaveBeenCalledWith(
       expect.objectContaining({ threadTs: "1699999999.000100" }),
     );
+  });
+});
+
+describe("handleReactionAdded enrichment hand-off", () => {
+  it("starts enrichment with what the task was filed with, after the reply", async () => {
+    const client = slackClient();
+
+    await handleReactionAdded(reaction, { client });
+
+    expect(mocks.startTaskEnrichment).toHaveBeenCalledTimes(1);
+    const [request, deps] = mocks.startTaskEnrichment.mock.calls[0] as [
+      Record<string, unknown>,
+      { client: unknown },
+    ];
+    const created = mocks.createTask.mock.calls[0]?.[0] as Record<
+      string,
+      string
+    >;
+    expect(request).toEqual({
+      taskId: "task-1",
+      projectId: "proj-1",
+      prefix: "PS",
+      taskNumber: 7,
+      original: { title: created.title, description: created.description },
+      channel: "C1",
+      threadTs: "1700000000.000100",
+      reactedTs: "1700000000.000100",
+      actorId: "user-1",
+    });
+    expect(deps.client).toBe(client);
+    expect(mocks.createExternalLink.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.startTaskEnrichment.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(client.postThreadReply.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.startTaskEnrichment.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it("passes a null actor when the reactor has no Kaneo account", async () => {
+    mocks.userFindFirst.mockResolvedValue(undefined);
+
+    await handleReactionAdded(reaction, { client: slackClient() });
+
+    const [request] = mocks.startTaskEnrichment.mock.calls[0] as [
+      { actorId: unknown },
+    ];
+    expect(request.actorId).toBeNull();
+  });
+
+  it("does not start enrichment for a message that is already filed", async () => {
+    mocks.findExternalLink.mockResolvedValue({ taskId: "task-1" });
+    mocks.taskFindFirst.mockResolvedValue({
+      id: "task-1",
+      number: 7,
+      projectId: "proj-1",
+    });
+
+    await handleReactionAdded(reaction, { client: slackClient() });
+
+    expect(mocks.startTaskEnrichment).not.toHaveBeenCalled();
+  });
+
+  it("does not start enrichment when another delivery won the link race", async () => {
+    mocks.createExternalLink.mockRejectedValue(
+      Object.assign(new Error("duplicate key"), { code: "23505" }),
+    );
+    mocks.findExternalLink
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ taskId: "task-winner" });
+    mocks.taskFindFirst.mockResolvedValue({
+      id: "task-winner",
+      number: 7,
+      projectId: "proj-1",
+    });
+
+    await handleReactionAdded(reaction, { client: slackClient() });
+
+    expect(mocks.startTaskEnrichment).not.toHaveBeenCalled();
   });
 });

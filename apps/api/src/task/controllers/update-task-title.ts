@@ -44,7 +44,9 @@ async function updateTaskTitle({
     await tx.insert(activityTable).values({
       taskId: task.id,
       type: "title_changed",
-      userId: currentUserId,
+      // Empty for tasks filed from Slack by someone without a Kaneo account;
+      // the column is a foreign key, so that actor is recorded as no user.
+      userId: currentUserId || null,
       content: null,
       eventData: { oldTitle: existingTask.title, newTitle: title },
     });

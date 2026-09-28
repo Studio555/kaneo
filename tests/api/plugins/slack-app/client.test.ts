@@ -272,4 +272,101 @@ describe("createSlackClient", () => {
       null,
     );
   });
+
+  it("pages through the whole thread and dedupes the repeated root", async () => {
+    const pages = [
+      {
+        ok: true,
+        messages: [
+          { ts: "1", user: "U1", text: "root" },
+          {
+            ts: "2",
+            user: "U2",
+            text: "reply",
+            files: [
+              {
+                name: "shot.png",
+                mimetype: "image/png",
+                size: 10,
+                url_private: "https://files.slack.com/shot.png",
+              },
+            ],
+          },
+        ],
+        response_metadata: { next_cursor: "page-2" },
+      },
+      {
+        ok: true,
+        messages: [
+          { ts: "1", user: "U1", text: "root" },
+          { ts: "3", text: "bot" },
+        ],
+        response_metadata: { next_cursor: "" },
+      },
+    ];
+    const bodies: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        bodies.push(String(init.body));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => pages[bodies.length - 1],
+        } as unknown as Response;
+      }),
+    );
+
+    const thread = await createSlackClient("xoxb").getThread({
+      channel: "C1",
+      threadTs: "1",
+    });
+
+    expect(thread.map((m) => m.ts)).toEqual(["1", "2", "3"]);
+    expect(thread[1]?.files).toEqual([
+      {
+        name: "shot.png",
+        mimetype: "image/png",
+        size: 10,
+        url: "https://files.slack.com/shot.png",
+      },
+    ]);
+    expect(thread[2]?.userId).toBeNull();
+    expect(new URLSearchParams(bodies[0]).get("cursor")).toBeNull();
+    expect(new URLSearchParams(bodies[1]).get("cursor")).toBe("page-2");
+  });
+
+  it("downloads an image with the bot token", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(new Uint8Array([1, 2, 3]), {
+          headers: { "content-type": "image/png" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const bytes = await createSlackClient("xoxb-t").downloadImage(
+      "https://files.slack.com/shot.png",
+    );
+
+    expect([...bytes]).toEqual([1, 2, 3]);
+    expect(
+      (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].headers,
+    ).toMatchObject({ Authorization: "Bearer xoxb-t" });
+  });
+
+  // Without files:read, Slack serves its HTML sign-in page with a 200.
+  it("rejects a download that is not an image", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("<html>", { headers: { "content-type": "text/html" } }),
+      ),
+    );
+
+    await expect(
+      createSlackClient("xoxb").downloadImage("https://files.slack.com/x"),
+    ).rejects.toThrow("files:read");
+  });
 });

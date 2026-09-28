@@ -138,6 +138,20 @@ Name | Description |
 | `GITHUB_PRIVATE_KEY_BASE64` | (Optional) Alternative to `GITHUB_PRIVATE_KEY`: a base64-encoded PEM. Takes precedence when both are set. Convenient when your orchestrator can't carry newlines at all.
 | `GITHUB_APP_NAME` | (Optional) GitHub App slug, used for installation links in the UI.
 
+### Slack app
+
+The Slack app files a Slack message as a task when someone reacts to it with the emoji a project's Slack App integration claims. The bot token and signing secret belong to the Slack app, so they are instance-wide; the emoji is set per project. Slack sends events to `/api/slack-app/events`.
+
+When an OpenAI key is configured (`OPENAI_API_KEY`, or `OPENAI_API_KEY_FILE`), each newly filed task (never a message that was already filed) is then rewritten from its Slack thread: Kaneo reads the whole thread and up to six of its images (5 MB each at most), asks OpenAI for a clearer title and a structured description, and posts one comment on the task and one reply in the thread. The thread text, author display names, screenshots and the titles of the project's 100 most recent tasks are sent to OpenAI (with `store: false`). A title or description someone has already edited is left alone. Downloading images needs the Slack bot scope `files:read`. Failures are only logged; the task is filed either way.
+
+Name | Description |
+--- | --- |
+| `SLACK_BOT_TOKEN` | Bot token (`xoxb-...`) of the Slack app. Required for the Slack app.
+| `SLACK_SIGNING_SECRET` | Signing secret used to verify Slack event requests. Required for the Slack app.
+| `OPENAI_API_KEY` | (Optional) OpenAI API key. When set, tasks filed from Slack are rewritten from the thread and its screenshots, which sends that content to OpenAI.
+| `OPENAI_API_KEY_FILE` | (Optional) Path to a file holding the OpenAI API key, such as a mounted secret. Takes precedence over `OPENAI_API_KEY`, and is read for each task, so a rotated key is picked up without a restart.
+| `SLACK_TRIAGE_MODEL` | (Optional) OpenAI model used for that rewrite. Defaults to `gpt-5.6-luna`.
+
 ### Google SSO
 
 Name | Description |

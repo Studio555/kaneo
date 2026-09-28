@@ -2,6 +2,9 @@ import * as Sentry from "@sentry/node";
 
 const SLACK_API_BASE = "https://slack.com/api";
 const SLACK_TIMEOUT_MS = 10_000;
+const THREAD_PAGE_SIZE = 200;
+// A runaway cursor must not keep a background job paging forever.
+const THREAD_MAX_PAGES = 25;
 
 export type SlackMessage = {
   text: string;
@@ -10,11 +13,32 @@ export type SlackMessage = {
   threadTs: string;
 };
 
+export type SlackFile = {
+  name: string;
+  mimetype: string;
+  size: number;
+  url: string;
+};
+
+export type SlackThreadMessage = {
+  ts: string;
+  userId: string | null;
+  text: string;
+  files: SlackFile[];
+};
+
 export type SlackClient = {
   getMessage(params: {
     channel: string;
     ts: string;
   }): Promise<SlackMessage | null>;
+  /** Every message of the thread rooted at `threadTs`, oldest first. */
+  getThread(params: {
+    channel: string;
+    threadTs: string;
+  }): Promise<SlackThreadMessage[]>;
+  /** Downloads a private image file; needs the files:read scope. */
+  downloadImage(url: string): Promise<Buffer>;
   getUserEmail(userId: string): Promise<string | null>;
   getUserName(userId: string): Promise<string | null>;
   getChannelName(channel: string): Promise<string | null>;
@@ -122,6 +146,91 @@ export function createSlackClient(botToken: string): SlackClient {
       };
     },
 
+    async getThread({ channel, threadTs }) {
+      type RawMessage = {
+        ts?: string;
+        user?: string;
+        text?: string;
+        files?: Array<{
+          name?: string;
+          mimetype?: string;
+          size?: number;
+          url_private?: string;
+        }>;
+      };
+
+      // Slack repeats the root on every page, hence the map keyed by ts.
+      const byTs = new Map<string, RawMessage>();
+      let cursor = "";
+
+      for (let page = 0; page < THREAD_MAX_PAGES; page++) {
+        const payload = await callSlack<{
+          messages?: RawMessage[];
+          response_metadata?: { next_cursor?: string };
+        }>(botToken, "conversations.replies", {
+          channel,
+          ts: threadTs,
+          limit: THREAD_PAGE_SIZE,
+          ...(cursor ? { cursor } : {}),
+        });
+
+        for (const message of payload.messages ?? []) {
+          if (message.ts && !byTs.has(message.ts)) {
+            byTs.set(message.ts, message);
+          }
+        }
+
+        cursor = payload.response_metadata?.next_cursor ?? "";
+        if (!cursor) {
+          break;
+        }
+      }
+
+      return [...byTs.values()]
+        .map((message) => ({
+          ts: message.ts ?? "",
+          userId: message.user ?? null,
+          text: message.text ?? "",
+          files: (message.files ?? []).map((file) => ({
+            name: file.name ?? "",
+            mimetype: file.mimetype ?? "",
+            size: file.size ?? 0,
+            url: file.url_private ?? "",
+          })),
+        }))
+        .sort((a, b) => Number(a.ts) - Number(b.ts));
+    },
+
+    async downloadImage(url) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), SLACK_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(url, {
+          headers: { Authorization: `Bearer ${botToken}` },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Slack file download failed with HTTP ${response.status}`,
+          );
+        }
+
+        // Without files:read Slack answers 200 with its HTML sign-in page.
+        const contentType = response.headers.get("content-type") ?? "";
+        if (!contentType.startsWith("image/")) {
+          throw new Error(
+            `Slack file download returned ${contentType || "no content type"}; is files:read granted?`,
+          );
+        }
+
+        return Buffer.from(await response.arrayBuffer());
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    },
+
     async getUserEmail(userId) {
       const payload = await callSlack<{
         user?: { profile?: { email?: string } };
@@ -196,4 +305,17 @@ export function createSlackClient(botToken: string): SlackClient {
       }
     },
   };
+}
+
+export async function replyQuietly(
+  client: SlackClient,
+  params: { channel: string; threadTs: string; text: string },
+): Promise<void> {
+  try {
+    await client.postThreadReply(params);
+  } catch (error) {
+    // The task exists either way; a channel the bot was removed from must not
+    // turn into a retried delivery and a duplicate task.
+    console.error("[Slack App] Failed to reply in thread:", error);
+  }
 }

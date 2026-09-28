@@ -16,8 +16,9 @@ import {
   createExternalLink,
   findExternalLink,
 } from "../github/services/link-manager";
-import type { SlackClient } from "./client";
+import { replyQuietly, type SlackClient } from "./client";
 import { normalizeSlackAppConfig, type SlackAppConfig } from "./config";
+import { startTaskEnrichment } from "./enrich-task";
 import { deriveTaskTitle, formatTaskDescription } from "./format";
 
 export const SLACK_MESSAGE_RESOURCE_TYPE = "slack_message";
@@ -52,8 +53,12 @@ async function resolveTaskLink(task: LinkedTask) {
 
   const clientUrl = process.env.KANEO_CLIENT_URL || "http://localhost:5173";
 
+  const prefix = project.slug.toUpperCase();
+
   return {
-    identifier: `${project.slug.toUpperCase()}-${task.number}`,
+    workspaceId: project.workspaceId,
+    prefix,
+    identifier: `${prefix}-${task.number}`,
     url: `${clientUrl}/dashboard/workspace/${project.workspaceId}/project/${task.projectId}/task/${task.id}`,
   };
 }
@@ -113,19 +118,6 @@ async function optional<T>(work: Promise<T | null>): Promise<T | null> {
   } catch (error) {
     console.error("[Slack App] Optional message detail unavailable:", error);
     return null;
-  }
-}
-
-async function replyQuietly(
-  client: SlackClient,
-  params: { channel: string; threadTs: string; text: string },
-): Promise<void> {
-  try {
-    await client.postThreadReply(params);
-  } catch (error) {
-    // The task exists either way; a channel the bot was removed from must not
-    // turn into a retried delivery and a duplicate task.
-    console.error("[Slack App] Failed to reply in thread:", error);
   }
 }
 
@@ -213,17 +205,20 @@ export async function handleReactionAdded(
 
     const status = await resolveFirstColumnSlug(integration.projectId);
 
+    const title = deriveTaskTitle(message.text);
+    const description = formatTaskDescription({
+      text: message.text,
+      authorName,
+      channelName,
+      permalink: permalink ?? "",
+    });
+
     const createdTask = await createTask({
       projectId: integration.projectId,
       currentUserId: assigneeId ?? "",
       userId: assigneeId,
-      title: deriveTaskTitle(message.text),
-      description: formatTaskDescription({
-        text: message.text,
-        authorName,
-        channelName,
-        permalink: permalink ?? "",
-      }),
+      title,
+      description,
       status,
       priority: "no-priority",
     });
@@ -235,7 +230,7 @@ export async function handleReactionAdded(
         resourceType: SLACK_MESSAGE_RESOURCE_TYPE,
         externalId,
         url: permalink ?? "",
-        title: deriveTaskTitle(message.text),
+        title,
         metadata: {
           channel: event.channel,
           messageTs: event.ts,
@@ -287,6 +282,23 @@ export async function handleReactionAdded(
         threadTs: message.threadTs,
         text: `Created ${link.identifier} — ${link.url}`,
       });
+
+      // Not awaited: Slack expects the events endpoint to answer within
+      // seconds, and the task is already filed whatever enrichment does.
+      startTaskEnrichment(
+        {
+          taskId: createdTask.id,
+          projectId: createdTask.projectId,
+          prefix: link.prefix,
+          taskNumber: createdTask.number,
+          original: { title, description },
+          channel: event.channel,
+          threadTs: message.threadTs,
+          reactedTs: event.ts,
+          actorId: assigneeId ?? null,
+        },
+        { client },
+      );
     }
   }
 }

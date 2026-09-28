@@ -46,6 +46,7 @@ Kaneo supports many optional configuration options including:
 - `KANEO_INTERNAL_API_URL` - API origin used only for server-side requests from the built-in HTTP MCP endpoint. Defaults to `http://127.0.0.1:1337`; override it only if the API is not reachable there from its own process.
 - SSO providers (GitHub OAuth via `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET`, Google, Discord, Custom OAuth/OIDC)
 - GitHub repository integration (GitHub App: `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, optional `GITHUB_APP_NAME`), separate from GitHub SSO
+- Slack app (`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`), which files a reacted Slack message as a task, and optionally rewrites each new task from its Slack thread and screenshots with OpenAI (`OPENAI_API_KEY` or `OPENAI_API_KEY_FILE`, `SLACK_TRIAGE_MODEL`; off unless a key is set; needs the Slack scope `files:read`)
 - SMTP configuration for email
 - Access control settings
 - CORS configuration
