@@ -63,6 +63,7 @@ const request = {
   projectId: "proj-1",
   prefix: "PS",
   taskNumber: 7,
+  url: "https://kaneo.test/task/task-1",
   original,
   channel: "C1",
   threadTs: ROOT,
@@ -343,7 +344,7 @@ describe("enrichTask", () => {
     );
   });
 
-  it("rewrites title and description, comments and replies as the filing user", async () => {
+  it("rewrites title and description and comments as the filing user", async () => {
     const client = slackClient([message(ROOT)]);
     stubOpenAi({ ...goodOutput, possibleDuplicateOf: 3 });
 
@@ -367,11 +368,8 @@ describe("enrichTask", () => {
     expect([taskId, userId, external]).toEqual(["task-1", "user-1", undefined]);
     expect(comment).toContain(`**Title:** ${goodOutput.title}`);
     expect(comment).toContain("Possible duplicate of PS-3");
-    expect(client.postThreadReply).toHaveBeenCalledWith({
-      channel: "C1",
-      threadTs: ROOT,
-      text: `Updated PS-7: ${goodOutput.title}`,
-    });
+    // The thread reply belongs to startTaskEnrichment, once the run settles.
+    expect(client.postThreadReply).not.toHaveBeenCalled();
   });
 
   it("comments as Kaneo when the task was filed without a Kaneo user", async () => {
@@ -406,9 +404,6 @@ describe("enrichTask", () => {
     expect(mocks.updateTaskDescription).toHaveBeenCalledTimes(1);
     expect(mocks.createComment.mock.calls[0]?.[2]).toContain(
       "**Title:** kept — a person edited it first",
-    );
-    expect(client.postThreadReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "Updated PS-7: Edited by hand" }),
     );
   });
 
@@ -469,15 +464,72 @@ describe("enrichTask", () => {
 });
 
 describe("startTaskEnrichment", () => {
-  it("does nothing without OPENAI_API_KEY", async () => {
+  it("does nothing without OPENAI_API_KEY and leaves the reply to the caller", async () => {
     const fetchMock = stubOpenAi(goodOutput);
     const client = slackClient([message(ROOT)]);
 
-    startTaskEnrichment(request, { client });
+    expect(startTaskEnrichment(request, { client })).toBe(false);
     await new Promise((resolve) => setImmediate(resolve));
 
     expect(client.getThread).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(client.postThreadReply).not.toHaveBeenCalled();
+  });
+
+  it("replies once, after the rewrite, with the new title", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    stubOpenAi(goodOutput);
+    const client = slackClient([message(ROOT)]);
+    mocks.updateTaskTitle.mockImplementation(async () => {
+      mocks.taskFindFirst.mockResolvedValue({
+        id: "task-1",
+        ...original,
+        title: goodOutput.title,
+      });
+    });
+
+    expect(startTaskEnrichment(request, { client })).toBe(true);
+    await vi.waitFor(() => expect(client.postThreadReply).toHaveBeenCalled());
+
+    expect(mocks.updateTaskTitle).toHaveBeenCalledTimes(1);
+    expect(client.postThreadReply).toHaveBeenCalledTimes(1);
+    expect(client.postThreadReply).toHaveBeenCalledWith({
+      channel: "C1",
+      threadTs: ROOT,
+      text: `Created PS-7: ${goodOutput.title} — https://kaneo.test/task/task-1`,
+    });
+  });
+
+  it("still replies with the filed title when the model gives up", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    stubOpenAi("not json", "still not json");
+    const client = slackClient([message(ROOT)]);
+
+    startTaskEnrichment(request, { client });
+    await vi.waitFor(() => expect(client.postThreadReply).toHaveBeenCalled());
+
+    expect(client.postThreadReply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: `Created PS-7: ${original.title} — https://kaneo.test/task/task-1`,
+      }),
+    );
+  });
+
+  it("does not reply for a task deleted before the run settled", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    stubOpenAi(goodOutput);
+    mocks.taskFindFirst.mockResolvedValue(undefined);
+    const client = slackClient([message(ROOT)]);
+
+    startTaskEnrichment(request, { client });
+    await vi.waitFor(() =>
+      expect(console.info).toHaveBeenCalledWith(
+        expect.stringContaining('"outcome":"task_deleted"'),
+      ),
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(client.postThreadReply).not.toHaveBeenCalled();
   });
 
   it("reads the key from OPENAI_API_KEY_FILE ahead of OPENAI_API_KEY", async () => {
@@ -541,19 +593,25 @@ describe("startTaskEnrichment", () => {
     expect(requestBody(fetchMock).model).toBe("gpt-custom");
   });
 
-  it("swallows and logs an OpenAI failure", async () => {
+  it("swallows and logs an OpenAI failure, then still replies", async () => {
     vi.stubEnv("OPENAI_API_KEY", "sk-test");
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: false, status: 500 }) as Response),
     );
+    const client = slackClient([message(ROOT)]);
 
-    expect(() =>
-      startTaskEnrichment(request, { client: slackClient([message(ROOT)]) }),
-    ).not.toThrow();
+    expect(() => startTaskEnrichment(request, { client })).not.toThrow();
     await vi.waitFor(() =>
       expect(console.info).toHaveBeenCalledWith(
         expect.stringContaining('"outcome":"failed"'),
+      ),
+    );
+    await vi.waitFor(() =>
+      expect(client.postThreadReply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: expect.stringMatching(/^Created PS-7: /),
+        }),
       ),
     );
     expect(mocks.updateTaskTitle).not.toHaveBeenCalled();

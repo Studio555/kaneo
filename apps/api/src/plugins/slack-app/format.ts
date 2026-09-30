@@ -1,3 +1,5 @@
+import { escapeSlack } from "../slack/events";
+
 const MAX_TITLE_LENGTH = 80;
 const TITLE_FALLBACK = "Slack message";
 
@@ -46,4 +48,17 @@ export function formatTaskDescription({
   return text.trim()
     ? [quoted, "", origin, permalink].join("\n")
     : [origin, permalink].join("\n");
+}
+
+export function formatCreatedReply({
+  identifier,
+  title,
+  url,
+}: {
+  identifier: string;
+  title: string;
+  url: string;
+}): string {
+  // Titles keep Slack's markup, so an unescaped `<@U…>` would ping again.
+  return `Created ${identifier}: ${escapeSlack(title)} — ${url}`;
 }

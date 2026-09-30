@@ -11,6 +11,7 @@ import {
   type SlackFile,
   type SlackThreadMessage,
 } from "./client";
+import { formatCreatedReply } from "./format";
 import { type EnrichmentUsage, requestEnrichment } from "./openai";
 
 const DEFAULT_MODEL = "gpt-5.6-luna";
@@ -31,6 +32,7 @@ export type TaskEnrichmentRequest = {
   /** e.g. "PS" — the prefix of `PS-7`. */
   prefix: string;
   taskNumber: number | null;
+  url: string;
   original: { title: string; description: string };
   channel: string;
   threadTs: string;
@@ -312,14 +314,6 @@ export async function enrichTask(
     request.actorId ? undefined : { userName: "Kaneo", source: "slack" },
   );
 
-  if (writeTitle || writeDescription) {
-    await replyQuietly(client, {
-      channel: request.channel,
-      threadTs: rootTs,
-      text: `Updated ${request.prefix}-${request.taskNumber}: ${writeTitle ? enrichment.title : current.title}`,
-    });
-  }
-
   logRun({
     ...base,
     outcome: writeTitle || writeDescription ? "updated" : "kept",
@@ -346,21 +340,49 @@ export function readOpenAiApiKey(): string | null {
 }
 
 /**
+ * The thread gets a single reply once enrichment settles, carrying whatever
+ * title the task ended up with, so a filing does not post twice. Nothing is
+ * posted for a task deleted in the meantime.
+ */
+async function announceCreated(
+  request: TaskEnrichmentRequest,
+  client: SlackClient,
+): Promise<void> {
+  const task = await db.query.taskTable.findFirst({
+    where: eq(taskTable.id, request.taskId),
+  });
+  if (!task) {
+    return;
+  }
+
+  await replyQuietly(client, {
+    channel: request.channel,
+    threadTs: request.threadTs,
+    text: formatCreatedReply({
+      identifier: `${request.prefix}-${request.taskNumber}`,
+      title: task.title,
+      url: request.url,
+    }),
+  });
+}
+
+/**
  * Fire-and-forget: the task is already filed, so nothing here may reject into
- * the Slack events handler or delay its answer.
+ * the Slack events handler or delay its answer. Returns whether a run started;
+ * a started run owns the thread reply, otherwise the caller must post it.
  */
 export function startTaskEnrichment(
   request: TaskEnrichmentRequest,
   { client }: { client: SlackClient },
-): void {
+): boolean {
   const apiKey = readOpenAiApiKey();
   if (!apiKey) {
-    return;
+    return false;
   }
 
   if (inFlight >= MAX_IN_FLIGHT) {
     logRun({ taskId: request.taskId, outcome: "skipped_busy" });
-    return;
+    return false;
   }
 
   inFlight++;
@@ -374,7 +396,13 @@ export function startTaskEnrichment(
         error: error instanceof Error ? error.message : String(error),
       });
     })
+    .then(() => announceCreated(request, client))
+    .catch((error) => {
+      console.error("[Slack App] Failed to announce the task:", error);
+    })
     .finally(() => {
       inFlight--;
     });
+
+  return true;
 }

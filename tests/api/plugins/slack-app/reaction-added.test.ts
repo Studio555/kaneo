@@ -108,7 +108,7 @@ beforeEach(() => {
     number: 7,
     projectId: "proj-1",
   });
-  mocks.startTaskEnrichment.mockReturnValue(undefined);
+  mocks.startTaskEnrichment.mockReturnValue(false);
 });
 
 describe("handleReactionAdded", () => {
@@ -194,16 +194,46 @@ describe("handleReactionAdded", () => {
     );
   });
 
-  it("replies in the thread with the new task's identifier and link", async () => {
+  it("replies in the thread with the new task's identifier, title and link when no enrichment runs", async () => {
     const client = slackClient();
 
     await handleReactionAdded(reaction, { client });
 
+    const created = mocks.createTask.mock.calls[0]?.[0] as { title: string };
     expect(client.postThreadReply).toHaveBeenCalledWith({
       channel: "C1",
       threadTs: "1700000000.000100",
-      text: "Created PS-7 — https://kaneo.studio555.cloud/dashboard/workspace/ws-1/project/proj-1/task/task-1",
+      text: `Created PS-7: ${created.title} — https://kaneo.studio555.cloud/dashboard/workspace/ws-1/project/proj-1/task/task-1`,
     });
+  });
+
+  it("escapes Slack markup in the title so mentions do not ping again", async () => {
+    const client = slackClient({
+      getMessage: vi.fn(async () => ({
+        text: "<@U012AB3CD> checkout crashes",
+        userId: "UAUTHOR",
+        threadTs: "1700000000.000100",
+      })),
+    });
+
+    await handleReactionAdded(reaction, { client });
+
+    expect(client.postThreadReply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining(
+          "Created PS-7: &lt;@U012AB3CD&gt; checkout crashes — ",
+        ),
+      }),
+    );
+  });
+
+  it("leaves the reply to a started enrichment run", async () => {
+    mocks.startTaskEnrichment.mockReturnValue(true);
+    const client = slackClient();
+
+    await handleReactionAdded(reaction, { client });
+
+    expect(client.postThreadReply).not.toHaveBeenCalled();
   });
 
   it("does not create a second task when the message is already linked", async () => {
@@ -389,7 +419,7 @@ describe("handleReactionAdded on a message inside a thread", () => {
 });
 
 describe("handleReactionAdded enrichment hand-off", () => {
-  it("starts enrichment with what the task was filed with, after the reply", async () => {
+  it("starts enrichment with what the task was filed with, before any reply", async () => {
     const client = slackClient();
 
     await handleReactionAdded(reaction, { client });
@@ -408,6 +438,7 @@ describe("handleReactionAdded enrichment hand-off", () => {
       projectId: "proj-1",
       prefix: "PS",
       taskNumber: 7,
+      url: "https://kaneo.studio555.cloud/dashboard/workspace/ws-1/project/proj-1/task/task-1",
       original: { title: created.title, description: created.description },
       channel: "C1",
       threadTs: "1700000000.000100",
@@ -418,8 +449,8 @@ describe("handleReactionAdded enrichment hand-off", () => {
     expect(mocks.createExternalLink.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.startTaskEnrichment.mock.invocationCallOrder[0] ?? 0,
     );
-    expect(client.postThreadReply.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.startTaskEnrichment.mock.invocationCallOrder[0] ?? 0,
+    expect(mocks.startTaskEnrichment.mock.invocationCallOrder[0]).toBeLessThan(
+      client.postThreadReply.mock.invocationCallOrder[0] ?? 0,
     );
   });
 

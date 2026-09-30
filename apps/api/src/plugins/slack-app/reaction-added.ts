@@ -19,7 +19,11 @@ import {
 import { replyQuietly, type SlackClient } from "./client";
 import { normalizeSlackAppConfig, type SlackAppConfig } from "./config";
 import { startTaskEnrichment } from "./enrich-task";
-import { deriveTaskTitle, formatTaskDescription } from "./format";
+import {
+  deriveTaskTitle,
+  formatCreatedReply,
+  formatTaskDescription,
+} from "./format";
 
 export const SLACK_MESSAGE_RESOURCE_TYPE = "slack_message";
 
@@ -277,20 +281,16 @@ export async function handleReactionAdded(
     const link = await resolveTaskLink(createdTask);
 
     if (link) {
-      await replyQuietly(client, {
-        channel: event.channel,
-        threadTs: message.threadTs,
-        text: `Created ${link.identifier} — ${link.url}`,
-      });
-
       // Not awaited: Slack expects the events endpoint to answer within
-      // seconds, and the task is already filed whatever enrichment does.
-      startTaskEnrichment(
+      // seconds, and the task is already filed whatever enrichment does. A
+      // started run replies once it settles, with the rewritten title.
+      const enriching = startTaskEnrichment(
         {
           taskId: createdTask.id,
           projectId: createdTask.projectId,
           prefix: link.prefix,
           taskNumber: createdTask.number,
+          url: link.url,
           original: { title, description },
           channel: event.channel,
           threadTs: message.threadTs,
@@ -299,6 +299,18 @@ export async function handleReactionAdded(
         },
         { client },
       );
+
+      if (!enriching) {
+        await replyQuietly(client, {
+          channel: event.channel,
+          threadTs: message.threadTs,
+          text: formatCreatedReply({
+            identifier: link.identifier,
+            title,
+            url: link.url,
+          }),
+        });
+      }
     }
   }
 }
