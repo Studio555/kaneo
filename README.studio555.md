@@ -42,3 +42,17 @@ The service is defined in [`s555-iac`](https://github.com/Studio555/s555-iac), n
 the shared GKE cluster in the `tools` namespace against Cloud SQL Postgres, with attachments in GCS
 over the S3 interoperability API. Environment variables, secrets, scaling and DNS are all set there
 — nothing environment-specific is configured in this repository.
+
+## Agent fixes from Slack
+
+Reacting to a Slack message with the integration's `agentEmoji` files the task (as the filing
+emoji does), makes sure it has a GitHub issue, and labels that issue `agent:fix` with a request
+comment. The `agent-fix` workflow in `Studio555/s555-atlas` does the fix and answers with a
+result comment from `github-actions[bot]`; Kaneo turns that into Slack DMs to the person who
+reacted, and to `maintainerSlackUserId` when Codex on the runner is signed out. The comment
+markers are the contract between the two repositories: change them in both or neither.
+
+Turn it on per project through the Slack app integration API, for example
+`PATCH /api/slack-app-integration/project/<projectId>` with
+`{"agentEmoji": "robot_fix", "maintainerSlackUserId": "U…"}`. The DMs land in the app's
+Messages tab, which must be enabled under App Home in the Slack app settings.

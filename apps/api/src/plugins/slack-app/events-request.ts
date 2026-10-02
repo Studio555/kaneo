@@ -29,6 +29,7 @@ type SlackEventEnvelope = {
     reaction?: string;
     user?: string;
     item?: { type?: string; channel?: string; ts?: string };
+    event_ts?: string;
   };
 };
 
@@ -86,6 +87,7 @@ export async function handleSlackEventsRequest(
     itemType: event.item.type ?? "message",
     channel: event.item.channel,
     ts: event.item.ts,
+    ...(event.event_ts ? { eventTs: event.event_ts } : {}),
   };
 
   // Slack expects an acknowledgement within three seconds, so the work is

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "external_link_agent_run_unique" ON "external_link" USING btree ("integration_id","external_id") WHERE "external_link"."resource_type" = 'agent_run';

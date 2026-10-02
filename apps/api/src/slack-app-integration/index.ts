@@ -16,6 +16,7 @@ import { handleSlackEvent } from "../plugins/slack-app";
 import {
   normalizeSlackAppConfig,
   type SlackAppConfig,
+  validateSlackAppConfig,
 } from "../plugins/slack-app/config";
 import { requireWorkspacePermission } from "../utils/require-workspace-permission";
 import { workspaceAccess } from "../utils/workspace-access-middleware";
@@ -38,10 +39,22 @@ function toResponse(integration: {
     id: integration.id,
     projectId: integration.projectId,
     emoji: config.emoji ?? "",
+    agentEmoji: config.agentEmoji ?? null,
+    maintainerSlackUserId: config.maintainerSlackUserId ?? null,
     isActive: integration.isActive,
     createdAt: integration.createdAt,
     updatedAt: integration.updatedAt,
   };
+}
+
+async function assertValidConfig(config: SlackAppConfig) {
+  const result = await validateSlackAppConfig(config);
+
+  if (!result.valid) {
+    throw new HTTPException(400, {
+      message: result.errors?.join("; ") ?? "Invalid Slack app config",
+    });
+  }
 }
 
 async function findIntegration(projectId: string) {
@@ -165,7 +178,12 @@ const slackAppIntegration = apiRouter<BaseVariables & { workspaceId: string }>()
     const { projectId } = c.req.valid("param");
     const body = c.req.valid("json");
 
-    const config = normalizeSlackAppConfig({ emoji: body.emoji });
+    const config = normalizeSlackAppConfig({
+      emoji: body.emoji,
+      agentEmoji: body.agentEmoji,
+      maintainerSlackUserId: body.maintainerSlackUserId,
+    });
+    await assertValidConfig(config);
     const existing = await findIntegration(projectId);
 
     if (existing) {
@@ -210,9 +228,14 @@ const slackAppIntegration = apiRouter<BaseVariables & { workspaceId: string }>()
     const currentConfig = normalizeSlackAppConfig(
       JSON.parse(existing.config) as SlackAppConfig,
     );
+    // An omitted field keeps its value; an empty string clears it.
     const nextConfig = normalizeSlackAppConfig({
       emoji: body.emoji ?? currentConfig.emoji,
+      agentEmoji: body.agentEmoji ?? currentConfig.agentEmoji,
+      maintainerSlackUserId:
+        body.maintainerSlackUserId ?? currentConfig.maintainerSlackUserId,
     });
+    await assertValidConfig(nextConfig);
 
     await db
       .update(integrationTable)

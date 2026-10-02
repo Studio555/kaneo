@@ -2835,6 +2835,20 @@
             "type": "string",
             "description": "The reaction that files a message as a task, without surrounding colons."
           },
+          "agentEmoji": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The reaction that starts an agent fix, or null when agent fixes are off."
+          },
+          "maintainerSlackUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Slack user messaged when the agent runner needs a person, or null."
+          },
           "isActive": {
             "type": [
               "boolean",
@@ -2854,6 +2868,8 @@
           "id",
           "projectId",
           "emoji",
+          "agentEmoji",
+          "maintainerSlackUserId",
           "isActive",
           "createdAt",
           "updatedAt"
@@ -13329,6 +13345,14 @@
                 "properties": {
                   "emoji": {
                     "type": "string"
+                  },
+                  "agentEmoji": {
+                    "type": "string",
+                    "description": "The reaction that starts an agent fix, without surrounding colons. An empty string turns agent fixes off."
+                  },
+                  "maintainerSlackUserId": {
+                    "type": "string",
+                    "description": "Slack user id to message when the agent runner needs a person, such as signing Codex in again. An empty string clears it."
                   }
                 }
               }
@@ -13397,6 +13421,14 @@
                 "properties": {
                   "emoji": {
                     "type": "string"
+                  },
+                  "agentEmoji": {
+                    "type": "string",
+                    "description": "The reaction that starts an agent fix, without surrounding colons. An empty string turns agent fixes off."
+                  },
+                  "maintainerSlackUserId": {
+                    "type": "string",
+                    "description": "Slack user id to message when the agent runner needs a person, such as signing Codex in again. An empty string clears it."
                   },
                   "isActive": {
                     "type": "boolean"

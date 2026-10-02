@@ -1014,6 +1014,11 @@ export const externalLinkTable = pgTable(
     uniqueIndex("external_link_slack_message_unique")
       .on(table.integrationId, table.externalId)
       .where(sql`${table.resourceType} = 'slack_message'`),
+    // One agent run per Slack reaction, so a redelivered event cannot start a
+    // second run.
+    uniqueIndex("external_link_agent_run_unique")
+      .on(table.integrationId, table.externalId)
+      .where(sql`${table.resourceType} = 'agent_run'`),
   ],
 );
 

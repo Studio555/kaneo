@@ -16,7 +16,8 @@ import {
   createExternalLink,
   findExternalLink,
 } from "../github/services/link-manager";
-import { replyQuietly, type SlackClient } from "./client";
+import { startAgentRun } from "./agent-run";
+import { replyQuietly, type SlackClient, type SlackMessage } from "./client";
 import { normalizeSlackAppConfig, type SlackAppConfig } from "./config";
 import { startTaskEnrichment } from "./enrich-task";
 import {
@@ -33,9 +34,17 @@ export type SlackReactionAdded = {
   itemType: string;
   channel: string;
   ts: string;
+  /** Unique per reaction; a redelivery of the same reaction repeats it. */
+  eventTs?: string;
 };
 
-type LinkedTask = { id: string; number: number | null; projectId: string };
+export type LinkedTask = {
+  id: string;
+  number: number | null;
+  projectId: string;
+};
+
+type SlackAppIntegration = { id: string; projectId: string; config: string };
 
 function isUniqueViolation(error: unknown) {
   return (
@@ -46,7 +55,7 @@ function isUniqueViolation(error: unknown) {
   );
 }
 
-async function resolveTaskLink(task: LinkedTask) {
+export async function resolveTaskLink(task: LinkedTask) {
   const project = await db.query.projectTable.findFirst({
     where: eq(projectTable.id, task.projectId),
   });
@@ -73,7 +82,7 @@ async function resolveTaskLink(task: LinkedTask) {
  * guest, someone who has never signed in to Kaneo — files the task unassigned
  * rather than guessing.
  */
-async function resolveKaneoUserId(
+export async function resolveKaneoUserId(
   client: SlackClient,
   slackUserId: string,
   projectId: string,
@@ -125,6 +134,141 @@ async function optional<T>(work: Promise<T | null>): Promise<T | null> {
   }
 }
 
+export type FiledTask = {
+  task: LinkedTask;
+  /** False when the message was already linked, by an earlier reaction or a racing delivery. */
+  created: boolean;
+  title: string;
+  description: string;
+  /** Who a newly filed task was assigned to; undefined when it was already filed. */
+  assigneeId: string | undefined;
+};
+
+/**
+ * The task a Slack message maps to, filing it when it has none yet. Shared by
+ * the filing reaction and the agent reaction, so both agree on what "the
+ * task for this message" means.
+ */
+export async function findOrFileTask({
+  event,
+  message,
+  integration,
+  resolveAssignee,
+  client,
+}: {
+  event: SlackReactionAdded;
+  message: SlackMessage;
+  integration: SlackAppIntegration;
+  /** Only called when the task is actually filed, so a known message costs no Slack lookups. */
+  resolveAssignee: () => Promise<string | undefined>;
+  client: SlackClient;
+}): Promise<FiledTask | null> {
+  const externalId = `${event.channel}:${event.ts}`;
+
+  const existingLink = await findExternalLink(
+    integration.id,
+    SLACK_MESSAGE_RESOURCE_TYPE,
+    externalId,
+  );
+
+  if (existingLink) {
+    const task = await db.query.taskTable.findFirst({
+      where: eq(taskTable.id, existingLink.taskId),
+    });
+
+    return task
+      ? {
+          task,
+          created: false,
+          title: task.title,
+          description: task.description ?? "",
+          assigneeId: undefined,
+        }
+      : null;
+  }
+
+  const [assigneeId, permalink, channelName, authorName] = await Promise.all([
+    resolveAssignee(),
+    client.getPermalink({ channel: event.channel, ts: event.ts }),
+    optional(client.getChannelName(event.channel)),
+    message.userId
+      ? optional(client.getUserName(message.userId))
+      : Promise.resolve(null),
+  ]);
+
+  const status = await resolveFirstColumnSlug(integration.projectId);
+
+  const title = deriveTaskTitle(message.text);
+  const description = formatTaskDescription({
+    text: message.text,
+    authorName,
+    channelName,
+    permalink: permalink ?? "",
+  });
+
+  const createdTask = await createTask({
+    projectId: integration.projectId,
+    currentUserId: assigneeId ?? "",
+    userId: assigneeId,
+    title,
+    description,
+    status,
+    priority: "no-priority",
+  });
+
+  try {
+    await createExternalLink({
+      taskId: createdTask.id,
+      integrationId: integration.id,
+      resourceType: SLACK_MESSAGE_RESOURCE_TYPE,
+      externalId,
+      url: permalink ?? "",
+      title,
+      metadata: {
+        channel: event.channel,
+        messageTs: event.ts,
+        threadTs: message.threadTs,
+        reactedBy: event.userId,
+        createdFrom: "slack",
+      },
+    });
+  } catch (error) {
+    if (!isUniqueViolation(error)) {
+      throw error;
+    }
+
+    // A concurrent reaction or a Slack retry linked this message first. The
+    // unique index is what makes that race safe; this side just clears the
+    // task it lost with, so the message still maps to exactly one task.
+    await db.delete(taskTable).where(eq(taskTable.id, createdTask.id));
+
+    const winner = await findExternalLink(
+      integration.id,
+      SLACK_MESSAGE_RESOURCE_TYPE,
+      externalId,
+    );
+    const winningTask = winner
+      ? await db.query.taskTable.findFirst({
+          where: eq(taskTable.id, winner.taskId),
+        })
+      : null;
+
+    return winningTask
+      ? {
+          task: winningTask,
+          created: false,
+          title: winningTask.title,
+          description: winningTask.description ?? "",
+          assigneeId: undefined,
+        }
+      : null;
+  }
+
+  return { task: createdTask, created: true, title, description, assigneeId };
+}
+
+type ReactionKind = "file" | "agent";
+
 export async function handleReactionAdded(
   event: SlackReactionAdded,
   { client }: { client: SlackClient },
@@ -140,12 +284,23 @@ export async function handleReactionAdded(
     ),
   });
 
-  const matching = integrations.filter((integration) => {
+  const reaction = event.reaction.toLowerCase();
+  const matching: Array<{
+    integration: SlackAppIntegration;
+    kind: ReactionKind;
+  }> = [];
+
+  for (const integration of integrations) {
     const config = normalizeSlackAppConfig(
       JSON.parse(integration.config) as SlackAppConfig,
     );
-    return config.emoji === event.reaction.toLowerCase();
-  });
+
+    if (config.emoji === reaction) {
+      matching.push({ integration, kind: "file" });
+    } else if (config.agentEmoji === reaction) {
+      matching.push({ integration, kind: "agent" });
+    }
+  }
 
   if (matching.length === 0) {
     return;
@@ -161,8 +316,6 @@ export async function handleReactionAdded(
     return;
   }
 
-  const externalId = `${event.channel}:${event.ts}`;
-
   // Reacting to a reply inside a thread must answer in that thread, not start a
   // new one, so the parent is resolved before either branch replies.
   const message = await client.getMessage({
@@ -174,143 +327,83 @@ export async function handleReactionAdded(
     return;
   }
 
-  for (const integration of matching) {
-    const existingLink = await findExternalLink(
-      integration.id,
-      SLACK_MESSAGE_RESOURCE_TYPE,
-      externalId,
-    );
-
-    if (existingLink) {
-      const task = await db.query.taskTable.findFirst({
-        where: eq(taskTable.id, existingLink.taskId),
-      });
-      const link = task ? await resolveTaskLink(task) : null;
-
-      if (link) {
-        await replyQuietly(client, {
-          channel: event.channel,
-          threadTs: message.threadTs,
-          text: `Already filed as ${link.identifier} — ${link.url}`,
-        });
-      }
-
+  for (const { integration, kind } of matching) {
+    if (kind === "agent") {
+      await startAgentRun({ event, message, integration, client });
       continue;
     }
 
-    const [assigneeId, permalink, channelName, authorName] = await Promise.all([
+    await fileReactedMessage({ event, message, integration, client });
+  }
+}
+
+async function fileReactedMessage({
+  event,
+  message,
+  integration,
+  client,
+}: {
+  event: SlackReactionAdded;
+  message: SlackMessage;
+  integration: SlackAppIntegration;
+  client: SlackClient;
+}): Promise<void> {
+  const filed = await findOrFileTask({
+    event,
+    message,
+    integration,
+    resolveAssignee: () =>
       resolveKaneoUserId(client, event.userId, integration.projectId),
-      client.getPermalink({ channel: event.channel, ts: event.ts }),
-      optional(client.getChannelName(event.channel)),
-      message.userId
-        ? optional(client.getUserName(message.userId))
-        : Promise.resolve(null),
-    ]);
+    client,
+  });
 
-    const status = await resolveFirstColumnSlug(integration.projectId);
+  if (!filed) {
+    return;
+  }
 
-    const title = deriveTaskTitle(message.text);
-    const description = formatTaskDescription({
-      text: message.text,
-      authorName,
-      channelName,
-      permalink: permalink ?? "",
+  const link = await resolveTaskLink(filed.task);
+
+  if (!link) {
+    return;
+  }
+
+  if (!filed.created) {
+    await replyQuietly(client, {
+      channel: event.channel,
+      threadTs: message.threadTs,
+      text: `Already filed as ${link.identifier} — ${link.url}`,
     });
+    return;
+  }
 
-    const createdTask = await createTask({
-      projectId: integration.projectId,
-      currentUserId: assigneeId ?? "",
-      userId: assigneeId,
-      title,
-      description,
-      status,
-      priority: "no-priority",
+  // Not awaited: Slack expects the events endpoint to answer within
+  // seconds, and the task is already filed whatever enrichment does. A
+  // started run replies once it settles, with the rewritten title.
+  const enriching = startTaskEnrichment(
+    {
+      taskId: filed.task.id,
+      projectId: filed.task.projectId,
+      prefix: link.prefix,
+      taskNumber: filed.task.number,
+      url: link.url,
+      original: { title: filed.title, description: filed.description },
+      channel: event.channel,
+      threadTs: message.threadTs,
+      reactedTs: event.ts,
+      actorId: filed.assigneeId ?? null,
+    },
+    { client },
+  );
+
+  if (!enriching) {
+    await replyQuietly(client, {
+      channel: event.channel,
+      threadTs: message.threadTs,
+      text: formatCreatedReply({
+        identifier: link.identifier,
+        title: filed.title,
+        url: link.url,
+      }),
     });
-
-    try {
-      await createExternalLink({
-        taskId: createdTask.id,
-        integrationId: integration.id,
-        resourceType: SLACK_MESSAGE_RESOURCE_TYPE,
-        externalId,
-        url: permalink ?? "",
-        title,
-        metadata: {
-          channel: event.channel,
-          messageTs: event.ts,
-          threadTs: message.threadTs,
-          reactedBy: event.userId,
-          createdFrom: "slack",
-        },
-      });
-    } catch (error) {
-      if (!isUniqueViolation(error)) {
-        throw error;
-      }
-
-      // A concurrent reaction or a Slack retry linked this message first. The
-      // unique index is what makes that race safe; this side just clears the
-      // task it lost with, so the message still maps to exactly one task.
-      await db.delete(taskTable).where(eq(taskTable.id, createdTask.id));
-
-      const winner = await findExternalLink(
-        integration.id,
-        SLACK_MESSAGE_RESOURCE_TYPE,
-        externalId,
-      );
-      const winningTask = winner
-        ? await db.query.taskTable.findFirst({
-            where: eq(taskTable.id, winner.taskId),
-          })
-        : null;
-      const winningLink = winningTask
-        ? await resolveTaskLink(winningTask)
-        : null;
-
-      if (winningLink) {
-        await replyQuietly(client, {
-          channel: event.channel,
-          threadTs: message.threadTs,
-          text: `Already filed as ${winningLink.identifier} — ${winningLink.url}`,
-        });
-      }
-
-      continue;
-    }
-
-    const link = await resolveTaskLink(createdTask);
-
-    if (link) {
-      // Not awaited: Slack expects the events endpoint to answer within
-      // seconds, and the task is already filed whatever enrichment does. A
-      // started run replies once it settles, with the rewritten title.
-      const enriching = startTaskEnrichment(
-        {
-          taskId: createdTask.id,
-          projectId: createdTask.projectId,
-          prefix: link.prefix,
-          taskNumber: createdTask.number,
-          url: link.url,
-          original: { title, description },
-          channel: event.channel,
-          threadTs: message.threadTs,
-          reactedTs: event.ts,
-          actorId: assigneeId ?? null,
-        },
-        { client },
-      );
-
-      if (!enriching) {
-        await replyQuietly(client, {
-          channel: event.channel,
-          threadTs: message.threadTs,
-          text: formatCreatedReply({
-            identifier: link.identifier,
-            title,
-            url: link.url,
-          }),
-        });
-      }
-    }
   }
 }

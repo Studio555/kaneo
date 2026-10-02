@@ -53,6 +53,8 @@ export type SlackClient = {
     ts: string;
     name: string;
   }): Promise<void>;
+  /** Lands in the app's Messages tab, which must be enabled under App Home. */
+  postDirectMessage(params: { userId: string; text: string }): Promise<void>;
 };
 
 /**
@@ -284,6 +286,10 @@ export function createSlackClient(botToken: string): SlackClient {
       });
     },
 
+    async postDirectMessage({ userId, text }) {
+      await callSlack(botToken, "chat.postMessage", { channel: userId, text });
+    },
+
     async addReaction({ channel, ts, name }) {
       try {
         await callSlack(botToken, "reactions.add", {
@@ -317,5 +323,18 @@ export async function replyQuietly(
     // The task exists either way; a channel the bot was removed from must not
     // turn into a retried delivery and a duplicate task.
     console.error("[Slack App] Failed to reply in thread:", error);
+  }
+}
+
+export async function directMessageQuietly(
+  client: SlackClient,
+  params: { userId: string; text: string },
+): Promise<void> {
+  try {
+    await client.postDirectMessage(params);
+  } catch (error) {
+    // Someone who left, or blocked the app, must not undo the work being
+    // reported; the issue and the pull request carry the same news.
+    console.error("[Slack App] Failed to send a direct message:", error);
   }
 }
