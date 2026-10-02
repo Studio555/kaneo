@@ -1,6 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/get-initials";
+import {
+  getNextSuggestionIndex,
+  handleSuggestionNavigation,
+} from "@/lib/suggestion-navigation";
 
 export type MentionMember = {
   id: string;
@@ -31,15 +35,15 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
 
     useImperativeHandle(ref, () => ({
       onKeyDown: ({ event }) => {
-        if (items.length === 0) return false;
-        if (event.key === "ArrowUp") {
-          setSelected((s) => (s + items.length - 1) % items.length);
+        if (items.length === 0 || event.isComposing) return false;
+        if (
+          handleSuggestionNavigation(event, items.length, (direction) => {
+            setSelected((current) =>
+              getNextSuggestionIndex(current, items.length, direction),
+            );
+          })
+        )
           return true;
-        }
-        if (event.key === "ArrowDown") {
-          setSelected((s) => (s + 1) % items.length);
-          return true;
-        }
         if (event.key === "Enter") {
           select(selected);
           return true;

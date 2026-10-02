@@ -1351,3 +1351,10 @@ input:-webkit-autofill:active {
   }
 
 }
+
+@layer components {
+  [data-suggestion-highlighted="true"] {
+    background-color: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+}

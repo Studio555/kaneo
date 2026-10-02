@@ -2,17 +2,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Check, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { SuggestionInput } from "@/components/ui/suggestion-input";
 import useAttachLabelToTask from "@/hooks/mutations/label/use-attach-label-to-task";
 import useCreateLabel from "@/hooks/mutations/label/use-create-label";
 import useDetachLabelFromTask from "@/hooks/mutations/label/use-detach-label-from-task";
 import useGetLabelsByTask from "@/hooks/queries/label/use-get-labels-by-task";
 import useGetLabelsByWorkspace from "@/hooks/queries/label/use-get-labels-by-workspace";
+import { useSuggestionNavigation } from "@/hooks/use-suggestion-navigation";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { cn } from "@/lib/cn";
 import { getTaskLabelOptions } from "@/lib/get-task-label-options";
@@ -201,11 +202,21 @@ export default function TaskLabelsPopover({
     }
   };
 
+  const suggestions = useSuggestionNavigation({
+    items: [
+      ...filteredLabels.map((label) => label.id),
+      ...(canCreate && isCreatingNewLabel ? ["create-label"] : []),
+    ],
+    query: searchValue,
+    enabled: open && step === "select",
+  });
+
   const renderSelectStep = () => (
     <div className="w-auto">
       <div className="flex items-center gap-2 p-2 border-b border-border">
         <Search className="w-3 h-3 text-muted-foreground" />
-        <Input
+        <SuggestionInput
+          navigation={suggestions.inputProps}
           ref={searchInputRef}
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
@@ -214,14 +225,15 @@ export default function TaskLabelsPopover({
         />
       </div>
 
-      <div className="py-1">
+      <div {...suggestions.listProps} className="py-1">
         {filteredLabels.length === 0 && searchValue.length === 0 && (
           <span className="text-xs text-muted-foreground px-2">
             {t("tasks:popover.labels.empty")}
           </span>
         )}
-        {filteredLabels.map((label) => (
+        {filteredLabels.map((label, index) => (
           <button
+            {...suggestions.getOptionProps(index)}
             key={label.id}
             type="button"
             className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent/50 text-left"
@@ -249,6 +261,7 @@ export default function TaskLabelsPopover({
           <button
             type="button"
             className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent/50 text-left"
+            {...suggestions.getOptionProps(filteredLabels.length)}
             onClick={handleCreateNewClick}
           >
             <div className="flex-shrink-0 w-3 flex justify-center">

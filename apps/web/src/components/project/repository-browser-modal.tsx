@@ -21,12 +21,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { SuggestionInput } from "@/components/ui/suggestion-input";
 import getGitHubAppInfo from "@/fetchers/github-integration/get-app-info";
 import listRepositories, {
   type ListRepositoriesResponse,
 } from "@/fetchers/github-integration/list-repositories";
+import { useSuggestionNavigation } from "@/hooks/use-suggestion-navigation";
 import { cn } from "@/lib/cn";
 import { getInitials } from "@/lib/get-initials";
 
@@ -116,6 +117,12 @@ export function RepositoryBrowserModal({
     onOpenChange(open);
   };
 
+  const suggestions = useSuggestionNavigation({
+    items: filteredRepositories.map((repository) => repository.full_name),
+    query: searchTerm,
+    enabled: open && !isLoading && !error,
+  });
+
   return (
     <Dialog open={open} onOpenChange={resetAndCloseModal}>
       <DialogContent className="!max-w-2xl max-h-[85vh] p-0 gap-0 flex flex-col">
@@ -134,7 +141,8 @@ export function RepositoryBrowserModal({
         <div className="px-6 py-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
+            <SuggestionInput
+              navigation={suggestions.inputProps}
               placeholder={t("settings:repositoryBrowser.searchPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -204,9 +212,10 @@ export function RepositoryBrowserModal({
               )}
 
               {filteredRepositories.length > 0 && (
-                <div className="px-6 py-4 space-y-2">
-                  {filteredRepositories.map((repository) => (
+                <div {...suggestions.listProps} className="px-6 py-4 space-y-2">
+                  {filteredRepositories.map((repository, index) => (
                     <button
+                      {...suggestions.getOptionProps(index)}
                       key={repository.id}
                       type="button"
                       onClick={() => handleSelectRepository(repository)}

@@ -3,16 +3,17 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ShortcutNumber } from "@/components/ui/shortcut-number";
+import { SuggestionInput } from "@/components/ui/suggestion-input";
 import { useUpdateTaskAssignee } from "@/hooks/mutations/task/use-update-task-assignee";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
 import { useNumberedShortcuts } from "@/hooks/use-numbered-shortcuts";
+import { useSuggestionNavigation } from "@/hooks/use-suggestion-navigation";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { getInitials } from "@/lib/get-initials";
 import { toast } from "@/lib/toast";
@@ -101,6 +102,12 @@ export default function SubtaskAssigneePopover({
     return filteredUsersOptions.slice(0, visibleUsersCount);
   }, [filteredUsersOptions, visibleUsersCount]);
 
+  const suggestions = useSuggestionNavigation({
+    items: ["", ...visibleUsersOptions.map((user) => user.value)],
+    query: searchValue,
+    enabled: open,
+  });
+
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     setOpen(nextOpen);
     if (nextOpen) {
@@ -135,7 +142,8 @@ export default function SubtaskAssigneePopover({
       <PopoverContent className="w-56 p-0" align="start">
         <div className="flex items-center gap-2 p-2 border-b border-border">
           <Search className="w-3 h-3 shrink-0 text-muted-foreground" />
-          <Input
+          <SuggestionInput
+            navigation={suggestions.inputProps}
             unstyled
             size="sm"
             value={searchValue}
@@ -149,9 +157,11 @@ export default function SubtaskAssigneePopover({
         </div>
         <div
           className="max-h-80 space-y-1 overflow-y-auto p-1"
+          {...suggestions.listProps}
           onScroll={handleListScroll}
         >
           <Button
+            {...suggestions.getOptionProps(0)}
             variant="ghost"
             size="sm"
             className="w-full justify-start gap-2 h-8 px-2"
@@ -184,6 +194,7 @@ export default function SubtaskAssigneePopover({
           )}
           {visibleUsersOptions.map((user, index) => (
             <Button
+              {...suggestions.getOptionProps(index + 1)}
               key={user.value}
               variant="ghost"
               size="sm"

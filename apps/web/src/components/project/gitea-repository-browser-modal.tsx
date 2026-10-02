@@ -11,10 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { SuggestionInput } from "@/components/ui/suggestion-input";
 import listGiteaRepositories, {
   type ListGiteaRepositoriesResponse,
 } from "@/fetchers/gitea-integration/list-gitea-repositories";
+import { useSuggestionNavigation } from "@/hooks/use-suggestion-navigation";
 import { cn } from "@/lib/cn";
 
 type GiteaRepositoryBrowserModalProps = {
@@ -76,6 +77,12 @@ export function GiteaRepositoryBrowserModal({
     onOpenChange(next);
   };
 
+  const suggestions = useSuggestionNavigation({
+    items: filteredRepositories.map((repository) => repository.full_name),
+    query: searchTerm,
+    enabled: canFetch && !isLoading && !error,
+  });
+
   return (
     <Dialog open={open} onOpenChange={resetAndCloseModal}>
       <DialogContent className="!max-w-2xl max-h-[85vh] p-0 gap-0 flex flex-col">
@@ -92,7 +99,8 @@ export function GiteaRepositoryBrowserModal({
         <div className="px-6 pb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
+            <SuggestionInput
+              navigation={suggestions.inputProps}
               className="pl-9"
               placeholder={t("settings:giteaIntegration.searchRepos")}
               value={searchTerm}
@@ -128,12 +136,13 @@ export function GiteaRepositoryBrowserModal({
             </div>
           )}
           {canFetch && data && (
-            <ul className="space-y-1">
-              {filteredRepositories.map((repo) => (
+            <ul {...suggestions.listProps} className="space-y-1">
+              {filteredRepositories.map((repo, index) => (
                 <li key={repo.id}>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      {...suggestions.getOptionProps(index)}
                       onClick={() => handleSelectRepository(repo)}
                       className={cn(
                         "flex-1 flex items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted/80 transition-colors",

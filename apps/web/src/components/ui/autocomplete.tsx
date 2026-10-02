@@ -5,6 +5,7 @@ import { ChevronsUpDownIcon, XIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/cn";
+import { handleSuggestionNavigationShortcut } from "@/lib/suggestion-navigation";
 
 const Autocomplete = AutocompletePrimitive.Root;
 
@@ -14,6 +15,7 @@ function AutocompleteInput({
   showClear = false,
   startAddon,
   size,
+  onKeyDown,
   ...props
 }: Omit<AutocompletePrimitive.Input.Props, "size"> & {
   showTrigger?: boolean;
@@ -47,6 +49,10 @@ function AutocompleteInput({
         data-slot="autocomplete-input"
         render={<Input nativeInput size={sizeValue} />}
         {...props}
+        onKeyDown={(event) => {
+          onKeyDown?.(event);
+          handleSuggestionNavigationShortcut(event);
+        }}
       />
       {showTrigger && (
         <AutocompleteTrigger
