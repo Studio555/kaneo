@@ -1779,7 +1779,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "No asignada",
-				"updateError": "Error al actualizar el asignado a esta tarea"
+				"updateError": "Error al actualizar el asignado a esta tarea",
+				"searchPlaceholder": "Buscar personas...",
+				"empty": "No se encontraron personas"
 			},
 			"status": {
 				"updateError": "Error al actualizar el estado de esta tarea"

@@ -1785,7 +1785,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Atanmamış",
-				"updateError": "Talep atananı güncellenemedi"
+				"updateError": "Talep atananı güncellenemedi",
+				"searchPlaceholder": "Kişi ara...",
+				"empty": "Kimse bulunamadı"
 			},
 			"status": {
 				"updateError": "Talep durumu güncellenemedi"

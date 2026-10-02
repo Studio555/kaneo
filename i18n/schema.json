@@ -7187,9 +7187,20 @@
 								},
 								"updateError": {
 									"type": "string"
+								},
+								"searchPlaceholder": {
+									"type": "string"
+								},
+								"empty": {
+									"type": "string"
 								}
 							},
-							"required": ["unassigned", "updateError"]
+							"required": [
+								"unassigned",
+								"updateError",
+								"searchPlaceholder",
+								"empty"
+							]
 						},
 						"status": {
 							"type": "object",

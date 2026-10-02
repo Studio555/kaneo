@@ -1780,7 +1780,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "未指派",
-				"updateError": "更新任务负责人失败"
+				"updateError": "更新任务负责人失败",
+				"searchPlaceholder": "搜索人员...",
+				"empty": "未找到人员"
 			},
 			"status": {
 				"updateError": "更新任务状态失败"

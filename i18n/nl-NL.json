@@ -1774,7 +1774,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Niet toegewezen",
-				"updateError": "Bijwerken toegewezen persoon mislukt"
+				"updateError": "Bijwerken toegewezen persoon mislukt",
+				"searchPlaceholder": "Personen zoeken...",
+				"empty": "Geen personen gevonden"
 			},
 			"status": {
 				"updateError": "Bijwerken taakstatus mislukt"

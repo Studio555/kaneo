@@ -1790,7 +1790,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Non assegnato",
-				"updateError": "Aggiornamento assegnatario attività fallito"
+				"updateError": "Aggiornamento assegnatario attività fallito",
+				"searchPlaceholder": "Cerca persone...",
+				"empty": "Nessuna persona trovata"
 			},
 			"status": {
 				"updateError": "Aggiornamento stato attività fallito"

@@ -1780,7 +1780,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "未割り当て",
-				"updateError": "担当者の更新に失敗しました"
+				"updateError": "担当者の更新に失敗しました",
+				"searchPlaceholder": "ユーザーを検索...",
+				"empty": "ユーザーが見つかりません"
 			},
 			"status": {
 				"updateError": "ステータスの更新に失敗しました"

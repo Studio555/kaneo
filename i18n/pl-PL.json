@@ -2085,7 +2085,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Nieprzypisane",
-				"updateError": "Nie udało się zmienić osoby przypisanej do zadania"
+				"updateError": "Nie udało się zmienić osoby przypisanej do zadania",
+				"searchPlaceholder": "Szukaj osób...",
+				"empty": "Nie znaleziono osób"
 			},
 			"dueDate": {
 				"clear": "Wyczyść datę",

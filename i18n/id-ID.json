@@ -1780,7 +1780,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Belum ditugaskan",
-				"updateError": "Gagal memperbarui penanggung jawab tugas"
+				"updateError": "Gagal memperbarui penanggung jawab tugas",
+				"searchPlaceholder": "Cari orang...",
+				"empty": "Tidak ada orang ditemukan"
 			},
 			"status": {
 				"updateError": "Gagal memperbarui status tugas"

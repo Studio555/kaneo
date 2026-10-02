@@ -1,8 +1,9 @@
-import { Check } from "lucide-react";
+import { Check, Search } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -33,6 +34,7 @@ export default function TaskAssigneePopover({
 }: TaskAssigneePopoverProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const [visibleUsersCount, setVisibleUsersCount] = useState(
     INITIAL_VISIBLE_USERS,
   );
@@ -47,8 +49,18 @@ export default function TaskAssigneePopover({
       value: member.userId,
       image: member?.user?.image ?? "",
       name: member?.user?.name ?? "",
+      email: member?.user?.email ?? "",
     }));
   }, [workspaceUsers]);
+
+  const filteredUsersOptions = useMemo(() => {
+    const query = searchValue.trim().toLowerCase();
+    return (usersOptions ?? []).filter(
+      (user) =>
+        user.label.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query),
+    );
+  }, [usersOptions, searchValue]);
 
   const handleAssigneeChange = useCallback(
     async (newUserId: string) => {
@@ -71,19 +83,20 @@ export default function TaskAssigneePopover({
 
   const shortcutOptions = useMemo(() => {
     const unassignedOption = { onSelect: () => handleAssigneeChange("") };
-    const userOptions = (usersOptions || []).slice(0, 8).map((user) => ({
+    const userOptions = filteredUsersOptions.slice(0, 8).map((user) => ({
       onSelect: () => handleAssigneeChange(user.value),
     }));
     return [unassignedOption, ...userOptions];
-  }, [usersOptions, handleAssigneeChange]);
+  }, [filteredUsersOptions, handleAssigneeChange]);
 
   const visibleUsersOptions = useMemo(() => {
-    return usersOptions?.slice(0, visibleUsersCount) ?? [];
-  }, [usersOptions, visibleUsersCount]);
+    return filteredUsersOptions.slice(0, visibleUsersCount);
+  }, [filteredUsersOptions, visibleUsersCount]);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     setOpen(nextOpen);
     if (nextOpen) {
+      setSearchValue("");
       setVisibleUsersCount(INITIAL_VISIBLE_USERS);
     }
   }, []);
@@ -97,11 +110,11 @@ export default function TaskAssigneePopover({
       if (!nearBottom) return;
 
       setVisibleUsersCount((current) => {
-        const totalUsers = usersOptions?.length ?? current;
+        const totalUsers = filteredUsersOptions.length;
         return Math.min(current + VISIBLE_USERS_STEP, totalUsers);
       });
     },
-    [usersOptions?.length],
+    [filteredUsersOptions.length],
   );
 
   useNumberedShortcuts(open, shortcutOptions);
@@ -112,6 +125,20 @@ export default function TaskAssigneePopover({
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent className="w-56 p-0" align="start">
+        <div className="flex items-center gap-2 p-2 border-b border-border">
+          <Search className="w-3 h-3 shrink-0 text-muted-foreground" />
+          <Input
+            unstyled
+            size="sm"
+            value={searchValue}
+            onChange={(event) => {
+              setSearchValue(event.target.value);
+              setVisibleUsersCount(INITIAL_VISIBLE_USERS);
+            }}
+            placeholder={t("tasks:popover.assignee.searchPlaceholder")}
+            aria-label={t("tasks:popover.assignee.searchPlaceholder")}
+          />
+        </div>
         <div
           className="max-h-80 space-y-1 overflow-y-auto p-1"
           onScroll={handleListScroll}
@@ -139,6 +166,14 @@ export default function TaskAssigneePopover({
               <ShortcutNumber number={1} />
             )}
           </Button>
+          {filteredUsersOptions.length === 0 && (
+            <p
+              className="px-2 py-1.5 text-xs text-muted-foreground"
+              role="status"
+            >
+              {t("tasks:popover.assignee.empty")}
+            </p>
+          )}
           {visibleUsersOptions.map((user, index) => (
             <Button
               key={user.value}

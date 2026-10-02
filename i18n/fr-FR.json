@@ -1790,7 +1790,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Non assigné",
-				"updateError": "Échec de la mise à jour de l'assigné de la tâche"
+				"updateError": "Échec de la mise à jour de l'assigné de la tâche",
+				"searchPlaceholder": "Rechercher des personnes...",
+				"empty": "Aucune personne trouvée"
 			},
 			"status": {
 				"updateError": "Échec de la mise à jour du statut de la tâche"
