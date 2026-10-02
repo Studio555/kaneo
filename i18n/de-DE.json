@@ -1785,7 +1785,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Nicht zugewiesen",
-				"updateError": "Aufgabenzuweisung konnte nicht aktualisiert werden"
+				"updateError": "Aufgabenzuweisung konnte nicht aktualisiert werden",
+				"searchPlaceholder": "Personen suchen...",
+				"empty": "Keine Personen gefunden"
 			},
 			"status": {
 				"updateError": "Aufgabenstatus konnte nicht aktualisiert werden"

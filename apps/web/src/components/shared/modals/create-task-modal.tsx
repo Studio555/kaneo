@@ -197,6 +197,7 @@ function CreateTaskModal({
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("no-priority");
   const [assigneeId, setAssigneeId] = useState("");
+  const [assigneeSearchValue, setAssigneeSearchValue] = useState("");
   const datesEnabled = useDatesEnabled();
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
@@ -231,6 +232,15 @@ function CreateTaskModal({
   const { mutateAsync: createTask } = useCreateTask();
   const { mutateAsync: updateTask } = useUpdateTask();
   const { mutateAsync: deleteTask } = useDeleteTask();
+
+  const filteredMembers = useMemo(() => {
+    const query = assigneeSearchValue.trim().toLowerCase();
+    return (workspaceUsers?.members ?? []).filter(
+      (member) =>
+        (member.user?.name ?? member.userId).toLowerCase().includes(query) ||
+        (member.user?.email ?? "").toLowerCase().includes(query),
+    );
+  }, [workspaceUsers, assigneeSearchValue]);
 
   const filteredLabels = (() => {
     const searchFiltered = workspaceLabels.filter((label) =>
@@ -842,7 +852,7 @@ function CreateTaskModal({
                 </PopoverContent>
               </Popover>
 
-              <Popover>
+              <Popover onOpenChange={() => setAssigneeSearchValue("")}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
@@ -874,8 +884,23 @@ function CreateTaskModal({
                     )}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-48 p-1" align="start">
-                  <div className="space-y-1">
+                <PopoverContent className="w-56 p-0" align="start">
+                  <div className="flex items-center gap-2 p-2 border-b border-border">
+                    <Search className="w-3 h-3 shrink-0 text-muted-foreground" />
+                    <Input
+                      unstyled
+                      size="sm"
+                      value={assigneeSearchValue}
+                      onChange={(event) =>
+                        setAssigneeSearchValue(event.target.value)
+                      }
+                      placeholder={t(
+                        "tasks:popover.assignee.searchPlaceholder",
+                      )}
+                      aria-label={t("tasks:popover.assignee.searchPlaceholder")}
+                    />
+                  </div>
+                  <div className="max-h-80 space-y-1 overflow-y-auto p-1">
                     <button
                       type="button"
                       className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent/50 text-left transition-colors h-8"
@@ -894,16 +919,26 @@ function CreateTaskModal({
                       <span className="text-sm">
                         {t("common:modals.createTask.assignUnassigned")}
                       </span>
-                      {!assigneeId && <Check className="ml-auto h-4 w-4" />}
+                      {!assigneeId && (
+                        <Check className="ml-auto h-4 w-4 shrink-0" />
+                      )}
                     </button>
-                    {workspaceUsers?.members?.map((member) => (
+                    {filteredMembers.length === 0 && (
+                      <p
+                        className="px-2 py-1.5 text-xs text-muted-foreground"
+                        role="status"
+                      >
+                        {t("tasks:popover.assignee.empty")}
+                      </p>
+                    )}
+                    {filteredMembers.map((member) => (
                       <button
                         key={member.userId}
                         type="button"
                         className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent/50 text-left transition-colors h-8"
                         onClick={() => setAssigneeId(member.userId || "")}
                       >
-                        <Avatar className="h-6 w-6">
+                        <Avatar className="h-6 w-6 shrink-0">
                           <AvatarImage
                             src={member?.user?.image ?? ""}
                             alt={member?.user?.name || ""}
@@ -912,9 +947,11 @@ function CreateTaskModal({
                             {getInitials(member?.user?.name)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">{member?.user?.name}</span>
+                        <span className="text-sm truncate">
+                          {member?.user?.name ?? member.userId}
+                        </span>
                         {assigneeId === member.userId && (
-                          <Check className="ml-auto h-4 w-4" />
+                          <Check className="ml-auto h-4 w-4 shrink-0" />
                         )}
                       </button>
                     ))}

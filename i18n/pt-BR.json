@@ -1790,7 +1790,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Não atribuído",
-				"updateError": "Falha ao atualizar o responsável pela tarefa"
+				"updateError": "Falha ao atualizar o responsável pela tarefa",
+				"searchPlaceholder": "Buscar pessoas...",
+				"empty": "Nenhuma pessoa encontrada"
 			},
 			"status": {
 				"updateError": "Falha ao atualizar o status da tarefa"

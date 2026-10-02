@@ -60,7 +60,20 @@ vi.mock("@/hooks/queries/workspace/use-active-workspace", () => ({
 vi.mock(
   "@/hooks/queries/workspace-users/use-get-active-workspace-users",
   () => ({
-    useGetActiveWorkspaceUsers: () => ({ data: { members: [] } }),
+    useGetActiveWorkspaceUsers: () => ({
+      data: {
+        members: [
+          {
+            userId: "alice",
+            user: { name: "Alice Adams", email: "alice@example.com" },
+          },
+          {
+            userId: "bob",
+            user: { name: "Bob Brown", email: "robert@example.com" },
+          },
+        ],
+      },
+    }),
   }),
 );
 
@@ -94,6 +107,43 @@ vi.mock("react-i18next", () => ({
 }));
 
 describe("CreateTaskModal", () => {
+  it("searches assignees by name or email and saves the selected person", async () => {
+    useLocation.mockReturnValue({
+      pathname: "/dashboard/workspace/workspace-1/project/project-1/board",
+    });
+    render(<CreateTaskModal open onClose={vi.fn()} />);
+    fireEvent.click(screen.getByText("common:modals.createTask.assign"));
+    const search = await screen.findByRole("textbox", {
+      name: "tasks:popover.assignee.searchPlaceholder",
+    });
+    await vi.waitFor(() => expect(search).toHaveFocus());
+    fireEvent.change(search, { target: { value: "  ALICE  " } });
+    expect(screen.getByText("Alice Adams")).toBeTruthy();
+    expect(screen.queryByText("Bob Brown")).toBeNull();
+    fireEvent.change(search, { target: { value: "missing" } });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "tasks:popover.assignee.empty",
+    );
+    expect(
+      screen.getByText("common:modals.createTask.assignUnassigned"),
+    ).toBeTruthy();
+    fireEvent.change(search, { target: { value: "ROBERT@" } });
+    fireEvent.click(screen.getByText("Bob Brown"));
+    fireEvent.keyDown(search, { key: "Escape" });
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "common:modals.createTask.taskTitlePlaceholder",
+      ),
+      { target: { value: "Assigned task" } },
+    );
+    fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+    await vi.waitFor(() => {
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: "bob" }),
+      );
+    });
+  });
+
   it("keeps unsaved input while discard confirmation is open", async () => {
     useLocation.mockReturnValue({
       pathname: "/dashboard/workspace/workspace-1/project/project-1/board",

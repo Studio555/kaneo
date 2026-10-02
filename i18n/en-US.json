@@ -1842,7 +1842,9 @@
     "popover": {
       "assignee": {
         "unassigned": "Unassigned",
-        "updateError": "Failed to update task assignee"
+        "updateError": "Failed to update task assignee",
+        "searchPlaceholder": "Search people...",
+        "empty": "No people found"
       },
       "status": {
         "updateError": "Failed to update task status"
