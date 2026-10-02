@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { SuggestionInput } from "@/components/ui/suggestion-input";
 import { Switch } from "@/components/ui/switch";
 import columnIcons, {
   DEFAULT_COLUMN_ICON_NAMES,
@@ -17,6 +18,7 @@ import { useDeleteColumn } from "@/hooks/mutations/column/use-delete-column";
 import { useReorderColumns } from "@/hooks/mutations/column/use-reorder-columns";
 import { useUpdateColumn } from "@/hooks/mutations/column/use-update-column";
 import { useGetColumns } from "@/hooks/queries/column/use-get-columns";
+import { useSuggestionNavigation } from "@/hooks/use-suggestion-navigation";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { getColumnIcon } from "@/lib/column";
 import { toast } from "@/lib/toast";
@@ -195,6 +197,17 @@ export default function ColumnEditor({ projectId }: ColumnEditorProps) {
     iconName.toLowerCase().includes(iconSearch.trim().toLowerCase()),
   );
 
+  const iconSuggestions = useSuggestionNavigation({
+    items: filteredIcons.map(([name]) => name),
+    query: iconSearch,
+    enabled: iconPickerColumnId !== null,
+  });
+  const newIconSuggestions = useSuggestionNavigation({
+    items: filteredIcons.map(([name]) => name),
+    query: iconSearch,
+    enabled: newIconPickerOpen,
+  });
+
   if (isLoading) {
     return (
       <div className="text-sm text-muted-foreground">
@@ -240,7 +253,8 @@ export default function ColumnEditor({ projectId }: ColumnEditorProps) {
               </PopoverTrigger>
               <PopoverContent className="w-80" align="start">
                 <div className="space-y-2">
-                  <Input
+                  <SuggestionInput
+                    navigation={iconSuggestions.inputProps}
                     value={iconSearch}
                     onChange={(e) => setIconSearch(e.target.value)}
                     placeholder={t(
@@ -249,8 +263,11 @@ export default function ColumnEditor({ projectId }: ColumnEditorProps) {
                     className="h-8 text-xs"
                   />
                   <div className="max-h-[280px] overflow-y-auto pr-1">
-                    <div className="grid grid-cols-6 gap-1.5">
-                      {filteredIcons.map(([iconName, Icon]) => {
+                    <div
+                      {...iconSuggestions.listProps}
+                      className="grid grid-cols-6 gap-1.5"
+                    >
+                      {filteredIcons.map(([iconName, Icon], optionIndex) => {
                         const selectedIconName =
                           col.icon ||
                           DEFAULT_COLUMN_ICON_NAMES[
@@ -259,6 +276,7 @@ export default function ColumnEditor({ projectId }: ColumnEditorProps) {
                         const isSelected = selectedIconName === iconName;
                         return (
                           <Button
+                            {...iconSuggestions.getOptionProps(optionIndex)}
                             key={iconName}
                             type="button"
                             variant="ghost"
@@ -366,7 +384,8 @@ export default function ColumnEditor({ projectId }: ColumnEditorProps) {
             </PopoverTrigger>
             <PopoverContent className="w-80" align="start">
               <div className="space-y-2">
-                <Input
+                <SuggestionInput
+                  navigation={newIconSuggestions.inputProps}
                   value={iconSearch}
                   onChange={(e) => setIconSearch(e.target.value)}
                   placeholder={t(
@@ -375,11 +394,15 @@ export default function ColumnEditor({ projectId }: ColumnEditorProps) {
                   className="h-8 text-xs"
                 />
                 <div className="max-h-[280px] overflow-y-auto pr-1">
-                  <div className="grid grid-cols-6 gap-1.5">
-                    {filteredIcons.map(([iconName, Icon]) => {
+                  <div
+                    {...newIconSuggestions.listProps}
+                    className="grid grid-cols-6 gap-1.5"
+                  >
+                    {filteredIcons.map(([iconName, Icon], optionIndex) => {
                       const isSelected = newColumnIcon === iconName;
                       return (
                         <Button
+                          {...newIconSuggestions.getOptionProps(optionIndex)}
                           key={iconName}
                           type="button"
                           variant="ghost"

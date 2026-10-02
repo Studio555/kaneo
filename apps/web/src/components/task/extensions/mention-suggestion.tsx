@@ -78,6 +78,7 @@ export const MentionSuggestion = Extension.create<MentionSuggestionOptions>({
             place(props.clientRect);
           },
           onKeyDown: (props) => {
+            if (!props.view.hasFocus() || props.event.isComposing) return false;
             if (props.event.key === "Escape") return false;
             return component?.ref?.onKeyDown(props) ?? false;
           },

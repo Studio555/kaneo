@@ -78,7 +78,7 @@ describe.each(["task", "subtasks"])("%s assignee search", (kind) => {
       ),
     );
     fireEvent.click(screen.getByText("Assign person"));
-    return screen.findByRole("textbox", {
+    return screen.findByRole("combobox", {
       name: "tasks:popover.assignee.searchPlaceholder",
     });
   }
@@ -101,7 +101,7 @@ describe.each(["task", "subtasks"])("%s assignee search", (kind) => {
     await vi.waitFor(() => expect(search).not.toBeInTheDocument());
     fireEvent.click(screen.getByText("Assign person"));
     expect(
-      await screen.findByRole("textbox", {
+      await screen.findByRole("combobox", {
         name: "tasks:popover.assignee.searchPlaceholder",
       }),
     ).toHaveValue("");

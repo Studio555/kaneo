@@ -163,6 +163,7 @@ export function KeyboardShortcutsProvider({
 
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing) return;
       const target = event.target as HTMLElement;
       const isEditingText =
         target.tagName === "INPUT" ||

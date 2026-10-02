@@ -46,6 +46,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { SuggestionInput } from "@/components/ui/suggestion-input";
 import useCreateLabel from "@/hooks/mutations/label/use-create-label";
 import useCreateTask from "@/hooks/mutations/task/use-create-task";
 import { useDeleteTask } from "@/hooks/mutations/task/use-delete-task";
@@ -55,6 +56,7 @@ import useGetProjects from "@/hooks/queries/project/use-get-projects";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
 import { useDatesEnabled } from "@/hooks/use-dates-enabled";
+import { useSuggestionNavigation } from "@/hooks/use-suggestion-navigation";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { cn } from "@/lib/cn";
 import { formatDateMedium } from "@/lib/format";
@@ -263,6 +265,21 @@ function CreateTaskModal({
     !workspaceLabels.some(
       (label) => label.name.toLowerCase() === searchValue.toLowerCase(),
     );
+
+  const assigneeSuggestions = useSuggestionNavigation({
+    items: ["", ...filteredMembers.map((member) => member.userId)],
+    query: assigneeSearchValue,
+  });
+  const labelSuggestions = useSuggestionNavigation({
+    items: [
+      ...filteredLabels.map((label) => label.id),
+      ...(canCreateLabelCapability && isCreatingNewLabel
+        ? ["create-label"]
+        : []),
+    ],
+    query: searchValue,
+    enabled: labelsOpen && labelsStep === "select",
+  });
 
   const hasUnsavedChanges = Boolean(
     title.trim() ||
@@ -887,9 +904,10 @@ function CreateTaskModal({
                 <PopoverContent className="w-56 p-0" align="start">
                   <div className="flex items-center gap-2 p-2 border-b border-border">
                     <Search className="w-3 h-3 shrink-0 text-muted-foreground" />
-                    <Input
+                    <SuggestionInput
                       unstyled
                       size="sm"
+                      navigation={assigneeSuggestions.inputProps}
                       value={assigneeSearchValue}
                       onChange={(event) =>
                         setAssigneeSearchValue(event.target.value)
@@ -900,8 +918,12 @@ function CreateTaskModal({
                       aria-label={t("tasks:popover.assignee.searchPlaceholder")}
                     />
                   </div>
-                  <div className="max-h-80 space-y-1 overflow-y-auto p-1">
+                  <div
+                    {...assigneeSuggestions.listProps}
+                    className="max-h-80 space-y-1 overflow-y-auto p-1"
+                  >
                     <button
+                      {...assigneeSuggestions.getOptionProps(0)}
                       type="button"
                       className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent/50 text-left transition-colors h-8"
                       onClick={() => setAssigneeId("")}
@@ -931,8 +953,9 @@ function CreateTaskModal({
                         {t("tasks:popover.assignee.empty")}
                       </p>
                     )}
-                    {filteredMembers.map((member) => (
+                    {filteredMembers.map((member, index) => (
                       <button
+                        {...assigneeSuggestions.getOptionProps(index + 1)}
                         key={member.userId}
                         type="button"
                         className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent/50 text-left transition-colors h-8"
@@ -1023,7 +1046,11 @@ function CreateTaskModal({
                     <div className="w-auto">
                       <div className="flex items-center gap-2 p-2 border-b border-border">
                         <Search className="w-3 h-3 text-muted-foreground" />
-                        <input
+                        <SuggestionInput
+                          unstyled
+                          nativeInput
+                          size="sm"
+                          navigation={labelSuggestions.inputProps}
                           ref={searchInputRef}
                           value={searchValue}
                           onChange={(e) => setSearchValue(e.target.value)}
@@ -1034,15 +1061,16 @@ function CreateTaskModal({
                         />
                       </div>
 
-                      <div className="py-1">
+                      <div {...labelSuggestions.listProps} className="py-1">
                         {filteredLabels.length === 0 &&
                           searchValue.length === 0 && (
                             <span className="text-xs text-muted-foreground px-2">
                               {t("common:modals.createTask.noLabelsFound")}
                             </span>
                           )}
-                        {filteredLabels.map((label) => (
+                        {filteredLabels.map((label, index) => (
                           <button
+                            {...labelSuggestions.getOptionProps(index)}
                             key={label.id}
                             type="button"
                             className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent/50 text-left"
@@ -1074,6 +1102,9 @@ function CreateTaskModal({
                           <button
                             type="button"
                             className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent/50 text-left"
+                            {...labelSuggestions.getOptionProps(
+                              filteredLabels.length,
+                            )}
                             onClick={handleCreateNewClick}
                           >
                             <div className="flex-shrink-0 w-3 flex justify-center">

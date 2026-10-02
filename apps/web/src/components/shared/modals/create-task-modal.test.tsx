@@ -113,7 +113,7 @@ describe("CreateTaskModal", () => {
     });
     render(<CreateTaskModal open onClose={vi.fn()} />);
     fireEvent.click(screen.getByText("common:modals.createTask.assign"));
-    const search = await screen.findByRole("textbox", {
+    const search = await screen.findByRole("combobox", {
       name: "tasks:popover.assignee.searchPlaceholder",
     });
     await vi.waitFor(() => expect(search).toHaveFocus());
