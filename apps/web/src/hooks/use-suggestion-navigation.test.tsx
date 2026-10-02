@@ -95,15 +95,20 @@ describe("suggestion navigation", () => {
       "true",
     );
   });
-  it("clears the highlight after filtering, blur, and reopening", () => {
+  it("soft highlights filtered results and clears the highlight on blur", () => {
     render(<Picker />);
     const input = screen.getByRole("combobox");
     act(() => input.focus());
     fireEvent.keyDown(input, { key: "ArrowDown" });
     fireEvent.change(input, { target: { value: "Beta" } });
-    expect(input).not.toHaveAttribute("aria-activedescendant");
-    fireEvent.keyDown(input, { key: "Enter" });
+    expect(screen.getByRole("option", { name: "Beta" })).toHaveAttribute(
+      "data-suggestion-highlighted",
+      "true",
+    );
     expect(select).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(select).toHaveBeenCalledWith("Beta");
+    expect(submit).not.toHaveBeenCalled();
     fireEvent.keyDown(input, { key: "n", ctrlKey: true });
     expect(screen.getByRole("option", { name: "Beta" })).toHaveAttribute(
       "aria-selected",
@@ -114,7 +119,10 @@ describe("suggestion navigation", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" });
     expect(input).not.toHaveAttribute("aria-activedescendant");
     act(() => input.focus());
-    expect(input).not.toHaveAttribute("aria-activedescendant");
+    expect(input).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: "Beta" }).id,
+    );
   });
   it("does not activate a removed result or submit an empty picker", () => {
     const { rerender } = render(<Picker />);
@@ -129,6 +137,54 @@ describe("suggestion navigation", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(submit).not.toHaveBeenCalled();
+  });
+  it("updates the soft highlight as results narrow and supports manual navigation", () => {
+    render(<Picker items={["Alpha", "Alpine", "Beta"]} />);
+    const input = screen.getByRole("combobox");
+    act(() => input.focus());
+    fireEvent.change(input, { target: { value: "Al" } });
+    expect(input).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: "Alpha" }).id,
+    );
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(input).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: "Alpine" }).id,
+    );
+    fireEvent.change(input, { target: { value: "Alp" } });
+    expect(input).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: "Alpha" }).id,
+    );
+    fireEvent.change(input, { target: { value: "Alpi" } });
+    expect(input).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: "Alpine" }).id,
+    );
+    expect(select).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    expect(select).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(select).toHaveBeenCalledWith("Alpine");
+    expect(submit).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: "Missing" } });
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(select).toHaveBeenCalledTimes(1);
+  });
+  it("soft highlights results that arrive after typing", () => {
+    const { rerender } = render(<Picker items={[]} />);
+    const input = screen.getByRole("combobox");
+    act(() => input.focus());
+    fireEvent.change(input, { target: { value: "Be" } });
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+    rerender(<Picker items={["Beta"]} />);
+    expect(input).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: "Beta" }).id,
+    );
+    expect(select).not.toHaveBeenCalled();
   });
   it("ignores ordinary letters, extra modifiers, IME composition, and disabled navigation", () => {
     const { rerender } = render(<Picker />);

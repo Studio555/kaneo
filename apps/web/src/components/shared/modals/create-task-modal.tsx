@@ -269,6 +269,7 @@ function CreateTaskModal({
   const assigneeSuggestions = useSuggestionNavigation({
     items: ["", ...filteredMembers.map((member) => member.userId)],
     query: assigneeSearchValue,
+    autoHighlightIndex: 1,
   });
   const labelSuggestions = useSuggestionNavigation({
     items: [

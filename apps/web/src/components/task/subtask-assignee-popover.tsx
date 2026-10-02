@@ -105,6 +105,7 @@ export default function SubtaskAssigneePopover({
   const suggestions = useSuggestionNavigation({
     items: ["", ...visibleUsersOptions.map((user) => user.value)],
     query: searchValue,
+    autoHighlightIndex: 1,
     enabled: open,
   });
 

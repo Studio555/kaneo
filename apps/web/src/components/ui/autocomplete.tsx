@@ -2,12 +2,17 @@
 
 import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete";
 import { ChevronsUpDownIcon, XIcon } from "lucide-react";
+import type * as React from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/cn";
 import { handleSuggestionNavigationShortcut } from "@/lib/suggestion-navigation";
 
-const Autocomplete = AutocompletePrimitive.Root;
+function Autocomplete(
+  props: React.ComponentProps<typeof AutocompletePrimitive.Root>,
+) {
+  return <AutocompletePrimitive.Root autoHighlight keepHighlight {...props} />;
+}
 
 function AutocompleteInput({
   className,

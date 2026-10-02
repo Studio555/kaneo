@@ -108,12 +108,32 @@ describe.each(["task", "subtasks"])("%s assignee search", (kind) => {
     expect(screen.getByText("Member 0")).toBeTruthy();
   });
 
+  it("soft highlights the matching person and confirms with Enter", async () => {
+    const search = await renderPicker();
+    await vi.waitFor(() => expect(search).toHaveFocus());
+    fireEvent.change(search, { target: { value: "Member 44" } });
+    const person = screen.getByRole("option", { name: /Member 44/ });
+    expect(search).toHaveAttribute("aria-activedescendant", person.id);
+    expect(person).toHaveAttribute("data-suggestion-highlighted", "true");
+    expect(updateTaskAssignee).not.toHaveBeenCalled();
+    fireEvent.keyDown(search, { key: "Enter" });
+    await vi.waitFor(() =>
+      expect(updateTaskAssignee).toHaveBeenCalledWith({
+        ...task,
+        userId: "user-44",
+      }),
+    );
+  });
+
   it("keeps unassignment available when there are no matches", async () => {
     const search = await renderPicker();
     fireEvent.change(search, { target: { value: "Nobody" } });
     expect(screen.getByRole("status")).toHaveTextContent(
       "tasks:popover.assignee.empty",
     );
+    expect(search).not.toHaveAttribute("aria-activedescendant");
+    fireEvent.keyDown(search, { key: "Enter" });
+    expect(updateTaskAssignee).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("tasks:popover.assignee.unassigned"));
     await vi.waitFor(() =>
       expect(updateTaskAssignee).toHaveBeenCalledWith({ ...task, userId: "" }),

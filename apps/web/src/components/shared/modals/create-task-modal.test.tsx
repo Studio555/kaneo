@@ -128,7 +128,13 @@ describe("CreateTaskModal", () => {
       screen.getByText("common:modals.createTask.assignUnassigned"),
     ).toBeTruthy();
     fireEvent.change(search, { target: { value: "ROBERT@" } });
-    fireEvent.click(screen.getByText("Bob Brown"));
+    expect(search).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: /Bob Brown/ }).id,
+    );
+    expect(createTask).not.toHaveBeenCalled();
+    fireEvent.keyDown(search, { key: "Enter" });
+    expect(createTask).not.toHaveBeenCalled();
     fireEvent.keyDown(search, { key: "Escape" });
     fireEvent.change(
       screen.getByPlaceholderText(

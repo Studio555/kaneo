@@ -8,12 +8,14 @@ type SuggestionNavigationOptions = {
   items: readonly string[];
   query: string;
   enabled?: boolean;
+  autoHighlightIndex?: number;
 };
 
 export function useSuggestionNavigation({
   items,
   query,
   enabled = true,
+  autoHighlightIndex = 0,
 }: SuggestionNavigationOptions) {
   const listId = useId();
   const [focused, setFocused] = useState(false);
@@ -21,11 +23,25 @@ export function useSuggestionNavigation({
     item: string;
     query: string;
   } | null>(null);
+  const selectedIndex =
+    selection?.query === query ? items.indexOf(selection.item) : -1;
   const activeIndex =
-    enabled && focused && selection?.query === query
-      ? items.indexOf(selection.item)
+    enabled && focused
+      ? selectedIndex >= 0
+        ? selectedIndex
+        : query.trim() && items[autoHighlightIndex] !== undefined
+          ? autoHighlightIndex
+          : -1
       : -1;
   const optionId = (index: number) => `${listId}-option-${index}`;
+  const activeItem = items[activeIndex];
+
+  useEffect(() => {
+    if (activeItem === undefined) return;
+    document
+      .getElementById(`${listId}-option-${activeIndex}`)
+      ?.scrollIntoView?.({ block: "nearest" });
+  }, [activeIndex, activeItem, listId]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (
@@ -46,9 +62,6 @@ export function useSuggestionNavigation({
           direction,
         );
         setSelection({ item: items[nextIndex], query });
-        document
-          .getElementById(optionId(nextIndex))
-          ?.scrollIntoView?.({ block: "nearest" });
       },
     );
     if (navigated) {

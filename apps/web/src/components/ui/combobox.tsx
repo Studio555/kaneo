@@ -23,7 +23,7 @@ function Combobox<Value, Multiple extends boolean | undefined = false>(
   const chipsRef = React.useRef<Element | null>(null);
   return (
     <ComboboxContext.Provider value={{ chipsRef, multiple: !!props.multiple }}>
-      <ComboboxPrimitive.Root {...props} />
+      <ComboboxPrimitive.Root autoHighlight {...props} />
     </ComboboxContext.Provider>
   );
 }
