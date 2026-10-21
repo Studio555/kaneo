@@ -62,8 +62,7 @@ const project: ProjectWithTasks = {
       ],
     },
   ],
-  plannedTasks: [],
-  archivedTasks: [],
+  backlogSections: [],
 };
 let client: QueryClient;
 function Wrapper({ children }: { children: ReactNode }) {

@@ -12,6 +12,7 @@ export async function resolveTargetStatus(
     .select({
       id: columnTable.id,
       slug: columnTable.slug,
+      kind: columnTable.kind,
     })
     .from(columnTable)
     .where(eq(columnTable.projectId, projectId))
@@ -38,12 +39,17 @@ export async function resolveTargetStatus(
     }
   }
 
-  const fallbackColumn = projectColumns.find(
+  // A workflow rule may target a backlog section, but the fallbacks only ever
+  // land on the board.
+  const boardColumns = projectColumns.filter(
+    (column) => column.kind === "board",
+  );
+  const fallbackColumn = boardColumns.find(
     (column) => column.slug === fallbackStatus,
   );
   if (fallbackColumn) {
     return fallbackColumn.slug;
   }
 
-  return projectColumns[0]?.slug ?? fallbackStatus;
+  return boardColumns[0]?.slug ?? fallbackStatus;
 }

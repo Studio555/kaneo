@@ -4,6 +4,7 @@ import { PreferenceSwitchRow } from "@/components/settings/preferences/preferenc
 import { SettingsCard } from "@/components/settings/settings-card";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Button } from "@/components/ui/button";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useUserPreferencesStore } from "@/store/user-preferences";
 
 export function TaskDetailsSection() {
@@ -21,6 +22,7 @@ export function TaskDetailsSection() {
     setShowPriority,
     resetDisplayPreferences,
   } = useUserPreferencesStore();
+  const datesEnabled = useDatesEnabled();
 
   const rows = [
     {
@@ -35,12 +37,16 @@ export function TaskDetailsSection() {
       checked: showAssignees,
       onCheckedChange: setShowAssignees,
     },
-    {
-      id: "dueDates",
-      title: t("settings:preferencesPage.dueDates"),
-      checked: showDueDates,
-      onCheckedChange: setShowDueDates,
-    },
+    ...(datesEnabled
+      ? [
+          {
+            id: "dueDates",
+            title: t("settings:preferencesPage.dueDates"),
+            checked: showDueDates,
+            onCheckedChange: setShowDueDates,
+          },
+        ]
+      : []),
     {
       id: "labels",
       title: t("settings:preferencesPage.labels"),

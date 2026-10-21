@@ -107,8 +107,18 @@ const project: ProjectWithTasks = {
   description: null,
   isPublic: false,
   columns: [],
-  plannedTasks: [task, otherTask],
-  archivedTasks: [],
+  backlogSections: [
+    {
+      id: "planned",
+      columnId: "column-planned",
+      slug: "planned",
+      name: "Planned",
+      icon: null,
+      color: null,
+      systemKey: "planned",
+      tasks: [task, otherTask],
+    },
+  ],
 };
 
 beforeEach(() => {

@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { AssignedTask } from "@/fetchers/task/get-assigned-tasks";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { getColumnIcon } from "@/lib/column";
 import { getStatusDisplayLabel } from "@/lib/i18n/domain";
 import { resolveLabelColor } from "@/lib/label-color";
@@ -17,6 +18,8 @@ export function AssignedTaskRow({
   workspaceId,
   showLabels = false,
 }: AssignedTaskRowProps) {
+  const datesEnabled = useDatesEnabled();
+
   return (
     <Link
       to="/dashboard/workspace/$workspaceId/project/$projectId/task/$taskId"
@@ -60,10 +63,12 @@ export function AssignedTaskRow({
       <span className="hidden w-28 shrink-0 truncate text-muted-foreground text-xs sm:block">
         {task.projectName}
       </span>
-      <DueDateText
-        dueDate={task.dueDate}
-        className="shrink-0 text-right sm:w-20"
-      />
+      {datesEnabled && (
+        <DueDateText
+          dueDate={task.dueDate}
+          className="shrink-0 text-right sm:w-20"
+        />
+      )}
     </Link>
   );
 }

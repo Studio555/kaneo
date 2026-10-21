@@ -94,10 +94,8 @@ export async function handleIssueReopened(payload: IssueReopenedPayload) {
               source: "issue_reopened",
             });
 
-            if (
-              existingMetadata.createdFrom === "kaneo" ||
-              existingMetadata.state === "open"
-            ) {
+            // Kaneo-created issues sync too; inboundEcho filters our own writes.
+            if (existingMetadata.state === "open") {
               return;
             }
 

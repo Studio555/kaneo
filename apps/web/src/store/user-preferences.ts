@@ -1,5 +1,10 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type { BoardViewMode } from "@/components/project/views/project-views";
+
+// The backlog has no board layout, so it keeps its own narrower choice rather
+// than reusing BoardViewMode.
+export type BacklogViewMode = "list" | "table";
 
 export const WEEK_START_DAYS = [0, 1, 6] as const;
 export type WeekStartDay = (typeof WEEK_START_DAYS)[number];
@@ -17,8 +22,11 @@ type UserPreferencesStore = {
     coordinates?: { x: number; y: number },
   ) => void;
 
-  viewMode: "board" | "list";
-  setViewMode: (mode: "board" | "list") => void;
+  viewMode: BoardViewMode;
+  setViewMode: (mode: BoardViewMode) => void;
+
+  backlogViewMode: BacklogViewMode;
+  setBacklogViewMode: (mode: BacklogViewMode) => void;
 
   taskLayout: TaskLayout;
   setTaskLayout: (layout: TaskLayout) => void;
@@ -96,6 +104,9 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
 
       taskLayout: "board",
       setTaskLayout: (layout) => set({ taskLayout: layout }),
+
+      backlogViewMode: "list",
+      setBacklogViewMode: (mode) => set({ backlogViewMode: mode }),
 
       compactMode: false,
       setCompactMode: (compact) => set({ compactMode: compact }),

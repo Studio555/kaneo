@@ -135,6 +135,33 @@ export const userAvatarTable = pgTable(
   (table) => [index("user_avatar_userId_idx").on(table.userId)],
 );
 
+// The GitHub account behind a Kaneo user, so assignment can name the same
+// person on both sides. The numeric id is the identity because GitHub handles
+// get renamed; github_login is a cache, since the assign API takes a name.
+export const userGithubIdentityTable = pgTable("user_github_identity", {
+  id: text("id")
+    .$defaultFn(() => createId())
+    .primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .unique("user_github_identity_user_id_unique")
+    .references(() => userTable.id, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    }),
+  // Two Kaneo users claiming one GitHub account would make inbound
+  // assignment ambiguous, so the database refuses it.
+  githubUserId: text("github_user_id")
+    .notNull()
+    .unique("user_github_identity_github_user_id_unique"),
+  githubLogin: text("github_login").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
 export const verificationTable = pgTable(
   "verification",
   {
@@ -456,6 +483,12 @@ export const columnTable = pgTable(
     icon: text("icon"),
     color: text("color"),
     isFinal: boolean("is_final").default(false).notNull(),
+    // Board columns make up the board; backlog columns are the backlog's
+    // sections. Both are task statuses, so they share one slug namespace.
+    kind: text("kind").$type<ColumnKind>().default("board").notNull(),
+    // Marks the built-in "planned" and "archived" backlog sections, which
+    // every project has and which cannot be deleted.
+    systemKey: text("system_key").$type<BacklogSystemKey>(),
     createdAt: timestamp("created_at", { mode: "date" })
       .default(utcNow)
       .notNull(),
@@ -464,8 +497,16 @@ export const columnTable = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("column_projectId_idx").on(table.projectId)],
+  (table) => [
+    index("column_projectId_idx").on(table.projectId),
+    uniqueIndex("column_project_system_key_unique")
+      .on(table.projectId, table.systemKey)
+      .where(sql`${table.systemKey} is not null`),
+  ],
 );
+
+export type ColumnKind = "board" | "backlog";
+export type BacklogSystemKey = "planned" | "archived";
 
 export const workflowRuleTable = pgTable(
   "workflow_rule",
@@ -549,6 +590,12 @@ export const taskTable = pgTable(
       onUpdate: "cascade",
     }),
     priority: text("priority").default("low").notNull(),
+    // Deleting a craft un-crafts its tasks rather than removing them. Labels
+    // cascade instead, because there the row *is* the attachment.
+    craftId: text("craft_id").references(() => craftTable.id, {
+      onDelete: "set null",
+      onUpdate: "cascade",
+    }),
     startDate: timestamp("start_date", { mode: "date" }),
     dueDate: timestamp("due_date", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" })
@@ -569,6 +616,7 @@ export const taskTable = pgTable(
     index("task_dueDate_idx").on(table.dueDate),
     index("task_assigneeId_idx").on(table.userId),
     index("task_columnId_idx").on(table.columnId),
+    index("task_craftId_idx").on(table.craftId),
     unique("task_project_number_unique").on(table.projectId, table.number),
   ],
 );
@@ -775,6 +823,41 @@ export const assetTable = pgTable(
       .where(
         sql`${table.taskId} is null and ${table.surface} in ('draft', 'draft-pending')`,
       ),
+  ],
+);
+
+export const craftTable = pgTable(
+  "craft",
+  {
+    id: text("id")
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    // Always a workspace-level definition, never a per-task attachment. This
+    // is the structural break from `labelTable`, where a null taskId is what
+    // distinguishes a definition row from an attachment row.
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaceTable.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    name: text("name").notNull(),
+    color: text("color").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("craft_workspace_id_idx").on(table.workspaceId),
+    // Case-insensitive, because inbound `craft:` labels are resolved
+    // case-insensitively. A plain unique constraint would let `Engineering`
+    // and `engineering` coexist and make that resolution ambiguous.
+    uniqueIndex("craft_workspace_name_unique").on(
+      table.workspaceId,
+      sql`lower(${table.name})`,
+    ),
   ],
 );
 
@@ -1153,6 +1236,16 @@ export const externalLinkTable = pgTable(
       .where(
         sql`${table.resourceType} = 'issue' AND ${table.metadata} LIKE '%"deferredIssueEdit":%'`,
       ),
+    // Only Slack messages: a pull request legitimately links to several tasks,
+    // so this cannot be a unique constraint across every resource type.
+    uniqueIndex("external_link_slack_message_unique")
+      .on(table.integrationId, table.externalId)
+      .where(sql`${table.resourceType} = 'slack_message'`),
+    // One agent run per Slack reaction, so a redelivered event cannot start a
+    // second run.
+    uniqueIndex("external_link_agent_run_unique")
+      .on(table.integrationId, table.externalId)
+      .where(sql`${table.resourceType} = 'agent_run'`),
   ],
 );
 

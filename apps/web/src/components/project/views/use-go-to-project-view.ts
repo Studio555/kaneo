@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { useUserPreferencesStore } from "@/store/user-preferences";
 import {
+  isBoardViewMode,
   PROJECT_ROUTE_PATHS,
   type ProjectRoute,
   type ProjectView,
@@ -23,8 +24,9 @@ export function useGoToProjectView({
 
   return useCallback(
     (view: ProjectView) => {
-      if (view === "board" || view === "list") setViewMode(view);
-      if (view !== "backlog") setTaskLayout(view);
+      if (isBoardViewMode(view)) setViewMode(view);
+      // taskLayout only tells date layouts apart, so table is stored as board.
+      if (view !== "backlog") setTaskLayout(view === "table" ? "board" : view);
       const route = routeForView(view);
       if (route === currentRoute) return;
       navigate({

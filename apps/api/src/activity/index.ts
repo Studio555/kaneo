@@ -296,6 +296,20 @@ subscribeToEvent<{
 subscribeToEvent<{
   taskId: string;
   userId: string;
+  oldCraftName: string | null;
+  newCraftName: string | null;
+  title: string;
+  type: string;
+}>("task.craft_changed", async (data) => {
+  await createActivity(data.taskId, data.type, data.userId, null, {
+    oldCraftName: data.oldCraftName,
+    newCraftName: data.newCraftName,
+  });
+});
+
+subscribeToEvent<{
+  taskId: string;
+  userId: string;
   title: string;
   type: string;
 }>("task.unassigned", async (data) => {

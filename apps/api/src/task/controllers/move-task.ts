@@ -33,12 +33,15 @@ async function resolveDestinationStatus(
       id: columnTable.id,
       slug: columnTable.slug,
       position: columnTable.position,
+      kind: columnTable.kind,
     })
     .from(columnTable)
     .where(eq(columnTable.projectId, destinationProjectId))
     .orderBy(asc(columnTable.position));
 
-  const [firstColumn] = destinationColumns;
+  const firstColumn = destinationColumns.find(
+    (column) => column.kind === "board",
+  );
 
   if (!firstColumn) {
     throw new HTTPException(400, {

@@ -106,6 +106,13 @@ export function taskMatchesFilters(
       filters.labels,
       () => filters.labels?.some((id) => labelIds.includes(id)) ?? false,
     ],
+    // An empty craft filter value means "no craft".
+    [
+      "craft",
+      filters.craft,
+      () =>
+        filters.craft?.includes(task.craft?.id ?? task.craftId ?? "") ?? false,
+    ],
   ];
 
   for (const [subject, values, matches] of checks) {

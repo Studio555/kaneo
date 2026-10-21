@@ -11,7 +11,13 @@ export function useCreateColumn() {
       data,
     }: {
       projectId: string;
-      data: { name: string; icon?: string; color?: string; isFinal?: boolean };
+      data: {
+        name: string;
+        icon?: string;
+        color?: string;
+        isFinal?: boolean;
+        kind?: "board" | "backlog";
+      };
     }) => createColumn(projectId, data),
     onSuccess: async (column) => {
       forgetCollapsedColumn(column.projectId, column.slug);

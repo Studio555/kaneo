@@ -1,9 +1,9 @@
 .git
 .github
 .turbo
+**/.cache
 **/.next
 **/.turbo
-**/.cache
 **/*.tsbuildinfo
 **/coverage
 **/dist

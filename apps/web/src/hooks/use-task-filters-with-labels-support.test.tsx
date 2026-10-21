@@ -109,8 +109,28 @@ describe("useTaskFiltersWithLabelsSupport", () => {
           ],
         },
       ],
-      plannedTasks: [],
-      archivedTasks: [],
+      backlogSections: [
+        {
+          id: "planned",
+          columnId: "column-planned",
+          slug: "planned",
+          name: "Planned",
+          icon: null,
+          color: null,
+          systemKey: "planned" as const,
+          tasks: [],
+        },
+        {
+          id: "archived",
+          columnId: "column-archived",
+          slug: "archived",
+          name: "Archived",
+          icon: null,
+          color: null,
+          systemKey: "archived" as const,
+          tasks: [],
+        },
+      ],
     };
 
     const { result } = renderHook(
@@ -194,8 +214,28 @@ describe("useTaskFiltersWithLabelsSupport", () => {
             ],
           },
         ],
-        plannedTasks: [],
-        archivedTasks: [],
+        backlogSections: [
+          {
+            id: "planned",
+            columnId: "column-planned",
+            slug: "planned",
+            name: "Planned",
+            icon: null,
+            color: null,
+            systemKey: "planned" as const,
+            tasks: [],
+          },
+          {
+            id: "archived",
+            columnId: "column-archived",
+            slug: "archived",
+            name: "Archived",
+            icon: null,
+            color: null,
+            systemKey: "archived" as const,
+            tasks: [],
+          },
+        ],
       };
 
       const { result } = renderHook(
@@ -231,8 +271,7 @@ describe("useTaskFiltersWithLabelsSupport", () => {
       id: "project-1",
       slug: "PROJ",
       columns: [],
-      plannedTasks: [planned],
-      archivedTasks: [],
+      backlogSections: [{ slug: "planned", tasks: [planned] }],
     } as unknown as Parameters<typeof useTaskFiltersWithLabelsSupport>[0];
 
     const { result } = renderHook(
@@ -249,7 +288,9 @@ describe("useTaskFiltersWithLabelsSupport", () => {
 
     expect(result.current.filters.status).toBeNull();
     expect(result.current.activeFilterCount).toBe(1);
-    expect(result.current.filteredProject?.plannedTasks).toHaveLength(1);
+    expect(
+      result.current.filteredProject?.backlogSections[0].tasks,
+    ).toHaveLength(1);
 
     act(() => result.current.clearFilters());
 

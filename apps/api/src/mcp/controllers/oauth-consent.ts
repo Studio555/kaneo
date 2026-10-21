@@ -15,6 +15,7 @@ import type {
   authorizationQuerySchema,
   clientRegistrationSchema,
 } from "../schemas";
+import { SUPPORTED_GRANT_TYPES, SUPPORTED_RESPONSE_TYPES } from "../schemas";
 
 const clientUrl = process.env.KANEO_CLIENT_URL || "http://localhost:5173";
 
@@ -66,8 +67,10 @@ export async function registerMcpClient(input: ClientRegistrationInput) {
     redirect_uris: client.redirectUris,
     client_name: client.clientName,
     token_endpoint_auth_method: "none" as const,
-    grant_types: ["authorization_code" as const],
-    response_types: ["code" as const],
+    // What was registered, not what was requested: a client asking for refresh_token is registered
+    // for authorization_code alone and must be told so.
+    grant_types: [...SUPPORTED_GRANT_TYPES],
+    response_types: [...SUPPORTED_RESPONSE_TYPES],
   };
 }
 

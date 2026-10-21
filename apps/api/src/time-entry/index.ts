@@ -75,6 +75,7 @@ const createTimeEntryRoute = createRoute({
       "No access to the project, or missing task:update permission",
     ),
     404: errorResponse("Task not found"),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -104,6 +105,7 @@ const updateTimeEntryRoute = createRoute({
       "No access to the project, or missing task:update permission",
     ),
     404: errorResponse("Time entry not found"),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 

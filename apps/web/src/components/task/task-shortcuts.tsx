@@ -6,6 +6,7 @@ import { useUpdateTaskAssignee } from "@/hooks/mutations/task/use-update-task-as
 import { useUpdateTaskDueDate } from "@/hooks/mutations/task/use-update-task-due-date";
 import useGetTask from "@/hooks/queries/task/use-get-task";
 import useGetTaskRelations from "@/hooks/queries/task-relation/use-get-task-relations";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
 import { toast } from "@/lib/toast";
@@ -36,8 +37,10 @@ export function TaskShortcuts({
   const { mutateAsync: updateDueDate } = useUpdateTaskDueDate();
   const openRelationPicker = useRelationPickerStore((state) => state.open);
   const { canUpdateTasks, canAssignTasks } = useWorkspacePermission();
+  const datesEnabled = useDatesEnabled();
   const active = { enabled: enabled && Boolean(task) };
   const editable = { enabled: active.enabled && canUpdateTasks() };
+  const datesEditable = { enabled: editable.enabled && datesEnabled };
   const assignable = { enabled: active.enabled && canAssignTasks() };
 
   const openTask = (id: string | undefined) => {
@@ -52,7 +55,7 @@ export function TaskShortcuts({
   useShortcut("changePriority", () => clickTaskAction("priority"), editable);
   useShortcut("assignTask", () => clickTaskAction("assignee"), assignable);
   useShortcut("changeLabels", () => clickTaskAction("labels"), editable);
-  useShortcut("setDueDate", () => clickTaskAction("dueDate"), editable);
+  useShortcut("setDueDate", () => clickTaskAction("dueDate"), datesEditable);
   useShortcut("moveToProject", () => clickTaskAction("move"), editable);
   useShortcut("addLink", () => clickTaskAction("addLink"), editable);
   useShortcut("createSubtask", () => clickTaskAction("addSubtask"), editable);
@@ -99,7 +102,7 @@ export function TaskShortcuts({
         );
       }
     },
-    editable,
+    datesEditable,
   );
 
   useShortcut(

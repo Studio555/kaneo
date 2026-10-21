@@ -14,17 +14,29 @@ type TasksApiResponse = InferResponseType<
 
 type ProjectWithTasksRaw = TasksApiResponse["data"];
 
+export type BacklogSection = Omit<
+  ProjectWithTasksRaw["backlogSections"][number],
+  "tasks"
+> & {
+  tasks: Task[];
+};
+
+// The API still sends plannedTasks and archivedTasks for older clients; the
+// fetcher drops them because backlogSections already holds those tasks.
 export type ProjectWithTasks = Omit<
   ProjectWithTasksRaw,
-  "archivedTasks" | "backgroundVersion" | "columns" | "plannedTasks"
+  | "archivedTasks"
+  | "backgroundVersion"
+  | "backlogSections"
+  | "columns"
+  | "plannedTasks"
 > & {
   // Older cache fixtures and persisted query data predate board backgrounds.
   backgroundVersion?: string | null;
-  archivedTasks: Task[];
+  backlogSections: BacklogSection[];
   columns: Array<
     Omit<ProjectWithTasksRaw["columns"][number], "tasks"> & {
       tasks: Task[];
     }
   >;
-  plannedTasks: Task[];
 };

@@ -1,14 +1,23 @@
 import { and, asc, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import db from "../../database";
-import { columnTable, projectTable, taskTable } from "../../database/schema";
+import {
+  columnTable,
+  craftTable,
+  projectTable,
+  taskTable,
+} from "../../database/schema";
 import { publishEvent } from "../../events";
 import { filterUsersWithProjectAccess } from "../../project-access/filter-users-with-project-access";
+import { areDatesEnabled } from "../../utils/dates-enabled";
 import {
   NO_PROJECT_ACCESS,
   NOT_ASSIGNABLE,
 } from "../../utils/assert-assignable-user";
-import { coercePriority, VIRTUAL_STATUSES } from "../validate-task-fields";
+import {
+  coercePriority,
+  SYSTEM_BACKLOG_STATUSES,
+} from "../validate-task-fields";
 import { resolveImportTaskStatus } from "../resolve-import-task-status";
 import { claimTaskNumber } from "./claim-task-numbers";
 import { nextTaskPosition } from "./next-task-position";
@@ -22,6 +31,7 @@ export type ImportTask = {
   startDate?: string | null;
   dueDate?: string | null;
   userId?: string | null;
+  craft?: string | null;
 };
 
 async function importTasks(
@@ -61,7 +71,23 @@ async function importTasks(
     orderBy: asc(columnTable.position),
   });
 
+  // Craft is exported by name, so imports resolve it back against the target
+  // workspace's vocabulary. An unknown name imports the task with no craft
+  // rather than inventing one, matching how inbound `craft:` labels behave.
+  const workspaceCrafts = await db
+    .select({
+      id: craftTable.id,
+      name: craftTable.name,
+      color: craftTable.color,
+    })
+    .from(craftTable)
+    .where(eq(craftTable.workspaceId, project.workspaceId));
+  const craftByName = new Map(
+    workspaceCrafts.map((craft) => [craft.name.toLowerCase(), craft]),
+  );
+
   const results = [];
+  const datesEnabled = areDatesEnabled();
 
   for (const taskData of tasksToImport) {
     const reference = taskData.userId?.trim() || null;
@@ -71,6 +97,18 @@ async function importTasks(
       results.push({
         success: false,
         error: assigneeId ? NO_PROJECT_ACCESS : NOT_ASSIGNABLE,
+        task: taskData,
+      });
+      continue;
+    }
+
+    // A dated row in the file is a per-task failure, exactly like an unknown
+    // assignee: throwing here instead would abort the loop with the earlier
+    // rows already committed and no result body to say which ones landed.
+    if (!datesEnabled && (taskData.startDate || taskData.dueDate)) {
+      results.push({
+        success: false,
+        error: "Date fields are disabled on this instance",
         task: taskData,
       });
       continue;
@@ -88,6 +126,8 @@ async function importTasks(
       );
       const warnings = [statusWarning, priorityWarning].filter(Boolean);
 
+      const craft = craftByName.get(taskData.craft?.trim().toLowerCase() ?? "");
+
       const createdTask = await db.transaction(async (tx) => {
         const taskNumber = await claimTaskNumber(projectId, tx);
         // Recheck the snapshot's column and retain it until the insert commits.
@@ -104,7 +144,7 @@ async function importTasks(
           .for("key share");
         const status =
           column ||
-          VIRTUAL_STATUSES.some((virtual) => virtual === resolvedStatus)
+          SYSTEM_BACKLOG_STATUSES.some((key) => key === resolvedStatus)
             ? resolvedStatus
             : "planned";
         if (status !== resolvedStatus) {
@@ -131,6 +171,7 @@ async function importTasks(
             dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
             description: taskData.description || "",
             priority,
+            craftId: craft?.id ?? null,
             number: taskNumber,
             position,
           })
@@ -145,6 +186,8 @@ async function importTasks(
           taskId: createdTask.id,
           userId: createdTask.userId ?? "",
           currentUserId: currentUserId ?? "",
+          craftName: craft?.name ?? null,
+          craftColor: craft?.color ?? null,
           type: "create",
           content: "imported the task",
         });

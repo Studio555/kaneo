@@ -1,13 +1,14 @@
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { SuggestionInput } from "@/components/ui/suggestion-input";
 import columnIcons from "@/constants/column-icons";
+import { useSuggestionNavigation } from "@/hooks/use-suggestion-navigation";
 import { cn } from "@/lib/cn";
 
 type ColumnIconPickerProps = {
@@ -36,6 +37,11 @@ export function ColumnIconPicker({
   const icons = query
     ? ICON_ENTRIES.filter(([name]) => name.toLowerCase().includes(query))
     : ICON_ENTRIES;
+  const suggestions = useSuggestionNavigation({
+    items: icons.map(([name]) => name),
+    query: search,
+    enabled: open,
+  });
 
   const changeOpen = (next: boolean) => {
     setOpen(next);
@@ -60,16 +66,21 @@ export function ColumnIconPicker({
       </PopoverTrigger>
       <PopoverContent className="w-80" align="start">
         <div className="space-y-2 p-1">
-          <Input
+          <SuggestionInput
+            navigation={suggestions.inputProps}
             size="sm"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t("settings:columnEditor.searchIconsPlaceholder")}
             aria-label={t("settings:columnEditor.searchIconsPlaceholder")}
           />
-          <div className="grid max-h-70 grid-cols-6 gap-1 overflow-y-auto pr-1">
-            {icons.map(([name, Icon]) => (
+          <div
+            {...suggestions.listProps}
+            className="grid max-h-70 grid-cols-6 gap-1 overflow-y-auto pr-1"
+          >
+            {icons.map(([name, Icon], index) => (
               <Button
+                {...suggestions.getOptionProps(index)}
                 key={name}
                 type="button"
                 variant="ghost"

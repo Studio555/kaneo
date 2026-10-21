@@ -61,6 +61,9 @@ const cardFields = vi.hoisted((): CardField[] => []);
 vi.mock("@/components/custom-fields/use-task-card-fields", () => ({
   useTaskCardFields: () => cardFields,
 }));
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useShowDueDates: () => true,
+}));
 vi.mock("@/hooks/use-workspace-permission", () => ({
   // Only the priority picker is editable, so it's the one chip under test.
   useWorkspacePermission: () =>

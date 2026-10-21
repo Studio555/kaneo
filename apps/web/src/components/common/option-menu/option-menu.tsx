@@ -28,7 +28,10 @@ export function OptionMenu({
   const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
   const filtered = options.filter(
-    (option) => option.pinned || option.label.toLowerCase().includes(needle),
+    (option) =>
+      option.pinned ||
+      option.label.toLowerCase().includes(needle) ||
+      Boolean(option.keywords?.toLowerCase().includes(needle)),
   );
 
   const selectByNumber = (key: string) => {

@@ -13,8 +13,10 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { HTTPException } from "hono/http-exception";
+import { orderBacklogSections } from "../../column/backlog-sections";
 import {
   columnTable,
+  craftTable,
   externalLinkTable,
   labelTable,
   projectTable,
@@ -193,6 +195,9 @@ async function getTasksPage(
     assigneeId: userTable.id,
     assigneeImage: userTable.image,
     projectId: taskTable.projectId,
+    craftId: taskTable.craftId,
+    craftName: craftTable.name,
+    craftColor: craftTable.color,
   };
 
   const query = db
@@ -200,6 +205,7 @@ async function getTasksPage(
     .from(taskTable)
     .leftJoin(userTable, eq(taskTable.userId, userTable.id))
     .leftJoin(projectTable, eq(taskTable.projectId, projectTable.id))
+    .leftJoin(craftTable, eq(taskTable.craftId, craftTable.id))
     .where(whereClause)
     .orderBy(orderByClause, asc(taskTable.id));
 
@@ -284,6 +290,19 @@ async function getTasksPage(
     });
   }
 
+  // Flatten the joined craft columns into the nested shape the board expects,
+  // dropping the raw craftName/craftColor fields from the payload.
+  const withCraft = paginatedTasks.map((task) => {
+    const { craftName, craftColor, ...rest } = task;
+    return {
+      ...rest,
+      craft:
+        task.craftId && craftName
+          ? { id: task.craftId, name: craftName, color: craftColor ?? "" }
+          : null,
+    };
+  });
+
   const projectColumns = await db
     .select()
     .from(columnTable)
@@ -297,10 +316,9 @@ async function getTasksPage(
   const missingStatuses = Array.from(
     new Set(paginatedTasks.map((task) => task.status)),
   ).filter(
-    (status) =>
-      status !== "planned" &&
-      status !== "archived" &&
-      !projectColumns.some((column) => column.slug === status),
+    // Planned and Archived are backlog-section columns too, so they are
+    // fetched like any other status.
+    (status) => !projectColumns.some((column) => column.slug === status),
   );
   if (missingStatuses.length) {
     const taskColumns = await db
@@ -417,40 +435,42 @@ async function getTasksPage(
     publicRelatedRevision = `${labels?.revision}:${links?.revision}:${children?.revision}`;
   }
 
-  const columns = projectColumns.map((column) => ({
-    id: column.slug,
-    slug: column.slug,
-    name: column.name,
-    position: column.position,
-    icon: column.icon,
-    isFinal: column.isFinal,
-    tasks: paginatedTasks
-      .filter((task) => task.status === column.slug)
-      .map((task) => ({
-        ...task,
-        subtaskCounts: subtaskCounts.get(task.id) ?? { completed: 0, total: 0 },
-        labels: taskLabelsMap.get(task.id) || [],
-        externalLinks: taskExternalLinksMap.get(task.id) || [],
-      })),
+  const withRelations = (task: (typeof withCraft)[number]) => ({
+    ...task,
+    subtaskCounts: subtaskCounts.get(task.id) ?? { completed: 0, total: 0 },
+    labels: taskLabelsMap.get(task.id) || [],
+    externalLinks: taskExternalLinksMap.get(task.id) || [],
+  });
+  const tasksWithStatus = (slug: string) =>
+    withCraft.filter((task) => task.status === slug).map(withRelations);
+
+  const columns = projectColumns
+    .filter((column) => column.kind === "board")
+    .map((column) => ({
+      id: column.slug,
+      slug: column.slug,
+      name: column.name,
+      position: column.position,
+      icon: column.icon,
+      isFinal: column.isFinal,
+      tasks: tasksWithStatus(column.slug),
+    }));
+
+  const backlogSections = orderBacklogSections(
+    projectColumns.filter((column) => column.kind === "backlog"),
+  ).map((section) => ({
+    id: section.slug,
+    columnId: section.id,
+    slug: section.slug,
+    name: section.name,
+    icon: section.icon,
+    color: section.color,
+    systemKey: section.systemKey,
+    tasks: tasksWithStatus(section.slug),
   }));
 
-  const archivedTasks = paginatedTasks
-    .filter((task) => task.status === "archived")
-    .map((task) => ({
-      ...task,
-      subtaskCounts: subtaskCounts.get(task.id) ?? { completed: 0, total: 0 },
-      labels: taskLabelsMap.get(task.id) || [],
-      externalLinks: taskExternalLinksMap.get(task.id) || [],
-    }));
-
-  const plannedTasks = paginatedTasks
-    .filter((task) => task.status === "planned")
-    .map((task) => ({
-      ...task,
-      subtaskCounts: subtaskCounts.get(task.id) ?? { completed: 0, total: 0 },
-      labels: taskLabelsMap.get(task.id) || [],
-      externalLinks: taskExternalLinksMap.get(task.id) || [],
-    }));
+  const archivedTasks = tasksWithStatus("archived");
+  const plannedTasks = tasksWithStatus("planned");
 
   return {
     data: {
@@ -464,6 +484,7 @@ async function getTasksPage(
       workspaceId: project.workspaceId,
       backgroundVersion: project.backgroundVersion,
       columns,
+      backlogSections,
       archivedTasks,
       plannedTasks,
     },

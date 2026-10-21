@@ -30,8 +30,7 @@ function board() {
       },
       { id: "doing", slug: "doing", tasks: [] },
     ],
-    archivedTasks: [],
-    plannedTasks: [],
+    backlogSections: [],
   } as unknown as ProjectWithTasks;
 }
 

@@ -1,3 +1,4 @@
+import { HTTPException } from "hono/http-exception";
 import {
   apiRouter,
   type BaseVariables,
@@ -6,6 +7,7 @@ import {
   jsonResponse,
   z,
 } from "../openapi";
+import { areDatesEnabled } from "../utils/dates-enabled";
 import {
   hasWorkspacePermission,
   requireWorkspacePermission,
@@ -55,10 +57,18 @@ export const publicCalendarFeed = apiRouter().openapi(
         content: { "text/calendar": { schema: z.string() } },
       },
       400: errorResponse("Invalid feed token"),
-      404: errorResponse("Calendar feed not found or revoked"),
+      404: errorResponse(
+        "Calendar feed not found or revoked, or dates are disabled on this instance",
+      ),
     },
   }),
   async (c) => {
+    // A feed only carries dates, so it serves nothing while they are disabled.
+    if (!areDatesEnabled()) {
+      throw new HTTPException(404, {
+        message: "Date fields are disabled on this instance",
+      });
+    }
     c.header("Cache-Control", "private, no-store");
     c.header("X-Content-Type-Options", "nosniff");
     c.header("Content-Type", "text/calendar; charset=utf-8");
@@ -115,9 +125,15 @@ const calendarFeed = apiRouter<BaseVariables & { workspaceId: string }>()
         403: errorResponse(
           "No access to the project, missing project:share permission, or missing label:create permission for a new workspace label definition",
         ),
+        422: errorResponse("Date fields are disabled on this instance"),
       },
     }),
     async (c) => {
+      if (!areDatesEnabled()) {
+        throw new HTTPException(422, {
+          message: "Date fields are disabled on this instance",
+        });
+      }
       const { labelIds, timeZone } = c.req.valid("json");
       c.header("Cache-Control", "private, no-store");
       return c.json(

@@ -12,6 +12,7 @@ export type BoardFilters = {
   labels: string[] | null;
   customFields: Record<string, string[]> | null;
   negated?: string[] | null;
+  craft: string[] | null;
 };
 
 export const DUE_DATE_FILTER_VALUES = {
@@ -27,6 +28,7 @@ const DEFAULT_FILTERS: BoardFilters = {
   dueDate: null,
   labels: null,
   customFields: null,
+  craft: null,
 };
 
 const FILTER_KEYS: Array<keyof BoardFilters> = [
@@ -36,6 +38,7 @@ const FILTER_KEYS: Array<keyof BoardFilters> = [
   "dueDate",
   "labels",
   "customFields",
+  "craft",
 ];
 
 function normalizeFilters(raw: unknown): BoardFilters {

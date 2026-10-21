@@ -22,6 +22,8 @@ import {
   type GitHubConfig,
   hasVerifiedGitHubBinding,
 } from "../../plugins/github/config";
+import { reconcileIssueHierarchy } from "../../plugins/github/services/issue-hierarchy";
+import { findPullRequestLinks } from "../../plugins/github/services/link-manager";
 import { resolvePullRequestTask } from "../../plugins/github/services/resolve-pull-request-task";
 import {
   extractIssuePriority,
@@ -29,8 +31,13 @@ import {
 } from "../../plugins/github/utils/extract-priority";
 import { formatTaskDescriptionFromIssue } from "../../plugins/github/utils/format";
 import { getVerifiedInstallationOctokit } from "../../plugins/github/utils/github-app";
+import {
+  findCraftLabelName,
+  resolveCraftByName,
+} from "../../plugins/resolve-craft-label";
+import { isSystemLabelName } from "../../plugins/system-labels";
 import { claimTaskNumber } from "../../task/controllers/claim-task-numbers";
-import { VIRTUAL_STATUSES } from "../../task/validate-task-fields";
+import { SYSTEM_BACKLOG_STATUSES } from "../../task/validate-task-fields";
 import { withGithubImportLock } from "../import-lock";
 import {
   commentsPageSchema,
@@ -69,7 +76,7 @@ async function resolveImportedStatus(
       columns: { id: true },
     });
     if (column) return { status, columnId: column.id };
-    if ((VIRTUAL_STATUSES as readonly string[]).includes(status))
+    if ((SYSTEM_BACKLOG_STATUSES as readonly string[]).includes(status))
       return { status, columnId: null };
   }
   const first = await tx.query.columnTable.findFirst({
@@ -165,6 +172,7 @@ export async function importIssues(projectId: string, runId?: string) {
           "GitHub repository could not be verified; check the integration and resume",
       });
     }
+    const wasComplete = run.state.phase === "complete";
     for (
       let page = 0;
       page < IMPORT_PAGES_PER_REQUEST && run.state.phase !== "complete";
@@ -271,8 +279,42 @@ export async function importIssues(projectId: string, runId?: string) {
         await publishEvent(type, { projectId, taskId });
       await publishEvent("project.updated", { projectId });
     }
+    if (!wasComplete && run.state.phase === "complete")
+      await reconcileImportedHierarchy(integration.id);
     return importProgress(run.runId, run.state);
   });
+}
+
+// Only once every issue has its task, so a sub-issue imported before its
+// parent still finds the parent's task.
+async function reconcileImportedHierarchy(integrationId: string) {
+  const links = await db.query.externalLinkTable.findMany({
+    where: and(
+      eq(externalLinkTable.integrationId, integrationId),
+      eq(externalLinkTable.resourceType, "issue"),
+    ),
+    columns: { taskId: true, externalId: true },
+  });
+  for (const link of links) {
+    try {
+      await reconcileIssueHierarchy(link.taskId);
+    } catch (error) {
+      console.error(
+        `Failed to import sub-issues for GitHub issue #${link.externalId}:`,
+        error,
+      );
+    }
+  }
+}
+
+/** The workspace craft a `craft:` label names; unknown names import none. */
+async function importedCraft(
+  workspaceId: string,
+  labels: ImportedLabel[],
+): Promise<{ craftId: string } | Record<string, never>> {
+  const name = findCraftLabelName(labels);
+  const craft = name ? await resolveCraftByName(workspaceId, name) : null;
+  return craft ? { craftId: craft.id } : {};
 }
 
 function finishIssue(state: GitHubImportState) {
@@ -337,7 +379,13 @@ async function applyPage(
       finishIssue(state);
       return;
     }
-    const task = await importIssue(tx, issue, integrationId, project.id);
+    const task = await importIssue(
+      tx,
+      issue,
+      integrationId,
+      project.id,
+      project.workspaceId,
+    );
     if (!task) {
       state.skipped++;
       finishIssue(state);
@@ -455,7 +503,8 @@ async function applyPage(
         : 0;
     const priority = current.prioritySeen ? null : extractIssuePriority(labels);
     const status = current.statusSeen ? null : extractIssueStatus(labels);
-    if (priority || status)
+    const craft = await importedCraft(project.workspaceId, labels);
+    if (priority || status || craft.craftId)
       await tx
         .update(taskTable)
         .set({
@@ -463,6 +512,7 @@ async function applyPage(
           ...(status
             ? await resolveImportedStatus(tx, project.id, status, task.status)
             : {}),
+          ...craft,
         })
         .where(
           and(eq(taskTable.id, task.id), eq(taskTable.projectId, project.id)),
@@ -526,10 +576,12 @@ async function importIssue(
   issue: ImportedIssue,
   integrationId: string,
   projectId: string,
+  workspaceId: string,
 ): Promise<{ id: string; result: "imported" | "updated" } | null> {
   const link = await findLink(tx, integrationId, "issue", issue.number);
   const priority = extractIssuePriority(issue.labels.nodes);
   const status = extractIssueStatus(issue.labels.nodes);
+  const craft = await importedCraft(workspaceId, issue.labels.nodes);
   if (link) {
     if (!(await canSyncTask(link.taskId, integrationId, tx))) return null;
     const [task] = await tx
@@ -553,6 +605,7 @@ async function importIssue(
         description: formatTaskDescriptionFromIssue(issue.body, task.id),
         ...(await resolveImportedStatus(tx, projectId, status, task.status)),
         ...(priority ? { priority } : {}),
+        ...craft,
       })
       .where(and(eq(taskTable.id, task.id), eq(taskTable.projectId, projectId)))
       .returning({ id: taskTable.id });
@@ -568,6 +621,7 @@ async function importIssue(
       description: formatTaskDescriptionFromIssue(issue.body),
       ...(await resolveImportedStatus(tx, projectId, status)),
       priority: priority ?? "low",
+      ...craft,
       number,
     })
     .returning({ id: taskTable.id });
@@ -595,8 +649,7 @@ async function importLabels(
   workspaceId: string,
 ) {
   for (const label of labels) {
-    if (label.name.startsWith("priority:") || label.name.startsWith("status:"))
-      continue;
+    if (isSystemLabelName(label.name)) continue;
     const root = await tx.query.labelTable.findFirst({
       where: and(
         eq(labelTable.workspaceId, workspaceId),
@@ -656,7 +709,19 @@ async function linkPull(
   project: typeof projectTable.$inferSelect,
   config: GitHubConfig,
 ) {
-  if (await findLink(tx, integrationId, "pull_request", pull.number)) return;
+  const repository = `${config.repositoryOwner}/${config.repositoryName}`;
+  if (
+    (
+      await findPullRequestLinks(
+        integrationId,
+        pull.number,
+        repository,
+        repository,
+        tx,
+      )
+    ).length > 0
+  )
+    return;
   const task = await resolvePullRequestTask({
     integrationId,
     projectId: project.id,
@@ -689,6 +754,7 @@ async function linkPull(
       state: pull.state.toLowerCase(),
       branch: pull.headRefName,
       author: pull.author?.login,
+      repository,
     }),
   });
   return task.id;

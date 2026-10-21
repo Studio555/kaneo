@@ -26,6 +26,7 @@ import { useTaskCardFields } from "@/components/custom-fields/use-task-card-fiel
 import { useDeleteTask } from "@/hooks/mutations/task/use-delete-task";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
+import { useShowDueDates } from "@/hooks/use-dates-enabled";
 import { cn } from "@/lib/cn";
 import { isOwnDomEvent } from "@/lib/is-own-dom-event";
 import { isTaskCompleted } from "@/lib/due-date-status";
@@ -35,6 +36,7 @@ import useProjectStore from "@/store/project";
 import { useUserPreferencesStore } from "@/store/user-preferences";
 import type Task from "@/types/task";
 import TaskCardContextMenuContent from "../task-card-context-menu/task-card-context-menu-content";
+import { TaskCraft } from "../task-craft";
 import { useTaskCardClick } from "./use-task-card-click";
 import { useTouchDragMenu } from "./use-touch-drag-menu";
 
@@ -64,11 +66,11 @@ function TaskCardContent({
   const {
     showAssignees,
     showPriority,
-    showDueDates,
     showLabels,
     showTaskNumbers,
     showTaskItemCounts,
   } = useUserPreferencesStore();
+  const showDueDates = useShowDueDates();
 
   const [isDeleteTaskModalOpen, setIsDeleteTaskModalOpen] = useState<
     boolean | null
@@ -193,6 +195,7 @@ function TaskCardContent({
             {!taskIsCompleted && (
               <div className="mt-2.5 flex flex-wrap items-center gap-1 empty:hidden">
                 {showPriority && hasPriority && <PriorityChip task={task} />}
+                <TaskCraft craft={task.craft ?? null} />
                 {showDueDates && <DueDateChip task={task} />}
                 <SubtasksChip task={task} workspaceId={workspaceId} />
                 {showTaskItemCounts && <ChecklistChip task={task} />}

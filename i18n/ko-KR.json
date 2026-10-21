@@ -599,7 +599,24 @@
 				"title": "Delete account",
 				"sessionTooOld": "For security, sign out and sign back in before deleting your account."
 			},
-			"emailHint": "이 주소로 로그인합니다."
+			"emailHint": "이 주소로 로그인합니다.",
+			"githubIdentity": {
+				"connect": "Connect GitHub",
+				"connectedAs": "Connected as {{login}}",
+				"connectedHint": "Assigning a task assigns you on the linked GitHub issue, and being assigned on GitHub assigns you the task.",
+				"connectFailed": "Couldn't connect your GitHub account",
+				"connecting": "Connecting...",
+				"disconnect": "Disconnect",
+				"disconnected": "GitHub account disconnected",
+				"disconnectFailed": "Couldn't disconnect your GitHub account",
+				"notConnected": "GitHub account not connected",
+				"notConnectedHint": "Connecting signs you in to GitHub once to confirm the account is yours. It does not change how you sign in to Kaneo.",
+				"onlyAccount": "GitHub is your only way to sign in, so it cannot be disconnected. Set a password first.",
+				"sectionSubtitle": "Connect your GitHub account so task assignments stay in step with the linked GitHub issues.",
+				"sectionTitle": "GitHub account",
+				"sessionTooOld": "For your security, sign in again before disconnecting your GitHub account.",
+				"unavailable": "This Kaneo instance has no GitHub sign-in configured, so accounts cannot be connected."
+			}
 		},
 		"notificationsPage": {
 			"pageTitle": "알림",
@@ -753,7 +770,8 @@
 			"priority": "우선순위",
 			"projectBackgrounds": "Project backgrounds",
 			"projectBackgroundsDescription": "프로젝트에서 보드 배경으로 설정한 이미지를 표시합니다.",
-			"advancedTitle": "고급"
+			"advancedTitle": "고급",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "API 키",
@@ -1219,7 +1237,8 @@
 				"pr_opened": "풀 리퀘스트 열림",
 				"pr_merged": "풀 리퀘스트 병합됨",
 				"issue_opened": "이슈 열림",
-				"issue_closed": "이슈 닫힘"
+				"issue_closed": "이슈 닫힘",
+				"issue_reopened": "이슈 다시 열림"
 			},
 			"connectMore": "<link>연동</link>에서 {{providers}}을(를) 연결하면 함께 자동화할 수 있습니다.",
 			"dontMove": "이동 안 함",
@@ -2315,6 +2334,31 @@
 		},
 		"shared": {
 			"autosave": "변경 사항이 자동으로 저장됩니다"
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -2704,7 +2748,10 @@
 			"importedBy": "Imported by {{name}}",
 			"commentedOnForge": "{{forge}}에 댓글을 남김"
 		},
-		"movedFromOtherProject": "moved task from another project to \"{{to}}\""
+		"movedFromOtherProject": "moved task from another project to \"{{to}}\"",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft"
 	},
 	"tasks": {
 		"title": "작업",
@@ -2730,7 +2777,8 @@
 			"list": "목록",
 			"backlog": "백로그",
 			"gantt": "간트",
-			"heading": "보기"
+			"heading": "보기",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "작업 선택",
@@ -2908,7 +2956,8 @@
 			"startDate": "시작일",
 			"noDate": "날짜 없음",
 			"dates": "날짜",
-			"project": "프로젝트"
+			"project": "프로젝트",
+			"craft": "Craft"
 		},
 		"move": {
 			"title": "작업 이동",
@@ -2924,7 +2973,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "미할당",
-				"updateError": "작업 담당자 업데이트에 실패했습니다"
+				"updateError": "작업 담당자 업데이트에 실패했습니다",
+				"searchPlaceholder": "사용자 검색...",
+				"empty": "사용자를 찾을 수 없습니다"
 			},
 			"status": {
 				"updateError": "작업 상태 업데이트에 실패했습니다"
@@ -2960,6 +3011,12 @@
 					"crimson": "크림슨"
 				},
 				"editLabels": "라벨 편집"
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft",
+				"searchPlaceholder": "Search crafts..."
 			}
 		},
 		"backlog": {
@@ -2980,6 +3037,26 @@
 				"dueThisWeek": "이번 주 마감",
 				"dueNextWeek": "다음 주 마감",
 				"noDueDate": "마감일 없음"
+			},
+			"sectionActions": {
+				"add": "Section",
+				"addTooltip": "Add a backlog section",
+				"create": "Create section",
+				"created": "Section created",
+				"createError": "Failed to create section",
+				"createTitle": "New backlog section",
+				"delete": "Delete",
+				"deleted": "Section deleted",
+				"deleteDescription": "Only an empty section can be deleted. Move its tasks to another section first.",
+				"deleteError": "Failed to delete section",
+				"deleteTitle": "Delete the \"{{name}}\" section?",
+				"menu": "Section options",
+				"namePlaceholder": "Section name",
+				"rename": "Rename",
+				"renamed": "Section renamed",
+				"renameError": "Failed to rename section",
+				"renameTitle": "Rename section",
+				"save": "Save"
 			}
 		},
 		"sort": {
@@ -2992,7 +3069,8 @@
 				"priority": "우선순위",
 				"dueDate": "마감일",
 				"title": "제목",
-				"number": "작업 번호"
+				"number": "작업 번호",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -3002,7 +3080,8 @@
 				"priority": "우선순위",
 				"assignee": "담당자",
 				"dueDate": "마감일",
-				"labels": "라벨"
+				"labels": "라벨",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "다음 중 하나",
@@ -3015,7 +3094,8 @@
 			},
 			"allCustomFieldValues": "All values",
 			"noCustomFieldValues": "No custom field values",
-			"noValuesUsedYet": "No values used yet"
+			"noValuesUsedYet": "No values used yet",
+			"allCrafts": "All crafts"
 		},
 		"calendar": {
 			"pageTitle": "{{name}} – 캘린더",
@@ -3071,7 +3151,10 @@
 		"listView": {
 			"addTask": "작업 추가",
 			"archiveAllTooltip": "완료된 모든 작업 보관",
-			"noTasks": "작업 없음"
+			"noTasks": "작업 없음",
+			"collapseSubtasks": "{{title}}의 하위 작업 숨기기",
+			"expandSubtasks": "{{title}}의 하위 작업 표시",
+			"subtaskLevel": "하위 작업, {{level}}단계"
 		},
 		"kanban": {
 			"addTask": "작업 추가",
@@ -3237,6 +3320,16 @@
 			"startsOn": "시작: {{date}}",
 			"beforeStart": "{{date}}은(는) 시작일 이전입니다",
 			"afterDue": "{{date}}은(는) 마감일 이후입니다"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

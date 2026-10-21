@@ -8,6 +8,7 @@ import WorkspaceCrumbSelect from "@/components/common/header/workspace-crumb-sel
 import Layout from "@/components/common/layout";
 import { ProjectScopeToggle } from "@/components/project/views/project-scope-toggle";
 import {
+  isDateView,
   PROJECT_ROUTE_PATHS,
   type ProjectRoute,
   resolveProjectView,
@@ -23,6 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import useGetProject from "@/hooks/queries/project/use-get-project";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useProjectWebSocket } from "@/hooks/use-project-websocket";
 import { cn } from "@/lib/cn";
 import { getProjectUnavailableReason } from "@/lib/project-unavailable-reason";
@@ -54,6 +56,7 @@ export default function ProjectLayout({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const datesEnabled = useDatesEnabled();
   const { data: project, error: projectError } = useGetProject({
     id: projectId,
     workspaceId,
@@ -66,7 +69,7 @@ export default function ProjectLayout({
 
   useProjectWebSocket(unavailableReason ? "" : projectId);
 
-  const resolvedRoute: ProjectRoute =
+  const computedRoute: ProjectRoute =
     activeView ??
     (location.pathname.includes("/backlog")
       ? "backlog"
@@ -75,6 +78,10 @@ export default function ProjectLayout({
         : location.pathname.includes("/gantt")
           ? "gantt"
           : "board");
+  // Calendar and Gantt render nothing useful without dates; falling back keeps
+  // the active-view highlight and project switching correct on stale URLs.
+  const resolvedRoute: ProjectRoute =
+    !datesEnabled && isDateView(computedRoute) ? "board" : computedRoute;
   const currentView = resolveProjectView(resolvedRoute, viewMode);
   const showViews = showViewSwitcher && !unavailableReason;
 

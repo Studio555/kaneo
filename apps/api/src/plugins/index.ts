@@ -6,6 +6,7 @@ import { gitlabPlugin } from "./gitlab";
 import { mattermostPlugin } from "./mattermost";
 import { initializeEventSubscriptions, registerPlugin } from "./registry";
 import { slackPlugin } from "./slack";
+import { slackAppPlugin } from "./slack-app";
 import { telegramPlugin } from "./telegram";
 
 export function initializePlugins() {
@@ -15,6 +16,7 @@ export function initializePlugins() {
   registerPlugin(giteaPlugin);
   registerPlugin(gitlabPlugin);
   registerPlugin(slackPlugin);
+  registerPlugin(slackAppPlugin);
   registerPlugin(mattermostPlugin);
   registerPlugin(discordPlugin);
   registerPlugin(genericWebhookPlugin);

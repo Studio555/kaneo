@@ -4,37 +4,44 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, type Clock, Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { backlogSectionDropId } from "@/hooks/use-backlog-section-dnd";
+import { getBacklogSectionLabel } from "@/lib/backlog-sections";
 import { cn } from "@/lib/cn";
 import { EASE_OUT } from "@/lib/motion";
-import type Task from "@/types/task";
+import type { BacklogSection as BacklogSectionData } from "@/types/project";
+import { BacklogSectionIcon } from "../backlog-sections/backlog-section-icon";
+import { BacklogSectionMenu } from "../backlog-sections/backlog-section-menu";
 import BacklogTaskRow from "./backlog-task-row";
 
 const BacklogSection = memo(function BacklogSection({
-  sectionId,
-  title,
-  icon: IconComponent,
-  tasks,
+  section,
+  projectId,
   isExpanded,
   showDropIndicator,
+  canManage,
   onToggle,
   onAddTask,
 }: {
-  sectionId: string;
-  title: string;
-  icon: typeof Clock;
-  tasks: Task[];
+  section: BacklogSectionData;
+  projectId: string;
   isExpanded: boolean;
   showDropIndicator: boolean;
+  canManage: boolean;
   onToggle: (sectionId: string) => void;
-  onAddTask?: () => void;
+  onAddTask: (sectionId: string) => void;
 }) {
   const { t } = useTranslation();
   const [animateExpand, setAnimateExpand] = useState(false);
+  const sectionId = section.slug;
+  const title = getBacklogSectionLabel(section, t);
+  const { tasks } = section;
+  // The whole section is the drop target, header included, so a task can
+  // still be dropped on a collapsed section.
   const { setNodeRef } = useDroppable({
-    id: sectionId,
+    id: backlogSectionDropId(sectionId),
     data: {
       type: "column",
       column: { id: sectionId, name: title },
@@ -43,6 +50,7 @@ const BacklogSection = memo(function BacklogSection({
 
   return (
     <div
+      ref={setNodeRef}
       className={cn(
         "border-b border-border/50 transition-colors duration-150 overflow-auto",
         showDropIndicator && "border-l-4 border-l-ring bg-accent/35",
@@ -65,13 +73,12 @@ const BacklogSection = memo(function BacklogSection({
             )}
           />
           <div className="flex items-center gap-2 h-4">
-            <IconComponent className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+            <BacklogSectionIcon
+              section={section}
+              className="w-4 h-4 flex-shrink-0 text-muted-foreground"
+            />
             <div className="flex items-center gap-1">
-              <span className="mt-1 mr-1">
-                {t(`tasks:backlog.sections.${sectionId}`, {
-                  defaultValue: title,
-                })}
-              </span>
+              <span className="mt-1 mr-1">{title}</span>
               <span className="text-xs text-muted-foreground mt-0.5">
                 {tasks.length}
               </span>
@@ -80,10 +87,10 @@ const BacklogSection = memo(function BacklogSection({
         </button>
 
         <div className="flex items-center gap-1">
-          {onAddTask && (
+          {section.systemKey !== "archived" && (
             <button
               type="button"
-              onClick={onAddTask}
+              onClick={() => onAddTask(sectionId)}
               className="touch-hitbox relative p-1 hover:bg-accent rounded text-muted-foreground hover:text-foreground transition-colors"
               title={t("tasks:backlog.addTask")}
               aria-label={t("tasks:backlog.addTask")}
@@ -91,12 +98,14 @@ const BacklogSection = memo(function BacklogSection({
               <Plus className="w-3 h-3" />
             </button>
           )}
+          {canManage && !section.systemKey && (
+            <BacklogSectionMenu projectId={projectId} section={section} />
+          )}
         </div>
       </div>
 
       {isExpanded && (
         <div
-          ref={setNodeRef}
           className={cn(
             "bg-card",
             animateExpand &&
@@ -122,9 +131,7 @@ const BacklogSection = memo(function BacklogSection({
           {tasks.length === 0 && (
             <div className="py-6 px-4 text-center text-xs text-muted-foreground">
               {t("tasks:backlog.noTasksInSection", {
-                section: t(`tasks:backlog.sections.${sectionId}`, {
-                  defaultValue: title,
-                }).toLowerCase(),
+                section: title.toLowerCase(),
               })}
             </div>
           )}

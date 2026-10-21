@@ -1,3 +1,4 @@
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
 import { useUserPreferencesStore } from "@/store/user-preferences";
 import { type ProjectView, tasksViewFor } from "./project-views";
@@ -9,14 +10,17 @@ export function useProjectViewShortcuts(
 ) {
   const taskLayout = useUserPreferencesStore((state) => state.taskLayout);
   const viewMode = useUserPreferencesStore((state) => state.viewMode);
+  const datesEnabled = useDatesEnabled();
 
   useShortcut(
     "toggleLayout",
     () => goToView(currentView === "list" ? "board" : "list"),
     { enabled },
   );
-  useShortcut("goToTasks", () => goToView(tasksViewFor(taskLayout, viewMode)), {
-    enabled,
-  });
+  useShortcut(
+    "goToTasks",
+    () => goToView(tasksViewFor(taskLayout, viewMode, datesEnabled)),
+    { enabled },
+  );
   useShortcut("goToBacklog", () => goToView("backlog"), { enabled });
 }

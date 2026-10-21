@@ -1,9 +1,11 @@
 import { useGetColumns } from "@/hooks/queries/column/use-get-columns";
+import useGetCraftsByWorkspace from "@/hooks/queries/craft/use-get-crafts-by-workspace";
 import useGetLabelsByTask from "@/hooks/queries/label/use-get-labels-by-task";
 import useGetProject from "@/hooks/queries/project/use-get-project";
 import useGetProjects from "@/hooks/queries/project/use-get-projects";
 import useGetTask from "@/hooks/queries/task/use-get-task";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { getDueDateStatus, isTaskCompleted } from "@/lib/due-date-status";
 import { getStatusDisplayLabel } from "@/lib/i18n/domain";
 
@@ -18,6 +20,8 @@ export function useTaskProperties(
   const { data: workspaceUsers } = useGetActiveWorkspaceUsers(workspaceId);
   const { data: labels = [] } = useGetLabelsByTask(taskId);
   const { data: workspaceProjects = [] } = useGetProjects({ workspaceId });
+  const { data: workspaceCrafts = [] } = useGetCraftsByWorkspace(workspaceId);
+  const datesEnabled = useDatesEnabled();
 
   const statusColumn = columns.find(
     (column) => column.slug === task?.status || column.id === task?.status,
@@ -27,6 +31,9 @@ export function useTaskProperties(
     task,
     project,
     labels,
+    // getTask returns craftId, so the name and colour come from the workspace.
+    craft: workspaceCrafts.find((craft) => craft.id === task?.craftId) ?? null,
+    datesEnabled,
     status: {
       label: getStatusDisplayLabel(task?.status ?? "", statusColumn?.name),
       isFinal: statusColumn?.isFinal ?? false,

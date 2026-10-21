@@ -73,8 +73,10 @@ beforeEach(() => {
       },
       { id: "doing", slug: "doing", tasks: [] },
     ],
-    plannedTasks: [],
-    archivedTasks: [],
+    backlogSections: [
+      { id: "planned", columnId: "planned-col", slug: "planned", tasks: [] },
+      { id: "archived", columnId: "archived-col", slug: "archived", tasks: [] },
+    ],
   };
   mocks.client.getQueryData.mockImplementation(() => mocks.board);
   mocks.client.setQueryData.mockImplementation((_key, value) => {
@@ -303,15 +305,28 @@ it("bounds per-task reads during a thousand-event burst and reconciles once", as
   }
 });
 
-it("applies remote reorders to virtual task buckets", () => {
-  const board = mocks.board as {
-    plannedTasks: unknown[];
-    archivedTasks: unknown[];
-  };
-  board.plannedTasks = [
+type Sections = {
+  backlogSections: {
+    slug: string;
+    tasks: {
+      id: string;
+      projectId?: string;
+      status?: string;
+      columnId?: string | null;
+      position?: number;
+    }[];
+  }[];
+};
+const sectionTasks = (slug: string) =>
+  (mocks.board as Sections).backlogSections.find(
+    (section) => section.slug === slug,
+  )?.tasks ?? [];
+
+it("applies remote reorders to backlog sections", () => {
+  (mocks.board as Sections).backlogSections[0].tasks = [
     { id: "p1", projectId: "p", status: "planned", position: 0 },
     { id: "p2", projectId: "p", status: "planned", position: 1 },
-  ];
+  ] as Sections["backlogSections"][number]["tasks"];
   renderHook(() => useProjectWebSocket("p"));
   Socket.current.message("TASKS_REORDERED", {
     tasks: [
@@ -319,11 +334,7 @@ it("applies remote reorders to virtual task buckets", () => {
       { id: "p2", position: 0 },
     ],
   });
-  expect(
-    (mocks.board as { plannedTasks: { id: string }[] }).plannedTasks.map(
-      (task) => task.id,
-    ),
-  ).toEqual(["p2", "p1"]);
+  expect(sectionTasks("planned").map((task) => task.id)).toEqual(["p2", "p1"]);
 });
 
 it("reconciles a remote read superseded by a narrow local mutation", async () => {
@@ -347,21 +358,15 @@ it("reconciles a remote read superseded by a narrow local mutation", async () =>
   });
 });
 
-it("applies a remote reorder across virtual buckets without waiting for HTTP", () => {
-  const board = mocks.board as {
+it("applies a remote reorder across backlog sections without waiting for HTTP", () => {
+  const board = mocks.board as Sections & {
     columns: {
       tasks: { id: string; status: string; columnId: string | null }[];
     }[];
-    plannedTasks: {
-      id: string;
-      projectId: string;
-      status: string;
-      position: number;
-    }[];
   };
-  board.plannedTasks = [
+  board.backlogSections[0].tasks = [
     { id: "planned", projectId: "p", status: "planned", position: 0 },
-  ];
+  ] as Sections["backlogSections"][number]["tasks"];
   renderHook(() => useProjectWebSocket("p"));
   Socket.current.message("TASKS_REORDERED", {
     tasks: [
@@ -369,14 +374,16 @@ it("applies a remote reorder across virtual buckets without waiting for HTTP", (
       { id: "a", position: 0, status: "archived" },
     ],
   });
-  expect((mocks.board as typeof board).plannedTasks).toEqual([]);
+  expect(sectionTasks("planned")).toEqual([]);
   expect((mocks.board as typeof board).columns[0].tasks).toContainEqual(
     expect.objectContaining({ id: "planned", status: "todo" }),
   );
-  expect(
-    (mocks.board as { archivedTasks: unknown[] }).archivedTasks,
-  ).toContainEqual(
-    expect.objectContaining({ id: "a", status: "archived", columnId: null }),
+  expect(sectionTasks("archived")).toContainEqual(
+    expect.objectContaining({
+      id: "a",
+      status: "archived",
+      columnId: "archived-col",
+    }),
   );
 });
 

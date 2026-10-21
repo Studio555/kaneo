@@ -6,6 +6,8 @@ export type ExternalLinkMetadata = {
   draft?: boolean;
   branch?: string;
   author?: string;
+  /** `owner/name` of the repository a pull request or branch lives in. */
+  repository?: string;
   createdFrom?:
     | "github"
     | "kaneo"

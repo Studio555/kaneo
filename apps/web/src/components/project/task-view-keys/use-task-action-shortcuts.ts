@@ -16,6 +16,7 @@ import useAuth from "@/components/providers/auth-provider/hooks/use-auth";
 import type getProjects from "@/fetchers/project/get-projects";
 import { useBulkOperations } from "@/hooks/mutations/task/use-bulk-operations";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { generateLink } from "@/lib/generate-link";
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
@@ -30,8 +31,7 @@ const findTask = (project: ProjectWithTasks | undefined, taskId: string) =>
   project &&
   [
     ...project.columns.flatMap((column) => column.tasks),
-    ...project.plannedTasks,
-    ...project.archivedTasks,
+    ...project.backlogSections.flatMap((section) => section.tasks),
   ].find((task) => task.id === taskId);
 
 export function useTaskActionShortcuts(selection: TaskSelectionStore) {
@@ -42,6 +42,7 @@ export function useTaskActionShortcuts(selection: TaskSelectionStore) {
   const operations = useBulkOperations();
   const { canUpdateTasks, canAssignTasks, canDeleteTasks, canUpdateLabels } =
     useWorkspacePermission();
+  const datesEnabled = useDatesEnabled();
 
   const targets = () => {
     const { selectedTaskIds, focusedTaskId } = selection.getState();
@@ -100,6 +101,7 @@ export function useTaskActionShortcuts(selection: TaskSelectionStore) {
 
   const view = { scope: "view" as const };
   const edit = { ...view, enabled: canUpdateTasks() };
+  const editDates = { ...view, enabled: canUpdateTasks() && datesEnabled };
   const assign = { ...view, enabled: canAssignTasks() };
   const labels = { ...view, enabled: canUpdateLabels() };
   const remove = { ...view, enabled: canDeleteTasks() };
@@ -108,7 +110,7 @@ export function useTaskActionShortcuts(selection: TaskSelectionStore) {
   useShortcut("changePriority", () => request("priority"), edit);
   useShortcut("assignTask", () => request("assignee"), assign);
   useShortcut("changeLabels", () => request("labels"), labels);
-  useShortcut("setDueDate", () => request("dueDate"), edit);
+  useShortcut("setDueDate", () => request("dueDate"), editDates);
   useShortcut("deleteTask", () => request("delete"), remove);
 
   useShortcut(
@@ -133,7 +135,7 @@ export function useTaskActionShortcuts(selection: TaskSelectionStore) {
         CalendarDaysIcon,
         t("tasks:bulk.updateDueDateError"),
       ),
-    edit,
+    editDates,
   );
 
   useShortcut(

@@ -3,6 +3,7 @@ import { AutosaveNote } from "@/components/settings/autosave-note";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { SettingsSection } from "@/components/settings/settings-section";
 import type { NotificationPreferences } from "@/fetchers/notification-preferences/get-notification-preferences";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { DueDateReminderRow } from "./due-date-reminder-row";
 import { EventSwitchRow } from "./event-switch-row";
 import { useEventPreferencesAutosave } from "./use-event-preferences-autosave";
@@ -13,6 +14,7 @@ type NotifyMeSectionProps = {
 
 export function NotifyMeSection({ preferences }: NotifyMeSectionProps) {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
   const { state, setSwitch, setLeadTime } =
     useEventPreferencesAutosave(preferences);
 
@@ -47,14 +49,16 @@ export function NotifyMeSection({ preferences }: NotifyMeSectionProps) {
             setSwitch("taskStatusChangeEnabled", checked)
           }
         />
-        <DueDateReminderRow
-          enabled={state.dueDateReminderEnabled}
-          leadTime={state.leadTime}
-          onEnabledChange={(checked) =>
-            setSwitch("dueDateReminderEnabled", checked)
-          }
-          onLeadTimeChange={setLeadTime}
-        />
+        {datesEnabled && (
+          <DueDateReminderRow
+            enabled={state.dueDateReminderEnabled}
+            leadTime={state.leadTime}
+            onEnabledChange={(checked) =>
+              setSwitch("dueDateReminderEnabled", checked)
+            }
+            onLeadTimeChange={setLeadTime}
+          />
+        )}
       </SettingsCard>
     </SettingsSection>
   );

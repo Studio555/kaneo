@@ -22,8 +22,7 @@ function board() {
         tasks: [{ id: "c", status: "doing", position: 0 }],
       },
     ],
-    plannedTasks: [],
-    archivedTasks: [],
+    backlogSections: [],
   } as unknown as ProjectWithTasks;
 }
 
@@ -129,52 +128,69 @@ it("preserves a newer remote order instead of rolling it back", () => {
   expect(rollbackBoardReorder(current, previous, moved.tasks)).toBeNull();
 });
 
+const section = (slug: string, tasks: unknown[]) => ({
+  id: slug,
+  columnId: `${slug}-column`,
+  slug,
+  tasks,
+});
+const sectionTasks = (project: ProjectWithTasks, slug: string) =>
+  project.backlogSections.find((entry) => entry.slug === slug)?.tasks ?? [];
+
 it("patches and sorts planned and archived task reorders", () => {
   const project = board();
-  project.plannedTasks = [
-    { id: "p1", status: "planned", position: 0 },
-    { id: "p2", status: "planned", position: 1 },
-  ] as typeof project.plannedTasks;
-  project.archivedTasks = [
-    { id: "a1", status: "archived", position: 0 },
-    { id: "a2", status: "archived", position: 1 },
-  ] as typeof project.archivedTasks;
+  project.backlogSections = [
+    section("planned", [
+      { id: "p1", status: "planned", position: 0 },
+      { id: "p2", status: "planned", position: 1 },
+    ]),
+    section("archived", [
+      { id: "a1", status: "archived", position: 0 },
+      { id: "a2", status: "archived", position: 1 },
+    ]),
+  ] as typeof project.backlogSections;
   const updated = applyBoardReorder(project, [
     { id: "p1", position: 1 },
     { id: "p2", position: 0 },
     { id: "a1", position: 1 },
     { id: "a2", position: 0 },
   ]);
-  expect(updated.plannedTasks.map((task) => task.id)).toEqual(["p2", "p1"]);
-  expect(updated.archivedTasks.map((task) => task.id)).toEqual(["a2", "a1"]);
+  expect(sectionTasks(updated, "planned").map((task) => task.id)).toEqual([
+    "p2",
+    "p1",
+  ]);
+  expect(sectionTasks(updated, "archived").map((task) => task.id)).toEqual([
+    "a2",
+    "a1",
+  ]);
 });
 
 it("moves cards between ordinary, planned and archived buckets while preserving metadata", () => {
   const project = board();
-  project.plannedTasks = [
-    { id: "p", status: "planned", position: 0, title: "planned title" },
-  ] as typeof project.plannedTasks;
-  project.archivedTasks = [
-    { id: "z", status: "archived", position: 0 },
-  ] as typeof project.archivedTasks;
+  project.backlogSections = [
+    section("planned", [
+      { id: "p", status: "planned", position: 0, title: "planned title" },
+    ]),
+    section("archived", [{ id: "z", status: "archived", position: 0 }]),
+  ] as typeof project.backlogSections;
   const updated = applyBoardReorder(project, [
     { id: "a", position: 1, status: "planned" },
     { id: "p", position: 2, status: "archived" },
     { id: "z", position: 3, status: "doing" },
   ]);
-  expect(updated.plannedTasks).toEqual([
+  expect(sectionTasks(updated, "planned")).toEqual([
     expect.objectContaining({
       id: "a",
       status: "planned",
-      columnId: null,
+      columnId: "planned-column",
       title: "keep a",
     }),
   ]);
-  expect(updated.archivedTasks).toEqual([
+  expect(sectionTasks(updated, "archived")).toEqual([
     expect.objectContaining({
       id: "p",
       status: "archived",
-      columnId: null,
+      columnId: "archived-column",
       title: "planned title",
     }),
   ]);

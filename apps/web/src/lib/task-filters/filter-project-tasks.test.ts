@@ -9,8 +9,10 @@ it("filters board columns, planned and archived tasks alike", () => {
   const project = {
     id: "p",
     columns: [{ id: "todo", tasks: [task("a"), task("b")] }],
-    plannedTasks: [task("c"), task("d")],
-    archivedTasks: [task("e")],
+    backlogSections: [
+      { slug: "planned", tasks: [task("c"), task("d")] },
+      { slug: "archived", tasks: [task("e")] },
+    ],
   } as unknown as ProjectWithTasks;
 
   const filtered = filterProjectTasks(project, (item) =>
@@ -18,7 +20,9 @@ it("filters board columns, planned and archived tasks alike", () => {
   );
 
   expect(filtered.columns[0].tasks.map((item) => item.id)).toEqual(["a"]);
-  expect(filtered.plannedTasks.map((item) => item.id)).toEqual(["d"]);
-  expect(filtered.archivedTasks).toEqual([]);
+  expect(filtered.backlogSections[0].tasks.map((item) => item.id)).toEqual([
+    "d",
+  ]);
+  expect(filtered.backlogSections[1].tasks).toEqual([]);
   expect(project.columns[0].tasks).toHaveLength(2);
 });

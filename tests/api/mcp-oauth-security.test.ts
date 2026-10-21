@@ -233,6 +233,18 @@ describe("MCP OAuth security", () => {
     });
   });
 
+  it("rejects a client that cannot use authorization_code", async () => {
+    const response = await mcpRoutes.request("/mcp/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        redirect_uris: ["https://client.example/callback"],
+        grant_types: ["client_credentials"],
+      }),
+    });
+    expect(response.status).toBe(400);
+  });
+
   it("requires an exact registered redirect URI", async () => {
     const registeredRedirect = "https://client.example/callback";
     const client = await registerClient(registeredRedirect);

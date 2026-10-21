@@ -13,11 +13,13 @@ import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogClose, DialogPopup } from "@/components/ui/dialog";
 import { usePublicTaskDescription } from "@/hooks/queries/task/use-public-task-description";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import {
   dueDateStatusColors,
   getDueDateStatus,
   isTaskCompleted,
 } from "@/lib/due-date-status";
+import { getLinkRepository } from "@/lib/external-link-repository";
 import { formatDateMedium, formatDateShort } from "@/lib/format";
 import { getInitials } from "@/lib/get-initials";
 import { getPriorityIcon } from "@/lib/priority";
@@ -49,6 +51,7 @@ export function PublicTaskDetailModal({
   onOpenChange,
 }: PublicTaskDetailModalProps) {
   const taskIsCompleted = isTaskCompleted(task?.status ?? "", columns);
+  const datesEnabled = useDatesEnabled();
   const { t } = useTranslation();
   const descriptionQuery = usePublicTaskDescription(task, open);
   const description = task?.descriptionDeferred
@@ -138,7 +141,7 @@ export function PublicTaskDetailModal({
                   </div>
                 )}
 
-                {task.dueDate && (
+                {datesEnabled && task.dueDate && (
                   <div
                     className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md ${dueDateStatusColors[getDueDateStatus(task.dueDate, taskIsCompleted)]}`}
                   >
@@ -215,10 +218,7 @@ export function PublicTaskDetailModal({
                   <div className="space-y-2">
                     {pullRequests.map((pr) => {
                       const status = getPRStatus(pr);
-                      const repoMatch = pr.url.match(
-                        /github\.com\/([^/]+\/[^/]+)\/pull/,
-                      );
-                      const repoName = repoMatch ? repoMatch[1] : null;
+                      const repoName = getLinkRepository(pr);
                       return (
                         <a
                           key={pr.id}
@@ -313,7 +313,7 @@ export function PublicTaskDetailModal({
                   {formatDateMedium(task.createdAt)}
                 </div>
               </div>
-              {task.dueDate && (
+              {datesEnabled && task.dueDate && (
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">
                     {t("publicProject:taskDetail.dueDateLabel")}

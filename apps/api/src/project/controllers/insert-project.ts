@@ -31,6 +31,11 @@ export const DEFAULT_PROJECT_COLUMNS = [
   { name: "Done", slug: "done", position: 3, isFinal: true },
 ] as const;
 
+export const SYSTEM_BACKLOG_SECTIONS = [
+  { name: "Planned", slug: "planned", position: 0, systemKey: "planned" },
+  { name: "Archived", slug: "archived", position: 1, systemKey: "archived" },
+] as const;
+
 async function seedDefaultColumns(tx: Transaction, projectId: string) {
   for (const col of DEFAULT_PROJECT_COLUMNS) {
     await tx.insert(columnTable).values({
@@ -39,6 +44,17 @@ async function seedDefaultColumns(tx: Transaction, projectId: string) {
       slug: col.slug,
       position: col.position,
       isFinal: col.isFinal,
+    });
+  }
+
+  for (const section of SYSTEM_BACKLOG_SECTIONS) {
+    await tx.insert(columnTable).values({
+      projectId,
+      name: section.name,
+      slug: section.slug,
+      position: section.position,
+      kind: "backlog",
+      systemKey: section.systemKey,
     });
   }
 }

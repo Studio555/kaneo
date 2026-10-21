@@ -142,8 +142,7 @@ describe("filtered board dragging", () => {
     const canonical = {
       id: "p",
       columns,
-      plannedTasks: [],
-      archivedTasks: [],
+      backlogSections: [],
     } as unknown as ProjectWithTasks;
     mocks.project = canonical;
     const filtered = {
@@ -190,8 +189,7 @@ it("rejects an in-flight Kanban drop after a failed refresh disables dragging", 
         ],
       },
     ],
-    plannedTasks: [],
-    archivedTasks: [],
+    backlogSections: [],
   } as unknown as ProjectWithTasks;
   mocks.project = canonical;
   const view = render(<KanbanBoard project={canonical} />);
@@ -218,8 +216,7 @@ it("refreshes personal work after a cross-column status change", () => {
         tasks: [{ id: "b", status: "done", position: 0 }],
       },
     ],
-    plannedTasks: [],
-    archivedTasks: [],
+    backlogSections: [],
   } as unknown as ProjectWithTasks;
   mocks.project = project;
   const view = render(<KanbanBoard project={project} />);
@@ -255,8 +252,7 @@ function crossColumnBoard() {
         ],
       },
     ],
-    plannedTasks: [],
-    archivedTasks: [],
+    backlogSections: [],
   } as unknown as ProjectWithTasks;
 }
 

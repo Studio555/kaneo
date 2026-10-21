@@ -505,6 +505,62 @@ describe("registerTools", () => {
     expect(result?.isError).toBe(false);
   });
 
+  it("advertises startDate/dueDate and the date/time-entry tools when dates are enabled (default)", () => {
+    const { server, tools } = createServerMock();
+    const client = { json: vi.fn() };
+
+    registerTools(server as never, { client: client as never });
+
+    for (const name of [
+      "update_task_due_date",
+      "get_time_entry",
+      "create_time_entry",
+      "update_time_entry",
+      "list_task_time_entries",
+    ]) {
+      expect(tools.has(name)).toBe(true);
+    }
+    for (const name of ["create_task", "update_task"]) {
+      const shape = tools.get(name)?.config.inputSchema as unknown as {
+        shape?: Record<string, unknown>;
+      };
+      expect(Object.keys(shape?.shape ?? {})).toEqual(
+        expect.arrayContaining(["startDate", "dueDate"]),
+      );
+    }
+  });
+
+  it("does not register the date and time-entry tools when dates are disabled", () => {
+    const { server, tools } = createServerMock();
+    const client = { json: vi.fn() };
+
+    registerTools(
+      server as never,
+      { client: client as never },
+      { datesEnabled: false },
+    );
+
+    for (const name of [
+      "update_task_due_date",
+      "get_time_entry",
+      "create_time_entry",
+      "update_time_entry",
+      "list_task_time_entries",
+    ]) {
+      expect(tools.has(name)).toBe(false);
+    }
+    for (const name of ["whoami", "create_task", "update_task", "list_tasks"]) {
+      expect(tools.has(name)).toBe(true);
+    }
+    for (const name of ["create_task", "update_task"]) {
+      const shape = tools.get(name)?.config.inputSchema as unknown as {
+        shape?: Record<string, unknown>;
+      };
+      expect(Object.keys(shape?.shape ?? {})).not.toContain("startDate");
+      expect(Object.keys(shape?.shape ?? {})).not.toContain("dueDate");
+    }
+  });
+
   it("resumes workspace label deletion until the API completes it", async () => {
     const { server, tools } = createServerMock();
     const client = {

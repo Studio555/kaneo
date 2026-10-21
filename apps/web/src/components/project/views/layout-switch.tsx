@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { cn } from "@/lib/cn";
 import {
+  isDateView,
   type ProjectRoute,
   type ProjectView,
   TASK_LAYOUTS,
@@ -22,14 +24,21 @@ export function LayoutSwitch({
 }: LayoutSwitchProps) {
   const { t } = useTranslation();
   const goToView = useGoToProjectView({ workspaceId, projectId, currentRoute });
+  const datesEnabled = useDatesEnabled();
+  const layouts = datesEnabled
+    ? TASK_LAYOUTS
+    : TASK_LAYOUTS.filter((layout) => !isDateView(layout.id));
 
   return (
     <div
       role="group"
       aria-label={t("tasks:display.layout")}
-      className="grid grid-cols-4 gap-1 rounded-lg border border-border/80 bg-background p-1 dark:bg-input/32"
+      className={cn(
+        "grid gap-1 rounded-lg border border-border/80 bg-background p-1 dark:bg-input/32",
+        datesEnabled ? "grid-cols-5" : "grid-cols-3",
+      )}
     >
-      {TASK_LAYOUTS.map((layout) => {
+      {layouts.map((layout) => {
         const Icon = layout.icon;
         const active = layout.id === currentView;
         return (

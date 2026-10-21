@@ -295,6 +295,9 @@
               "$ref": "#/components/schemas/TaskLabel"
             }
           },
+          "craft": {
+            "$ref": "#/components/schemas/TaskCraft"
+          },
           "externalLinks": {
             "type": "array",
             "items": {
@@ -320,11 +323,34 @@
           "projectId",
           "subtaskCounts",
           "labels",
+          "craft",
           "externalLinks"
         ]
       },
       "TaskLabel": {
         "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color"
+        ]
+      },
+      "TaskCraft": {
+        "type": [
+          "object",
+          "null"
+        ],
         "properties": {
           "id": {
             "type": "string"
@@ -400,6 +426,65 @@
           "metadata",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "BoardBacklogSection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The section's slug."
+          },
+          "columnId": {
+            "type": "string",
+            "description": "The section's column id, for the column endpoints that update or delete it."
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "systemKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "planned",
+              "archived",
+              null
+            ],
+            "description": "Set on the built-in Planned and Archived sections, which cannot be renamed or deleted."
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardTask"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "columnId",
+          "slug",
+          "name",
+          "icon",
+          "color",
+          "systemKey",
+          "tasks"
         ]
       },
       "BoardPagination": {
@@ -495,17 +580,26 @@
               "$ref": "#/components/schemas/BoardColumn"
             }
           },
+          "backlogSections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardBacklogSection"
+            },
+            "description": "The backlog's sections in display order: Planned first, custom sections by position, Archived last."
+          },
           "archivedTasks": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BoardTask"
-            }
+            },
+            "description": "Deprecated: the tasks of the Archived entry in backlogSections."
           },
           "plannedTasks": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BoardTask"
-            }
+            },
+            "description": "Deprecated: the tasks of the Planned entry in backlogSections."
           }
         },
         "required": [
@@ -518,6 +612,7 @@
           "workspaceId",
           "backgroundVersion",
           "columns",
+          "backlogSections",
           "archivedTasks",
           "plannedTasks"
         ]
@@ -608,6 +703,9 @@
           },
           "billingEnabled": {
             "type": "boolean"
+          },
+          "datesEnabled": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -628,7 +726,8 @@
           "customOAuthName",
           "customOAuthAutoLogin",
           "customOAuthLogoutUrl",
-          "billingEnabled"
+          "billingEnabled",
+          "datesEnabled"
         ]
       },
       "McpClientRegistration": {
@@ -1215,6 +1314,13 @@
             "type": "string",
             "description": "One of: no-priority, low, medium, high, urgent."
           },
+          "craftId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The craft (discipline) this task belongs to, if any."
+          },
           "startDate": {
             "type": [
               "string",
@@ -1262,6 +1368,7 @@
           "description",
           "status",
           "priority",
+          "craftId",
           "startDate",
           "dueDate",
           "createdAt"
@@ -1462,6 +1569,13 @@
               "null"
             ]
           },
+          "craft": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The craft name, resolved by name on import so a round-trip keeps it."
+          },
           "labels": {
             "type": "array",
             "items": {
@@ -1478,6 +1592,7 @@
           "dueDate",
           "startDate",
           "userId",
+          "craft",
           "labels"
         ]
       },
@@ -1550,7 +1665,7 @@
           },
           "position": {
             "type": "number",
-            "description": "Board order, ascending. Columns are always returned sorted by it."
+            "description": "Order within the column's kind, ascending. Columns are always returned sorted by it."
           },
           "icon": {
             "type": [
@@ -1567,6 +1682,26 @@
           "isFinal": {
             "type": "boolean",
             "description": "Marks the column as a done state, which stops overdue reminders for tasks in it."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "board",
+              "backlog"
+            ],
+            "description": "`board` columns make up the board; `backlog` columns are the backlog's sections."
+          },
+          "systemKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "planned",
+              "archived",
+              null
+            ],
+            "description": "Set on the two built-in backlog sections every project has. They cannot be renamed or deleted."
           },
           "createdAt": {
             "type": "string",
@@ -1586,6 +1721,8 @@
           "icon",
           "color",
           "isFinal",
+          "kind",
+          "systemKey",
           "createdAt",
           "updatedAt"
         ]
@@ -1598,7 +1735,7 @@
           },
           "type": {
             "type": "string",
-            "description": "One of: comment, task, create, status_changed, priority_changed, assignee_changed, unassigned, due_date_changed, title_changed, description_changed."
+            "description": "One of: comment, task, create, status_changed, priority_changed, craft_changed, assignee_changed, unassigned, due_date_changed, title_changed, description_changed."
           },
           "createdAt": {
             "type": "string",
@@ -1691,7 +1828,7 @@
           },
           "type": {
             "type": "string",
-            "description": "One of: comment, task, create, status_changed, priority_changed, assignee_changed, unassigned, due_date_changed, title_changed, description_changed."
+            "description": "One of: comment, task, create, status_changed, priority_changed, craft_changed, assignee_changed, unassigned, due_date_changed, title_changed, description_changed."
           },
           "createdAt": {
             "type": "string",
@@ -1961,6 +2098,39 @@
               "pendingDeletion"
             ]
           }
+        ]
+      },
+      "Craft": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "name",
+          "color",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "Notification": {
@@ -3855,6 +4025,62 @@
           "updatedAt"
         ]
       },
+      "SlackAppIntegration": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string",
+            "description": "The reaction that files a message as a task, without surrounding colons."
+          },
+          "agentEmoji": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The reaction that starts an agent fix, or null when agent fixes are off."
+          },
+          "maintainerSlackUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Slack user messaged when the agent runner needs a person, or null."
+          },
+          "isActive": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "emoji",
+          "agentEmoji",
+          "maintainerSlackUserId",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "TelegramIntegration": {
         "type": [
           "object",
@@ -3921,6 +4147,35 @@
           "isActive",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "TaskRelation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sourceTaskId": {
+            "type": "string"
+          },
+          "targetTaskId": {
+            "type": "string"
+          },
+          "relationType": {
+            "type": "string",
+            "description": "How the two tasks relate: `subtask`, `blocks`, or `related`."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sourceTaskId",
+          "targetTaskId",
+          "relationType",
+          "createdAt"
         ]
       },
       "TaskRelationWithTasks": {
@@ -4002,35 +4257,6 @@
           "projectId",
           "userId",
           "assigneeName"
-        ]
-      },
-      "TaskRelation": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "sourceTaskId": {
-            "type": "string"
-          },
-          "targetTaskId": {
-            "type": "string"
-          },
-          "relationType": {
-            "type": "string",
-            "description": "How the two tasks relate: `subtask`, `blocks`, or `related`."
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "sourceTaskId",
-          "targetTaskId",
-          "relationType",
-          "createdAt"
         ]
       },
       "CreatedExternalLink": {
@@ -5218,6 +5444,48 @@
           "deleted"
         ]
       },
+      "UserGithubIdentityState": {
+        "type": "object",
+        "properties": {
+          "identity": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "githubUserId": {
+                "type": "string",
+                "description": "GitHub's numeric account id. This is the identity, because handles get renamed.",
+                "example": "4242"
+              },
+              "githubLogin": {
+                "type": "string",
+                "description": "Cached GitHub username, used when assigning issues.",
+                "example": "ada"
+              }
+            },
+            "required": [
+              "githubUserId",
+              "githubLogin"
+            ],
+            "description": "Null when the user has not connected a GitHub account."
+          }
+        },
+        "required": [
+          "identity"
+        ]
+      },
+      "UserGithubIdentityUnlinked": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
       "AdminUserList": {
         "type": "object",
         "properties": {
@@ -5844,7 +6112,7 @@
             }
           },
           "404": {
-            "description": "Calendar feed not found or revoked",
+            "description": "Calendar feed not found or revoked, or dates are disabled on this instance",
             "content": {
               "application/json": {
                 "schema": {
@@ -8483,24 +8751,16 @@
                   "grant_types": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "authorization_code",
-                        "refresh_token"
-                      ]
+                      "type": "string"
                     },
-                    "maxItems": 2
+                    "minItems": 1
                   },
                   "response_types": {
                     "type": "array",
                     "items": {
-                      "type": "string",
-                      "enum": [
-                        "code"
-                      ]
+                      "type": "string"
                     },
-                    "minItems": 1,
-                    "maxItems": 1
+                    "minItems": 1
                   }
                 },
                 "required": [
@@ -10118,6 +10378,16 @@
               }
             }
           },
+          "422": {
+            "description": "Date fields are disabled on this instance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "429": {
             "$ref": "#/components/responses/ApiKeyRateLimited"
           }
@@ -10530,7 +10800,7 @@
           "Tasks"
         ],
         "summary": "List tasks",
-        "description": "Get a project's board: its columns, each with the tasks in it, plus the archived and planned buckets. Responses always contain at most 100 tasks (50 by default). Continue through pagination.totalPages for the whole board, and for each task page follow relatedPage through pagination.relatedTotalPages for all labels, links and column metadata. Filters and sorting apply before pagination. Descriptions larger than 64 KiB are omitted with descriptionDeferred=true; read the task detail or description pages for full text.",
+        "description": "Get a project's board: its columns, each with the tasks in it, plus the backlog's sections. Responses always contain at most 100 tasks (50 by default). Continue through pagination.totalPages for the whole board, and for each task page follow relatedPage through pagination.relatedTotalPages for all labels, links and column metadata. Filters and sorting apply before pagination. Descriptions larger than 64 KiB are omitted with descriptionDeferred=true; read the task detail or description pages for full text.",
         "parameters": [
           {
             "schema": {
@@ -10799,6 +11069,16 @@
           },
           "409": {
             "description": "Tasks changed projects; retry the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
             "content": {
               "application/json": {
                 "schema": {
@@ -11307,6 +11587,13 @@
                         "value"
                       ]
                     }
+                  },
+                  "craftId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "The craft (discipline) to file the task under, if any."
                   }
                 },
                 "required": [
@@ -11362,6 +11649,16 @@
           },
           "404": {
             "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
             "content": {
               "application/json": {
                 "schema": {
@@ -11798,6 +12095,16 @@
               }
             }
           },
+          "422": {
+            "description": "Date fields are disabled on this instance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "429": {
             "$ref": "#/components/responses/ApiKeyRateLimited"
           }
@@ -12110,6 +12417,13 @@
                             "null"
                           ],
                           "description": "Assignable user's ID or email address. Emails match case-insensitively. Null, empty, or omitted leaves the task unassigned."
+                        },
+                        "craft": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Craft name, resolved against the target workspace. Unknown names import with no craft."
                         }
                       },
                       "required": [
@@ -12376,6 +12690,103 @@
         }
       }
     },
+    "/task/craft/{id}": {
+      "put": {
+        "operationId": "updateTaskCraft",
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Update task craft",
+        "description": "Set the craft (discipline) a task belongs to, or clear it by passing null. The craft must belong to the task's workspace.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "craftId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "The craft to set, or null to clear it."
+                  }
+                },
+                "required": [
+                  "craftId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated task",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown task, or the craft is not in its workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No workspace access, or missing task:update permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      }
+    },
     "/task/assignee/{id}": {
       "put": {
         "operationId": "updateTaskAssignee",
@@ -12549,6 +12960,16 @@
           },
           "404": {
             "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
             "content": {
               "application/json": {
                 "schema": {
@@ -12991,7 +13412,7 @@
           "Columns"
         ],
         "summary": "Get columns",
-        "description": "Get a project's board columns, ordered by position.",
+        "description": "Get a project's board columns, or with `kind=backlog` its backlog sections, ordered by position.",
         "parameters": [
           {
             "schema": {
@@ -13000,6 +13421,20 @@
             "required": true,
             "name": "projectId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "board",
+                "backlog"
+              ],
+              "description": "Which columns to list. Defaults to `board`."
+            },
+            "required": false,
+            "description": "Which columns to list. Defaults to `board`.",
+            "name": "kind",
+            "in": "query"
           }
         ],
         "responses": {
@@ -13057,7 +13492,7 @@
           "Columns"
         ],
         "summary": "Create column",
-        "description": "Add a column to the end of a project's board. The slug is derived from the name, with a numeric suffix such as `-2` when another column in the project already uses it.",
+        "description": "Add a column to the end of a project's board, or with `kind: backlog` a section to its backlog. The slug is derived from the name and must be unique across both, with a numeric suffix such as `-2` when another column in the project already uses it.",
         "parameters": [
           {
             "schema": {
@@ -13085,7 +13520,16 @@
                     "type": "string"
                   },
                   "isFinal": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "Not allowed for backlog sections."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "board",
+                      "backlog"
+                    ],
+                    "description": "Defaults to `board`. Cannot be changed after creation."
                   }
                 },
                 "required": [
@@ -13107,7 +13551,7 @@
             }
           },
           "400": {
-            "description": "Invalid body",
+            "description": "Invalid body, or a final backlog section",
             "content": {
               "application/json": {
                 "schema": {
@@ -13169,7 +13613,7 @@
           "Columns"
         ],
         "summary": "Reorder columns",
-        "description": "Set new positions for a project's columns and return the whole board in its new order.",
+        "description": "Set new positions for a project's columns and return all of its columns, board and backlog, in their new order.",
         "parameters": [
           {
             "schema": {
@@ -13300,7 +13744,8 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Built-in backlog sections cannot be renamed."
                   },
                   "icon": {
                     "type": [
@@ -13334,7 +13779,7 @@
             }
           },
           "400": {
-            "description": "Invalid body",
+            "description": "Invalid body, a renamed built-in section, or a final backlog section",
             "content": {
               "application/json": {
                 "schema": {
@@ -13384,7 +13829,7 @@
           "Columns"
         ],
         "summary": "Delete column",
-        "description": "Delete an empty column. A column holding tasks is refused until they are moved or deleted.",
+        "description": "Delete an empty column or backlog section. A column holding tasks is refused until they are moved or deleted, and the built-in Planned and Archived sections cannot be deleted.",
         "parameters": [
           {
             "schema": {
@@ -13437,7 +13882,7 @@
             }
           },
           "409": {
-            "description": "The column still contains tasks",
+            "description": "The column still contains tasks, or is a built-in backlog section",
             "content": {
               "application/json": {
                 "schema": {
@@ -14524,6 +14969,16 @@
               }
             }
           },
+          "422": {
+            "description": "Date fields are disabled on this instance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "429": {
             "$ref": "#/components/responses/ApiKeyRateLimited"
           }
@@ -14614,6 +15069,16 @@
           },
           "404": {
             "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Date fields are disabled on this instance",
             "content": {
               "application/json": {
                 "schema": {
@@ -15270,6 +15735,414 @@
           },
           "404": {
             "description": "Label or task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      }
+    },
+    "/craft/workspace/{workspaceId}": {
+      "get": {
+        "operationId": "getWorkspaceCrafts",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Get workspace crafts",
+        "description": "List the crafts defined in a workspace, ordered by name. A craft is the discipline a task belongs to, kept separate from labels so integrations cannot pollute it.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of crafts in the workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Craft"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Workspace ID could not be determined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to the workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      }
+    },
+    "/craft/{id}": {
+      "get": {
+        "operationId": "getCraft",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Get craft",
+        "description": "Get a specific craft by ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Craft details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Craft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown craft, or its workspace could not be determined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to the craft's workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Craft not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateCraft",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Update craft",
+        "description": "Rename or recolor a craft. A rename re-labels linked forge issues in the background; a colour change does not touch them.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "color": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "name",
+                  "color"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Craft updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Craft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, or unknown craft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No workspace access, or missing label:update permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Craft not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another craft in the workspace already has that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteCraft",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Delete craft",
+        "description": "Delete a craft. Tasks carrying it are left with no craft rather than being deleted, and the `craft:` label is removed from linked forge issues.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Craft deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Craft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown craft, or its workspace could not be determined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No workspace access, or missing label:delete permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Craft not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      }
+    },
+    "/craft": {
+      "post": {
+        "operationId": "createCraft",
+        "tags": [
+          "Crafts"
+        ],
+        "summary": "Create craft",
+        "description": "Create a craft in a workspace. Craft names are unique per workspace; re-creating an existing name returns the existing craft.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "color": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "workspaceId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "color",
+                  "workspaceId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Craft created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Craft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body, or workspace ID could not be determined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No workspace access, or missing label:create permission",
             "content": {
               "application/json": {
                 "schema": {
@@ -20542,6 +21415,337 @@
         }
       }
     },
+    "/slack-app-integration/project/{projectId}": {
+      "get": {
+        "operationId": "getSlackAppIntegration",
+        "tags": [
+          "Slack App"
+        ],
+        "summary": "Get Slack app integration",
+        "description": "Get the reaction-to-task integration for a project, or null when none is configured.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Slack app integration details, or null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlackAppIntegration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown project, or its workspace could not be determined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to the project's workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createSlackAppIntegration",
+        "tags": [
+          "Slack App"
+        ],
+        "summary": "Create Slack app integration",
+        "description": "Create or replace the reaction-to-task integration for a project. The Slack app's own credentials come from the instance environment.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emoji": {
+                    "type": "string"
+                  },
+                  "agentEmoji": {
+                    "type": "string",
+                    "description": "The reaction that starts an agent fix, without surrounding colons. An empty string turns agent fixes off."
+                  },
+                  "maintainerSlackUserId": {
+                    "type": "string",
+                    "description": "Slack user id to message when the agent runner needs a person, such as signing Codex in again. An empty string clears it."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The stored integration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlackAppIntegration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The emoji failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No workspace access, or missing workspace:manage_settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateSlackAppIntegration",
+        "tags": [
+          "Slack App"
+        ],
+        "summary": "Update Slack app integration",
+        "description": "Update the integration. Omitted fields keep their value.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emoji": {
+                    "type": "string"
+                  },
+                  "agentEmoji": {
+                    "type": "string",
+                    "description": "The reaction that starts an agent fix, without surrounding colons. An empty string turns agent fixes off."
+                  },
+                  "maintainerSlackUserId": {
+                    "type": "string",
+                    "description": "Slack user id to message when the agent runner needs a person, such as signing Codex in again. An empty string clears it."
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated integration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlackAppIntegration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The resulting config failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No workspace access, or missing workspace:manage_settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Slack app integration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSlackAppIntegration",
+        "tags": [
+          "Slack App"
+        ],
+        "summary": "Delete Slack app integration",
+        "description": "Remove the reaction-to-task integration from a project.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The integration was removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown project, or its workspace could not be determined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No workspace access, or missing workspace:manage_settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Slack app integration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      }
+    },
     "/telegram-integration/project/{projectId}": {
       "get": {
         "operationId": "getTelegramIntegration",
@@ -20920,6 +22124,74 @@
           },
           "404": {
             "description": "Project or Telegram integration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      }
+    },
+    "/task-relation/project/{projectId}": {
+      "get": {
+        "operationId": "getProjectTaskRelations",
+        "tags": [
+          "Task Relations"
+        ],
+        "summary": "Get a project's task relations",
+        "description": "Get every relation joining two tasks in the project, without the task summaries the per-task endpoint returns. Intended for views that render many tasks at once and already hold them. Relations reaching outside the project are omitted.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Relations between tasks in the project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskRelation"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown project, or its workspace could not be determined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No workspace access, or missing task:read permission",
             "content": {
               "application/json": {
                 "schema": {
@@ -23608,6 +24880,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UserAvatarDeleted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      }
+    },
+    "/user/github-identity": {
+      "get": {
+        "operationId": "getUserGithubIdentity",
+        "tags": [
+          "User"
+        ],
+        "summary": "Get linked GitHub account",
+        "description": "Return the GitHub account connected to the current user, so task assignment can name the same person on a linked GitHub issue. Null when nothing is connected. Accounts are connected through the GitHub OAuth flow, not by supplying a username.",
+        "responses": {
+          "200": {
+            "description": "Current GitHub link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserGithubIdentityState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/ApiKeyRateLimited"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "unlinkUserGithubIdentity",
+        "tags": [
+          "User"
+        ],
+        "summary": "Forget the cached GitHub account",
+        "description": "Drop the current user's cached GitHub handle. Disconnecting for real also revokes the linked GitHub account through Better Auth; this only clears what Kaneo cached. Succeeds even when there was nothing to remove.",
+        "responses": {
+          "200": {
+            "description": "GitHub account unlinked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserGithubIdentityUnlinked"
                 }
               }
             }

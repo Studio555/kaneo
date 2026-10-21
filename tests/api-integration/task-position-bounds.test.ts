@@ -21,7 +21,7 @@ beforeEach(async () => {
 });
 async function setup() {
   const member = await createWorkspaceMember();
-  const { project, columns } = await createProjectFixture({
+  const { project, columns, backlogSections } = await createProjectFixture({
     workspaceId: member.workspace.id,
   });
   mockAuthenticatedSession(member.user);
@@ -40,7 +40,7 @@ async function setup() {
     .update(schema.projectTable)
     .set({ lastTaskNumber: 1 })
     .where(eq(schema.projectTable.id, project.id));
-  return { ...member, project, columns, task };
+  return { ...member, project, columns, backlogSections, task };
 }
 
 describe("task position bounds and legacy recovery", () => {
@@ -119,11 +119,15 @@ describe("task position bounds and legacy recovery", () => {
     ]);
   });
 
-  it("repairs virtual-status tasks and serializes concurrent appends", async () => {
-    const { project, task, user } = await setup();
+  it("repairs backlog-section tasks and serializes concurrent appends", async () => {
+    const { project, backlogSections, task, user } = await setup();
     await db
       .update(schema.taskTable)
-      .set({ status: "planned", columnId: null, position: MAX_TASK_POSITION })
+      .set({
+        status: "planned",
+        columnId: backlogSections.planned.id,
+        position: MAX_TASK_POSITION,
+      })
       .where(eq(schema.taskTable.id, task.id));
     const added = await Promise.all(
       Array.from({ length: 4 }, (_, index) =>

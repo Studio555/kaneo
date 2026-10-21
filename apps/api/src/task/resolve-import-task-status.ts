@@ -1,5 +1,5 @@
 import { toSlug } from "../column/to-slug";
-import { coerceStatus, VIRTUAL_STATUSES } from "./validate-task-fields";
+import { coerceStatus, SYSTEM_BACKLOG_STATUSES } from "./validate-task-fields";
 
 export function resolveImportTaskStatus(
   status: string,
@@ -7,7 +7,7 @@ export function resolveImportTaskStatus(
 ): { status: string; warning?: string } | { error: string } {
   const validStatuses = [
     ...columns.map((column) => column.slug),
-    ...VIRTUAL_STATUSES,
+    ...SYSTEM_BACKLOG_STATUSES,
   ];
   // Persisted slugs and virtual statuses take precedence over display names.
   if (validStatuses.includes(status)) return { status };

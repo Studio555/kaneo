@@ -18,21 +18,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import useImportTasks from "@/hooks/mutations/task/use-import-tasks";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { toast } from "@/lib/toast";
 
-const EXAMPLE_FORMAT = `{
-  "tasks": [
-    {
-      "title": "Task title",
-      "description": "Description text",
-      "status": "to-do",
-      "priority": "low",
-      "startDate": "2025-04-18T00:00:00.000Z",
-      "dueDate": "2025-04-20T00:00:00.000Z",
-      "userId": "user@example.com"
-    }
-  ]
-}`;
+const UNDATED_EXAMPLE_TASK = {
+  title: "Task title",
+  description: "Description text",
+  status: "to-do",
+  priority: "low",
+  userId: "user@example.com",
+};
+
+const exampleFormat = (datesEnabled: boolean) => {
+  const task = datesEnabled
+    ? {
+        ...UNDATED_EXAMPLE_TASK,
+        startDate: "2025-04-18T00:00:00.000Z",
+        dueDate: "2025-04-20T00:00:00.000Z",
+      }
+    : UNDATED_EXAMPLE_TASK;
+  return JSON.stringify({ tasks: [task] }, null, 2);
+};
 
 type ImportTasksDialogProps = {
   projectId: string;
@@ -46,6 +52,7 @@ export function ImportTasksDialog({
   onOpenChange,
 }: ImportTasksDialogProps) {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { mutateAsync: importTasks, isPending } = useImportTasks();
@@ -128,7 +135,7 @@ export function ImportTasksDialog({
               {t("settings:tasksImportExport.expectedFormat")}
             </p>
             <pre className="max-h-32 overflow-auto rounded-lg border border-border bg-muted/50 p-3 font-mono text-xs">
-              {EXAMPLE_FORMAT}
+              {exampleFormat(datesEnabled)}
             </pre>
           </div>
           <div

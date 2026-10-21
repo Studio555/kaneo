@@ -8,6 +8,7 @@ import { getPriorityLabel } from "@/lib/i18n/domain";
 import { getPriorityIcon } from "@/lib/priority";
 import { TaskCustomFieldRows } from "../custom-fields/task-custom-field-rows";
 import TaskAssigneePopover from "../task-assignee-popover";
+import TaskCraftPopover from "../task-craft-popover";
 import TaskDueDatePopover from "../task-due-date-popover";
 import TaskLabelsPopover from "../task-labels-popover";
 import TaskMovePopover from "../task-move-popover";
@@ -15,6 +16,7 @@ import TaskPriorityPopover from "../task-priority-popover";
 import TaskStartDatePopover from "../task-start-date-popover";
 import TaskStatusPopover from "../task-status-popover";
 import { AssigneeAvatar } from "./assignee-avatar";
+import { CraftValue } from "./craft-value";
 import { dueDateTextClass } from "./due-date-text-class";
 import { LabelsValue } from "./labels-value";
 import { PropertyRow } from "./property-row";
@@ -35,8 +37,17 @@ export function PropertiesRail({
   className,
 }: PropertiesRailProps) {
   const { t } = useTranslation();
-  const { task, project, labels, status, assignee, dueStatus, canMoveTask } =
-    useTaskProperties(taskId, projectId, workspaceId);
+  const {
+    task,
+    project,
+    labels,
+    craft,
+    datesEnabled,
+    status,
+    assignee,
+    dueStatus,
+    canMoveTask,
+  } = useTaskProperties(taskId, projectId, workspaceId);
 
   if (!task) return null;
 
@@ -100,6 +111,14 @@ export function PropertiesRail({
           </TaskAssigneePopover>
         </PropertyRow>
 
+        <PropertyRow label={t("tasks:properties.craft")}>
+          <TaskCraftPopover task={task} workspaceId={workspaceId}>
+            <PropertyValue>
+              <CraftValue craft={craft} />
+            </PropertyValue>
+          </TaskCraftPopover>
+        </PropertyRow>
+
         <PropertyRow label={t("tasks:properties.labels")} align="start">
           <TaskLabelsPopover task={task} workspaceId={workspaceId}>
             <PropertyValue
@@ -112,38 +131,42 @@ export function PropertiesRail({
           </TaskLabelsPopover>
         </PropertyRow>
 
-        <PropertyRow label={t("tasks:properties.dates")}>
-          <div className="flex min-w-0 items-center gap-0.5">
-            <TaskStartDatePopover task={task}>
-              <PropertyValue className="flex-none">
-                <CalendarDays className="text-muted-foreground" />
-                <span
-                  className={cn(!task.startDate && "text-muted-foreground")}
+        {datesEnabled && (
+          <PropertyRow label={t("tasks:properties.dates")}>
+            <div className="flex min-w-0 items-center gap-0.5">
+              <TaskStartDatePopover task={task}>
+                <PropertyValue className="flex-none">
+                  <CalendarDays className="text-muted-foreground" />
+                  <span
+                    className={cn(!task.startDate && "text-muted-foreground")}
+                  >
+                    {task.startDate
+                      ? formatDateShort(task.startDate)
+                      : t("tasks:properties.start")}
+                  </span>
+                </PropertyValue>
+              </TaskStartDatePopover>
+              <ArrowRight className="size-3 shrink-0 text-muted-foreground/60" />
+              <TaskDueDatePopover task={task}>
+                <PropertyValue
+                  data-task-action="dueDate"
+                  className={cn("flex-none", dueDateTextClass[dueStatus])}
                 >
-                  {task.startDate
-                    ? formatDateShort(task.startDate)
-                    : t("tasks:properties.start")}
-                </span>
-              </PropertyValue>
-            </TaskStartDatePopover>
-            <ArrowRight className="size-3 shrink-0 text-muted-foreground/60" />
-            <TaskDueDatePopover task={task}>
-              <PropertyValue
-                data-task-action="dueDate"
-                className={cn("flex-none", dueDateTextClass[dueStatus])}
-              >
-                <Calendar
-                  className={cn(!task.dueDate && "text-muted-foreground")}
-                />
-                <span className={cn(!task.dueDate && "text-muted-foreground")}>
-                  {task.dueDate
-                    ? formatDateShort(task.dueDate)
-                    : t("tasks:dueDate.label")}
-                </span>
-              </PropertyValue>
-            </TaskDueDatePopover>
-          </div>
-        </PropertyRow>
+                  <Calendar
+                    className={cn(!task.dueDate && "text-muted-foreground")}
+                  />
+                  <span
+                    className={cn(!task.dueDate && "text-muted-foreground")}
+                  >
+                    {task.dueDate
+                      ? formatDateShort(task.dueDate)
+                      : t("tasks:dueDate.label")}
+                  </span>
+                </PropertyValue>
+              </TaskDueDatePopover>
+            </div>
+          </PropertyRow>
+        )}
 
         <PropertyRow label={t("tasks:properties.project")}>
           {canMoveTask ? (

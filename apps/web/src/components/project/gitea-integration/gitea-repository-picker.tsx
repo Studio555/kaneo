@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { filterByName } from "@/components/project/code-hosting/picker/filter-by-name";
 import { RepositoryPickerDialog } from "@/components/project/code-hosting/picker/repository-picker-dialog";
+import { repositoryPickerKeyDown } from "@/components/project/code-hosting/picker/repository-picker-keys";
 import { RepositoryPickerSearch } from "@/components/project/code-hosting/picker/repository-picker-search";
 import { GiteaRepositoryResults } from "@/components/project/gitea-integration/gitea-repository-results";
 import listGiteaRepositories, {
@@ -104,6 +105,14 @@ export function GiteaRepositoryPicker({
           value={term}
           placeholder={t("settings:repositoryBrowser.searchPlaceholder")}
           onChange={setTerm}
+          onKeyDown={repositoryPickerKeyDown(
+            repositories,
+            repositories.findIndex(
+              (repository) => repository.full_name === chosen?.full_name,
+            ),
+            setSelected,
+            () => use(chosen),
+          )}
         />
       }
       confirmLabel={t("settings:repositoryBrowser.useRepository")}

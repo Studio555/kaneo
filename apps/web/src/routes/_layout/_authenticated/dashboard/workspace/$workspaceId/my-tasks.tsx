@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import useGetAssignedTasks from "@/hooks/queries/task/use-get-assigned-tasks";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 
 export const Route = createFileRoute(
   "/_layout/_authenticated/dashboard/workspace/$workspaceId/my-tasks",
@@ -33,7 +34,9 @@ function RouteComponent() {
     isLoading,
     isError,
   } = useGetAssignedTasks(workspaceId);
-  const [groupBy, setGroupBy] = useState<MyTasksGroupBy>("dueDate");
+  const datesEnabled = useDatesEnabled();
+  const [selectedGroupBy, setGroupBy] = useState<MyTasksGroupBy>("dueDate");
+  const groupBy = datesEnabled ? selectedGroupBy : "project";
 
   return (
     <>
@@ -41,7 +44,7 @@ function RouteComponent() {
       <WorkspaceLayout
         title={t("workspace:myTasks.pageTitle")}
         headerActions={
-          assigned?.tasks.length ? (
+          datesEnabled && assigned?.tasks.length ? (
             <MyTasksGroupByToggle value={groupBy} onChange={setGroupBy} />
           ) : null
         }

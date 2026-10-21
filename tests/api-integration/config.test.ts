@@ -31,6 +31,7 @@ describe("API integration: config", () => {
       customOAuthAutoLogin: false,
       isDemoMode: false,
       hasGuestAccess: true,
+      datesEnabled: true,
     });
     expect(payload).toSatisfy((value: Record<string, unknown>) =>
       [
@@ -65,5 +66,11 @@ describe("API integration: config", () => {
       "customOAuthName",
       "Authentik",
     );
+  });
+
+  it("reports dates as disabled when DISABLE_DATES is set", async () => {
+    vi.stubEnv("DISABLE_DATES", "true");
+    const response = await createApp().app.request("/api/config");
+    expect(await response.json()).toHaveProperty("datesEnabled", false);
   });
 });

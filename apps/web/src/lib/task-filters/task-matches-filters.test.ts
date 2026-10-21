@@ -12,6 +12,7 @@ const noFilters: BoardFilters = {
   assignee: null,
   dueDate: null,
   labels: null,
+  craft: null,
   customFields: null,
 };
 

@@ -25,12 +25,14 @@ import {
   validateTaskAssetUploadInput,
   verifyTaskAssetUpload,
 } from "../storage/s3";
+import { areDatesEnabled } from "../utils/dates-enabled";
 import { normalizeApiServerUrl } from "../utils/openapi-spec";
 import {
   hasWorkspacePermission,
   requireWorkspacePermission,
 } from "../utils/require-workspace-permission";
 import {
+  assertDatesEnabled,
   validateAndParseDate,
   validateDateRange,
 } from "../utils/validate-dates";
@@ -58,6 +60,7 @@ import {
 } from "./controllers/require-task-permission";
 import updateTask from "./controllers/update-task";
 import updateTaskAssignee from "./controllers/update-task-assignee";
+import updateTaskCraft from "./controllers/update-task-craft";
 import updateTaskDescription from "./controllers/update-task-description";
 import updateTaskDueDate from "./controllers/update-task-due-date";
 import updateTaskPriority from "./controllers/update-task-priority";
@@ -102,6 +105,7 @@ import {
   ticketIdParam,
   ticketIdQuery,
   updateAssigneeBody,
+  updateCraftBody,
   updateDescriptionBody,
   updateDueDateBody,
   updatePriorityBody,
@@ -138,7 +142,7 @@ const listTasksRoute = createRoute({
   tags: ["Tasks"],
   summary: "List tasks",
   description:
-    "Get a project's board: its columns, each with the tasks in it, plus the archived and planned buckets. Responses always contain at most 100 tasks (50 by default). Continue through pagination.totalPages for the whole board, and for each task page follow relatedPage through pagination.relatedTotalPages for all labels, links and column metadata. Filters and sorting apply before pagination. Descriptions larger than 64 KiB are omitted with descriptionDeferred=true; read the task detail or description pages for full text.",
+    "Get a project's board: its columns, each with the tasks in it, plus the backlog's sections. Responses always contain at most 100 tasks (50 by default). Continue through pagination.totalPages for the whole board, and for each task page follow relatedPage through pagination.relatedTotalPages for all labels, links and column metadata. Filters and sorting apply before pagination. Descriptions larger than 64 KiB are omitted with descriptionDeferred=true; read the task detail or description pages for full text.",
   middleware: [workspaceAccess.fromProject("projectId")] as const,
   request: { params: projectIdParam, query: listTasksQuery },
   responses: {
@@ -178,6 +182,7 @@ const bulkUpdateTasksRoute = createRoute({
     ),
     404: errorResponse("No tasks found"),
     409: errorResponse("Tasks changed projects; retry the operation"),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -302,6 +307,7 @@ const createTaskRoute = createRoute({
       "No access to the project, or missing task:create permission",
     ),
     404: errorResponse("Project not found"),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -437,6 +443,7 @@ const updateTaskRoute = createRoute({
       "No access to the project, or missing task:update or task:assign permission",
     ),
     404: errorResponse("Task not found"),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -568,6 +575,36 @@ const updateTaskPriorityRoute = createRoute({
   },
 });
 
+const updateTaskCraftRoute = createRoute({
+  method: "put",
+  operationId: "updateTaskCraft",
+  path: "/craft/{id}",
+  tags: ["Tasks"],
+  summary: "Update task craft",
+  description:
+    "Set the craft (discipline) a task belongs to, or clear it by passing null. The craft must belong to the task's workspace.",
+  middleware: [
+    workspaceAccess.fromTask(),
+    requireWorkspacePermission({ task: ["update"] }),
+    requireEntitlement,
+  ] as const,
+  request: {
+    params: taskParam,
+    body: {
+      required: true,
+      content: { "application/json": { schema: updateCraftBody } },
+    },
+  },
+  responses: {
+    200: jsonResponse("The updated task", taskSchema),
+    400: errorResponse("Unknown task, or the craft is not in its workspace"),
+    403: errorResponse(
+      "No workspace access, or missing task:update permission",
+    ),
+    404: errorResponse("Task not found"),
+  },
+});
+
 const updateTaskAssigneeRoute = createRoute({
   method: "put",
   operationId: "updateTaskAssignee",
@@ -626,6 +663,7 @@ const updateTaskDueDateRoute = createRoute({
       "No access to the project, or missing task:update permission",
     ),
     404: errorResponse("Task not found"),
+    422: errorResponse("Date fields are disabled on this instance"),
   },
 });
 
@@ -889,7 +927,11 @@ const task = apiRouter<BaseVariables & { workspaceId: string }>()
       userId,
       customFields,
       draftAssetIds,
+      craftId,
     } = c.req.valid("json");
+
+    assertDatesEnabled(startDate);
+    assertDatesEnabled(dueDate);
 
     const parsedStartDate =
       startDate !== undefined
@@ -914,6 +956,7 @@ const task = apiRouter<BaseVariables & { workspaceId: string }>()
       status,
       customFields,
       draftAssetIds,
+      craftId,
     });
 
     return c.json(task, 200);
@@ -979,14 +1022,28 @@ const task = apiRouter<BaseVariables & { workspaceId: string }>()
 
     const currentUserId = c.get("userId");
 
-    const parsedStartDate =
-      startDate !== undefined
-        ? validateAndParseDate(startDate, "startDate")
-        : undefined;
-    const parsedDueDate =
-      dueDate !== undefined
-        ? validateAndParseDate(dueDate, "dueDate")
-        : undefined;
+    // This route parses dates before `updateTask` can compare them against the
+    // stored values, so an unparseable value would surface as a 400 parse error
+    // even when the real answer is that this instance does not accept date
+    // writes at all. A value that cannot be parsed also cannot be an echo of a
+    // stored date, so while dates are disabled it is necessarily an attempt to
+    // set one: report the feature as disabled instead.
+    const parseUpdateDate = (value: string | undefined, fieldName: string) => {
+      if (value === undefined) return undefined;
+      try {
+        return validateAndParseDate(value, fieldName);
+      } catch (error) {
+        if (!areDatesEnabled()) {
+          throw new HTTPException(422, {
+            message: "Date fields are disabled on this instance",
+          });
+        }
+        throw error;
+      }
+    };
+
+    const parsedStartDate = parseUpdateDate(startDate, "startDate");
+    const parsedDueDate = parseUpdateDate(dueDate, "dueDate");
 
     validateDateRange(parsedStartDate, parsedDueDate);
 
@@ -1048,6 +1105,15 @@ const task = apiRouter<BaseVariables & { workspaceId: string }>()
 
     return c.json(task, 200);
   })
+  .openapi(updateTaskCraftRoute, async (c) => {
+    const { id } = c.req.valid("param");
+    const { craftId } = c.req.valid("json");
+    const currentUserId = c.get("userId");
+
+    const task = await updateTaskCraft({ id, craftId, currentUserId });
+
+    return c.json(task, 200);
+  })
   .openapi(updateTaskAssigneeRoute, async (c) => {
     const { id } = c.req.valid("param");
     const { userId } = c.req.valid("json");
@@ -1061,6 +1127,11 @@ const task = apiRouter<BaseVariables & { workspaceId: string }>()
     const { id } = c.req.valid("param");
     const { dueDate = null } = c.req.valid("json");
     const currentUserId = c.get("userId");
+
+    // An empty string means "clear"; it must not trip the guard.
+    if (dueDate) {
+      assertDatesEnabled(dueDate);
+    }
 
     const task = await updateTaskDueDate({
       id,

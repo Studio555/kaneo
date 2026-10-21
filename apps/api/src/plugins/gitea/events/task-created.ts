@@ -5,6 +5,9 @@ import {
 import { canSyncTask } from "../../sync/eligibility";
 import { withTaskSyncCreation } from "../../sync/create-task-issue";
 import { syncTaskFieldLabels } from "../../sync/sync-task-field-labels";
+import { isBacklogStatus } from "../../backlog-status";
+import { findTaskWithCraft } from "../../github/services/task-service";
+import { toCraftLabelName } from "../../system-labels";
 import {
   createExternalLink,
   updateExternalLink,
@@ -34,6 +37,9 @@ async function createTaskIssue(
   );
 
   if (existingLink && !isIssueInitializationPending(existingLink)) return;
+  // Backlog tasks are not committed work; leaving the backlog opens the issue.
+  if (!existingLink && (await isBacklogStatus(event.projectId, event.status)))
+    return;
 
   try {
     const client = createGiteaClient(config);
@@ -134,6 +140,19 @@ async function createTaskIssue(
           },
         ),
     });
+
+    const task = await findTaskWithCraft(event.taskId);
+    if (task?.craft) {
+      const craftLabel = toCraftLabelName(task.craft.name);
+      await addLabelsToIssueGitea(
+        config,
+        issueNumber,
+        [craftLabel],
+        false,
+        undefined,
+        { [craftLabel]: task.craft.color },
+      );
+    }
   } catch (error) {
     console.error("Failed to create Gitea issue:", error);
   }

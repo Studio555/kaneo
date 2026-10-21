@@ -7,6 +7,8 @@ export const SORT_FIELDS: SortField[] = [
   "dueDate",
   "title",
   "number",
+  "assignee",
+  "craft",
 ];
 
 export const MANUAL_SORT: SortConfig = { field: "position", direction: "asc" };

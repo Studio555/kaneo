@@ -104,6 +104,7 @@ Name | Description | Default |
 | `DISABLE_PASSWORD_REGISTRATION` | Disable local account creation through password, email OTP, magic link, and guest access. Existing accounts can still use email sign-in unless `DISABLE_LOGIN_FORM=true`. Social/OIDC registration remains available unless `DISABLE_REGISTRATION=true`. The initial administrator can still be created through password signup. | `false` |
 | `DISABLE_EMAIL_OTP_SIGN_IN` | When SMTP is configured, sign-in uses email verification codes by default. Set to `true` to use email/password sign-in instead. Workspace invitation and password-reset emails still use SMTP. | `false` |
 | `DISABLE_LOGIN_FORM` | Disable local email sign-in and hide the form on the sign-in page. When set to `true`, only SSO/OAuth buttons are shown. Useful when you want to enforce authentication exclusively through an external identity provider. | `false` |
+| `DISABLE_DATES` | Disable date features instance-wide. When set to `true`, task due dates and start dates, the Gantt and Calendar views and time tracking are hidden in the UI, writes to those fields are rejected by the API, and no due-date reminders are sent — neither the in-app notifications nor the generic-webhook deliveries. Existing stored dates are preserved, still returned when a task is read, and reappear if the variable is removed: while the variable is set, the general task update endpoint never modifies a stored date, so clearing one requires the dedicated due-date endpoint (`PUT /api/task/due-date/:id`), the bulk due-date operation, or re-enabling the feature. | `false` |
 | `CUSTOM_OAUTH_AUTO_LOGIN` | Automatically redirect to the custom OAuth/OIDC provider instead of showing the sign-in page. When set to `true`, users are immediately redirected to your identity provider without seeing the login page. Requires a custom OAuth provider to be configured. | `false` |
 
 <Warning>
@@ -157,6 +158,20 @@ Name | Description |
 | `GITHUB_PRIVATE_KEY` | PEM private key for the GitHub App (JWT authentication). Accepts a real multi-line PEM, or a single line where every newline is replaced with the literal characters `\n` (useful when the host's env editor strips newlines, e.g. Portainer's form-based stack editor).
 | `GITHUB_PRIVATE_KEY_BASE64` | (Optional) Alternative to `GITHUB_PRIVATE_KEY`: a base64-encoded PEM. Takes precedence when both are set. Convenient when your orchestrator can't carry newlines at all.
 | `GITHUB_APP_NAME` | (Optional) GitHub App slug, used for installation links in the UI.
+
+### Slack app
+
+The Slack app files a Slack message as a task when someone reacts to it with the emoji a project's Slack App integration claims. The bot token and signing secret belong to the Slack app, so they are instance-wide; the emoji is set per project. Slack sends events to `/api/slack-app/events`.
+
+When an OpenAI key is configured (`OPENAI_API_KEY`, or `OPENAI_API_KEY_FILE`), each newly filed task (never a message that was already filed) is then rewritten from its Slack thread: Kaneo reads the whole thread and up to six of its images (5 MB each at most), asks OpenAI for a clearer title and a structured description, and posts one comment on the task and one reply in the thread. The thread text, author display names, screenshots and the titles of the project's 100 most recent tasks are sent to OpenAI (with `store: false`). A title or description someone has already edited is left alone. Downloading images needs the Slack bot scope `files:read`. Failures are only logged; the task is filed either way.
+
+Name | Description |
+--- | --- |
+| `SLACK_BOT_TOKEN` | Bot token (`xoxb-...`) of the Slack app. Required for the Slack app.
+| `SLACK_SIGNING_SECRET` | Signing secret used to verify Slack event requests. Required for the Slack app.
+| `OPENAI_API_KEY` | (Optional) OpenAI API key. When set, tasks filed from Slack are rewritten from the thread and its screenshots, which sends that content to OpenAI.
+| `OPENAI_API_KEY_FILE` | (Optional) Path to a file holding the OpenAI API key, such as a mounted secret. Takes precedence over `OPENAI_API_KEY`, and is read for each task, so a rotated key is picked up without a restart.
+| `SLACK_TRIAGE_MODEL` | (Optional) OpenAI model used for that rewrite. Defaults to `gpt-5.6-luna`.
 
 ### Google SSO
 

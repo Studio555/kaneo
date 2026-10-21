@@ -13,8 +13,11 @@ export function applyBoardReorder(
         columnId: column.id,
         tasks: column.tasks,
       })),
-      { slug: "planned", columnId: null, tasks: draft.plannedTasks },
-      { slug: "archived", columnId: null, tasks: draft.archivedTasks },
+      ...draft.backlogSections.map((section) => ({
+        slug: section.slug,
+        columnId: section.columnId,
+        tasks: section.tasks,
+      })),
     ];
     const moved: Array<{
       task: (typeof draft.columns)[number]["tasks"][number];

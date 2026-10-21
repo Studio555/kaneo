@@ -50,6 +50,7 @@ import {
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
 import useGetProjectMembers from "@/hooks/queries/workspace-users/use-get-project-members";
+import { useSuggestionScroll } from "@/hooks/use-suggestion-navigation";
 import { cn } from "@/lib/cn";
 import {
   extractIssueKeyFromUrl,
@@ -60,6 +61,10 @@ import {
 import { isInCodeBlockLanguagePicker } from "@/lib/is-in-codeblock-language-picker";
 import { normalizeCommentMarkdown } from "@/lib/normalize-comment-markdown";
 import { pasteMarkdown } from "@/lib/paste-markdown";
+import {
+  handleSuggestionNavigation,
+  moveSuggestionHighlight,
+} from "@/lib/suggestion-navigation";
 import { toast } from "@/lib/toast";
 import { uploadTaskImage } from "@/lib/upload-task-image";
 
@@ -134,6 +139,7 @@ const COMMENT_SHIKI_LANGUAGE_ALIASES: Record<string, string> = {
 
 type EmbedComposerState = {
   mode: "choice" | "input";
+  selectedIndex?: number;
   url: string;
   top: number;
   left: number;
@@ -711,34 +717,28 @@ export default function CommentEditor({
             }
           }
 
-          if (!readOnly && !disabled && slashMenu) {
-            if (event.key === "ArrowDown") {
-              event.preventDefault();
-              setSlashMenu((current) => {
-                if (!current) return current;
-                return {
-                  ...current,
-                  selectedIndex:
-                    (current.selectedIndex + 1) %
-                    Math.max(filteredSlashCommands.length, 1),
-                };
-              });
-              return true;
-            }
-
-            if (event.key === "ArrowUp") {
-              event.preventDefault();
-              setSlashMenu((current) => {
-                if (!current) return current;
-                return {
-                  ...current,
-                  selectedIndex:
-                    (current.selectedIndex -
-                      1 +
-                      Math.max(filteredSlashCommands.length, 1)) %
-                    Math.max(filteredSlashCommands.length, 1),
-                };
-              });
+          if (
+            !readOnly &&
+            !disabled &&
+            slashMenu &&
+            view.hasFocus() &&
+            !event.isComposing
+          ) {
+            if (
+              handleSuggestionNavigation(
+                event,
+                filteredSlashCommands.length,
+                (direction) => {
+                  setSlashMenu((current) =>
+                    moveSuggestionHighlight(
+                      current,
+                      filteredSlashCommands.length,
+                      direction,
+                    ),
+                  );
+                },
+              )
+            ) {
               return true;
             }
 
@@ -1165,6 +1165,12 @@ export default function CommentEditor({
     [filteredSlashCommands, t],
   );
 
+  const slashListRef = useSuggestionScroll(
+    slashMenu?.selectedIndex,
+    editor?.isFocused ?? false,
+    ".is-selected",
+  );
+
   const submitEmbedComposer = useCallback(
     (mode: "embed" | "link") => {
       if (!editor || !embedComposer) return;
@@ -1229,12 +1235,24 @@ export default function CommentEditor({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!embedComposer) return;
+      const target = event.target as HTMLElement;
+      const ownsFocus =
+        embedComposer.mode === "choice"
+          ? editor?.isFocused
+          : target.tagName === "INPUT" &&
+            editorShellRef.current?.contains(target);
+      if (!ownsFocus || event.isComposing) return;
       event.stopPropagation();
       event.stopImmediatePropagation();
 
       if (embedComposer.mode === "choice") {
-        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-          event.preventDefault();
+        if (
+          handleSuggestionNavigation(event, 2, (direction) => {
+            setEmbedComposer((current) =>
+              moveSuggestionHighlight(current, 2, direction),
+            );
+          })
+        ) {
           return;
         }
 
@@ -1253,7 +1271,9 @@ export default function CommentEditor({
 
         if (event.key === "Enter") {
           event.preventDefault();
-          submitEmbedComposer("embed");
+          submitEmbedComposer(
+            embedComposer.selectedIndex === 1 ? "link" : "embed",
+          );
         }
         return;
       }
@@ -1269,7 +1289,7 @@ export default function CommentEditor({
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [embedComposer, submitEmbedComposer]);
+  }, [editor, embedComposer, submitEmbedComposer]);
 
   const handleEditorMouseMove = useCallback(
     (event: ReactMouseEvent<HTMLElement>) => {
@@ -1634,6 +1654,7 @@ export default function CommentEditor({
       )}
       {slashMenu && !readOnly && !disabled && (
         <div
+          ref={slashListRef}
           className="kaneo-tiptap-slash-menu"
           style={{
             top: slashMenu.top,
@@ -1715,7 +1736,10 @@ export default function CommentEditor({
             <div className="kaneo-embed-choice-menu">
               <button
                 type="button"
-                className="kaneo-embed-choice-item is-primary"
+                className={cn(
+                  "kaneo-embed-choice-item",
+                  embedComposer.selectedIndex !== 1 && "is-primary",
+                )}
                 onMouseDown={(event) => {
                   event.preventDefault();
                   submitEmbedComposer("embed");
@@ -1728,7 +1752,10 @@ export default function CommentEditor({
               </button>
               <button
                 type="button"
-                className="kaneo-embed-choice-item"
+                className={cn(
+                  "kaneo-embed-choice-item",
+                  embedComposer.selectedIndex === 1 && "is-primary",
+                )}
                 onMouseDown={(event) => {
                   event.preventDefault();
                   setEmbedComposer(null);

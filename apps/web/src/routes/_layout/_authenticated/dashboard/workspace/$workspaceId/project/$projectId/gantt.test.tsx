@@ -43,6 +43,28 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
+// The instance config query is mocked rather than the date hooks themselves:
+// the route guard has to tell "config resolved and dates are off" apart from
+// "the config hasn't arrived yet", and that distinction lives inside the real
+// hook. Mocking the hook would make the pending case untestable here.
+const config = vi.hoisted(
+  () =>
+    ({ value: { datesEnabled: true } }) as {
+      value: { datesEnabled: boolean } | undefined;
+    },
+);
+
+vi.mock("@/hooks/queries/config/use-get-config", () => ({
+  //  mirrors the real query: it is only true once a payload has
+  // arrived. An undefined value therefore models both "still pending" and
+  // "the request failed", which is exactly what the route guard must not
+  // treat as "dates are disabled".
+  default: () => ({
+    data: config.value,
+    isSuccess: config.value !== undefined,
+  }),
+}));
+
 const useGetTasks = vi.fn();
 vi.mock("@/hooks/queries/task/use-get-tasks", () => ({
   useGetTasks: (projectId: string) => useGetTasks(projectId),
@@ -85,6 +107,7 @@ vi.mock("@/components/project/task-filters/use-task-filter-options", () => ({
   useTaskFilterOptions: () => ({
     members: [],
     labels: [],
+    crafts: [],
     customFields: [],
     usedCustomFieldValues: {},
   }),
@@ -179,8 +202,28 @@ function mockProjectWithTask(
       name: overrides.name ?? "Roadmap",
       slug: "RM",
       columns: [{ id: "col-1", name: "In Progress", tasks: [task] }],
-      plannedTasks: [],
-      archivedTasks: [],
+      backlogSections: [
+        {
+          id: "planned",
+          columnId: "column-planned",
+          slug: "planned",
+          name: "Planned",
+          icon: null,
+          color: null,
+          systemKey: "planned" as const,
+          tasks: [],
+        },
+        {
+          id: "archived",
+          columnId: "column-archived",
+          slug: "archived",
+          name: "Archived",
+          icon: null,
+          color: null,
+          systemKey: "archived" as const,
+          tasks: [],
+        },
+      ],
     },
   });
 }
@@ -198,6 +241,7 @@ afterEach(() => {
   scrollIntoView.mockClear();
   useGetTasks.mockReset();
   routeParams.projectId = "project-1";
+  config.value = { datesEnabled: true };
 });
 
 describe("Gantt jump-to-today", () => {
@@ -368,5 +412,53 @@ describe("Gantt jump-to-today", () => {
     // component is correct.
     const container = screen.getByTestId("gantt-scroll-container");
     expect(container.style.scrollPaddingLeft).toBe("20rem");
+  });
+});
+
+describe("Gantt route with dates disabled", () => {
+  it("redirects to the board", () => {
+    mockProjectWithTask(makeTask({ title: "Task" }));
+    config.value = { datesEnabled: false };
+    navigate.mockClear();
+
+    render(<GanttRoute />);
+
+    expect(navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
+        params: { workspaceId: "workspace-1", projectId: "project-1" },
+        replace: true,
+      }),
+    );
+  });
+
+  it("does not redirect when dates are enabled", () => {
+    mockProjectWithTask(makeTask({ title: "Task" }));
+    navigate.mockClear();
+
+    render(<GanttRoute />);
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("does not redirect while the instance config is still loading", () => {
+    mockProjectWithTask(makeTask({ title: "Task" }));
+    // A cold load (bookmark, refresh, new tab) renders this route before the
+    // ["config"] query resolves. Treating that as "dates are disabled" would
+    // bounce the user to the board with `replace: true`, so Back wouldn't
+    // even bring them home.
+    config.value = undefined;
+    navigate.mockClear();
+
+    render(<GanttRoute />);
+
+    expect(navigate).not.toHaveBeenCalled();
+
+    // Positive control: once the config resolves as disabled, the very same
+    // render does redirect, so the assertion above can actually fail.
+    cleanup();
+    config.value = { datesEnabled: false };
+    render(<GanttRoute />);
+    expect(navigate).toHaveBeenCalled();
   });
 });

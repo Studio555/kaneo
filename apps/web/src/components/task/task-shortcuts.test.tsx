@@ -90,6 +90,9 @@ vi.mock(
 vi.mock("@/hooks/queries/task-relation/use-get-task-relations", () => ({
   default: () => ({ data: mocks.relations }),
 }));
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => true,
+}));
 vi.mock("@/hooks/use-workspace-permission", () => ({
   useWorkspacePermission: () => ({
     canUpdateTasks: mocks.canUpdateTasks,

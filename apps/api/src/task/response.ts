@@ -26,6 +26,9 @@ export const taskSchema = z
       description: "The slug of the column the task sits in.",
     }),
     priority: z.string().openapi({ description: priorityDescription }),
+    craftId: z.string().nullable().openapi({
+      description: "The craft (discipline) this task belongs to, if any.",
+    }),
     startDate: nullableResponseTimestamp,
     dueDate: nullableResponseTimestamp,
     createdAt: responseTimestamp,
@@ -73,6 +76,10 @@ export const taskByTicketIdSchema = taskWithAssigneeSchema
 const taskLabelSchema = z
   .object({ id: z.string(), name: z.string(), color: z.string() })
   .openapi("TaskLabel");
+
+const taskCraftSchema = z
+  .object({ id: z.string(), name: z.string(), color: z.string() })
+  .openapi("TaskCraft");
 
 const taskExternalLinkSchema = z
   .object({
@@ -123,6 +130,7 @@ export const boardTaskSchema = z
           "Direct subtasks in the workspace; completed means a final column in the child project. Public boards count only children in public projects.",
       }),
     labels: z.array(taskLabelSchema),
+    craft: taskCraftSchema.nullable(),
     externalLinks: z.array(taskExternalLinkSchema),
   })
   .openapi("BoardTask");
@@ -138,6 +146,25 @@ export const boardColumnSchema = z
     tasks: z.array(boardTaskSchema),
   })
   .openapi("BoardColumn");
+
+export const boardBacklogSectionSchema = z
+  .object({
+    id: z.string().openapi({ description: "The section's slug." }),
+    columnId: z.string().openapi({
+      description:
+        "The section's column id, for the column endpoints that update or delete it.",
+    }),
+    slug: z.string(),
+    name: z.string(),
+    icon: z.string().nullable(),
+    color: z.string().nullable(),
+    systemKey: z.enum(["planned", "archived"]).nullable().openapi({
+      description:
+        "Set on the built-in Planned and Archived sections, which cannot be renamed or deleted.",
+    }),
+    tasks: z.array(boardTaskSchema),
+  })
+  .openapi("BoardBacklogSection");
 
 export const boardSchema = z
   .object({
@@ -156,8 +183,18 @@ export const boardSchema = z
         workspaceId: z.string(),
         backgroundVersion: z.string().nullable(),
         columns: z.array(boardColumnSchema),
-        archivedTasks: z.array(boardTaskSchema),
-        plannedTasks: z.array(boardTaskSchema),
+        backlogSections: z.array(boardBacklogSectionSchema).openapi({
+          description:
+            "The backlog's sections in display order: Planned first, custom sections by position, Archived last.",
+        }),
+        archivedTasks: z.array(boardTaskSchema).openapi({
+          description:
+            "Deprecated: the tasks of the Archived entry in backlogSections.",
+        }),
+        plannedTasks: z.array(boardTaskSchema).openapi({
+          description:
+            "Deprecated: the tasks of the Planned entry in backlogSections.",
+        }),
       })
       .openapi("Board"),
     pagination: z
@@ -218,6 +255,10 @@ export const taskExportSchema = z
           dueDate: z.string().nullable().openapi({ format: "date-time" }),
           startDate: z.string().nullable().openapi({ format: "date-time" }),
           userId: z.string().nullable(),
+          craft: z.string().nullable().openapi({
+            description:
+              "The craft name, resolved by name on import so a round-trip keeps it.",
+          }),
           labels: z
             .array(
               z

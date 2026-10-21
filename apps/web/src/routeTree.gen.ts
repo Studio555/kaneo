@@ -48,6 +48,7 @@ import { Route as LayoutAuthenticatedDashboardSettingsAccountSecurityRouteImport
 import { Route as LayoutAuthenticatedDashboardSettingsAdminUsersRouteImport } from './routes/_layout/_authenticated/dashboard/settings/admin/users'
 import { Route as LayoutAuthenticatedDashboardSettingsAdminWorkspacesRouteImport } from './routes/_layout/_authenticated/dashboard/settings/admin/workspaces'
 import { Route as LayoutAuthenticatedDashboardSettingsWorkspaceBillingRouteImport } from './routes/_layout/_authenticated/dashboard/settings/workspace/billing'
+import { Route as LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRouteImport } from './routes/_layout/_authenticated/dashboard/settings/workspace/crafts'
 import { Route as LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRouteImport } from './routes/_layout/_authenticated/dashboard/settings/workspace/general'
 import { Route as LayoutAuthenticatedDashboardSettingsWorkspaceImportRouteImport } from './routes/_layout/_authenticated/dashboard/settings/workspace/import'
 import { Route as LayoutAuthenticatedDashboardSettingsWorkspaceLabelsRouteImport } from './routes/_layout/_authenticated/dashboard/settings/workspace/labels'
@@ -289,6 +290,12 @@ const LayoutAuthenticatedDashboardSettingsWorkspaceBillingRoute =
     path: '/billing',
     getParentRoute: () => LayoutAuthenticatedDashboardSettingsWorkspaceRoute,
   } as any)
+const LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRoute =
+  LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRouteImport.update({
+    id: '/crafts',
+    path: '/crafts',
+    getParentRoute: () => LayoutAuthenticatedDashboardSettingsWorkspaceRoute,
+  } as any)
 const LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRoute =
   LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRouteImport.update({
     id: '/general',
@@ -490,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/settings/admin/users': typeof LayoutAuthenticatedDashboardSettingsAdminUsersRoute
   '/dashboard/settings/admin/workspaces': typeof LayoutAuthenticatedDashboardSettingsAdminWorkspacesRoute
   '/dashboard/settings/workspace/billing': typeof LayoutAuthenticatedDashboardSettingsWorkspaceBillingRoute
+  '/dashboard/settings/workspace/crafts': typeof LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRoute
   '/dashboard/settings/workspace/general': typeof LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRoute
   '/dashboard/settings/workspace/import': typeof LayoutAuthenticatedDashboardSettingsWorkspaceImportRoute
   '/dashboard/settings/workspace/labels': typeof LayoutAuthenticatedDashboardSettingsWorkspaceLabelsRoute
@@ -548,6 +556,7 @@ export interface FileRoutesByTo {
   '/dashboard/settings/admin/users': typeof LayoutAuthenticatedDashboardSettingsAdminUsersRoute
   '/dashboard/settings/admin/workspaces': typeof LayoutAuthenticatedDashboardSettingsAdminWorkspacesRoute
   '/dashboard/settings/workspace/billing': typeof LayoutAuthenticatedDashboardSettingsWorkspaceBillingRoute
+  '/dashboard/settings/workspace/crafts': typeof LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRoute
   '/dashboard/settings/workspace/general': typeof LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRoute
   '/dashboard/settings/workspace/import': typeof LayoutAuthenticatedDashboardSettingsWorkspaceImportRoute
   '/dashboard/settings/workspace/labels': typeof LayoutAuthenticatedDashboardSettingsWorkspaceLabelsRoute
@@ -612,6 +621,7 @@ export interface FileRoutesById {
   '/_layout/_authenticated/dashboard/settings/admin/users': typeof LayoutAuthenticatedDashboardSettingsAdminUsersRoute
   '/_layout/_authenticated/dashboard/settings/admin/workspaces': typeof LayoutAuthenticatedDashboardSettingsAdminWorkspacesRoute
   '/_layout/_authenticated/dashboard/settings/workspace/billing': typeof LayoutAuthenticatedDashboardSettingsWorkspaceBillingRoute
+  '/_layout/_authenticated/dashboard/settings/workspace/crafts': typeof LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRoute
   '/_layout/_authenticated/dashboard/settings/workspace/general': typeof LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRoute
   '/_layout/_authenticated/dashboard/settings/workspace/import': typeof LayoutAuthenticatedDashboardSettingsWorkspaceImportRoute
   '/_layout/_authenticated/dashboard/settings/workspace/labels': typeof LayoutAuthenticatedDashboardSettingsWorkspaceLabelsRoute
@@ -675,6 +685,7 @@ export interface FileRouteTypes {
     | '/dashboard/settings/admin/users'
     | '/dashboard/settings/admin/workspaces'
     | '/dashboard/settings/workspace/billing'
+    | '/dashboard/settings/workspace/crafts'
     | '/dashboard/settings/workspace/general'
     | '/dashboard/settings/workspace/import'
     | '/dashboard/settings/workspace/labels'
@@ -733,6 +744,7 @@ export interface FileRouteTypes {
     | '/dashboard/settings/admin/users'
     | '/dashboard/settings/admin/workspaces'
     | '/dashboard/settings/workspace/billing'
+    | '/dashboard/settings/workspace/crafts'
     | '/dashboard/settings/workspace/general'
     | '/dashboard/settings/workspace/import'
     | '/dashboard/settings/workspace/labels'
@@ -796,6 +808,7 @@ export interface FileRouteTypes {
     | '/_layout/_authenticated/dashboard/settings/admin/users'
     | '/_layout/_authenticated/dashboard/settings/admin/workspaces'
     | '/_layout/_authenticated/dashboard/settings/workspace/billing'
+    | '/_layout/_authenticated/dashboard/settings/workspace/crafts'
     | '/_layout/_authenticated/dashboard/settings/workspace/general'
     | '/_layout/_authenticated/dashboard/settings/workspace/import'
     | '/_layout/_authenticated/dashboard/settings/workspace/labels'
@@ -1106,6 +1119,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAuthenticatedDashboardSettingsWorkspaceBillingRouteImport
       parentRoute: typeof LayoutAuthenticatedDashboardSettingsWorkspaceRoute
     }
+    '/_layout/_authenticated/dashboard/settings/workspace/crafts': {
+      id: '/_layout/_authenticated/dashboard/settings/workspace/crafts'
+      path: '/crafts'
+      fullPath: '/dashboard/settings/workspace/crafts'
+      preLoaderRoute: typeof LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRouteImport
+      parentRoute: typeof LayoutAuthenticatedDashboardSettingsWorkspaceRoute
+    }
     '/_layout/_authenticated/dashboard/settings/workspace/general': {
       id: '/_layout/_authenticated/dashboard/settings/workspace/general'
       path: '/general'
@@ -1340,6 +1360,7 @@ const LayoutAuthenticatedDashboardSettingsProjectsRouteWithChildren =
 
 interface LayoutAuthenticatedDashboardSettingsWorkspaceRouteChildren {
   LayoutAuthenticatedDashboardSettingsWorkspaceBillingRoute: typeof LayoutAuthenticatedDashboardSettingsWorkspaceBillingRoute
+  LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRoute: typeof LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRoute
   LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRoute: typeof LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRoute
   LayoutAuthenticatedDashboardSettingsWorkspaceImportRoute: typeof LayoutAuthenticatedDashboardSettingsWorkspaceImportRoute
   LayoutAuthenticatedDashboardSettingsWorkspaceLabelsRoute: typeof LayoutAuthenticatedDashboardSettingsWorkspaceLabelsRoute
@@ -1350,6 +1371,8 @@ const LayoutAuthenticatedDashboardSettingsWorkspaceRouteChildren: LayoutAuthenti
   {
     LayoutAuthenticatedDashboardSettingsWorkspaceBillingRoute:
       LayoutAuthenticatedDashboardSettingsWorkspaceBillingRoute,
+    LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRoute:
+      LayoutAuthenticatedDashboardSettingsWorkspaceCraftsRoute,
     LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRoute:
       LayoutAuthenticatedDashboardSettingsWorkspaceGeneralRoute,
     LayoutAuthenticatedDashboardSettingsWorkspaceImportRoute:

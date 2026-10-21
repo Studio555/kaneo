@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/menu";
 import { useUpdateTaskDescription } from "@/hooks/mutations/task/use-update-task-description";
 import useGetTask from "@/hooks/queries/task/use-get-task";
+import { useSuggestionScroll } from "@/hooks/use-suggestion-navigation";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { cn } from "@/lib/cn";
 import { descriptionSaveQueue } from "@/lib/description-save-queue";
@@ -71,6 +72,10 @@ import {
 } from "@/lib/editor-url-utils";
 import { isInCodeBlockLanguagePicker } from "@/lib/is-in-codeblock-language-picker";
 import { pasteMarkdown } from "@/lib/paste-markdown";
+import {
+  handleSuggestionNavigation,
+  moveSuggestionHighlight,
+} from "@/lib/suggestion-navigation";
 import { toast } from "@/lib/toast";
 import { uploadTaskImage } from "@/lib/upload-task-image";
 import { ResizableImage } from "./extensions/resizable-image";
@@ -128,6 +133,7 @@ function setContentWithoutUndoStep(editor: Editor, content: string) {
 
 type EmbedComposerState = {
   mode: "choice" | "input";
+  selectedIndex?: number;
   url: string;
   top: number;
   left: number;
@@ -889,6 +895,12 @@ export default function TaskDescription({ taskId }: TaskDescriptionProps) {
     };
   }, [editor, syncSlashMenu]);
 
+  const slashListRef = useSuggestionScroll(
+    slashMenu?.selectedIndex,
+    editor?.isFocused ?? false,
+    ".is-selected",
+  );
+
   const submitEmbedComposer = useCallback(
     (mode: "embed" | "link") => {
       if (!canEditRef.current || !editor || !embedComposer) return;
@@ -953,12 +965,24 @@ export default function TaskDescription({ taskId }: TaskDescriptionProps) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (embedComposer) {
+        const target = event.target as HTMLElement;
+        const ownsFocus =
+          embedComposer.mode === "choice"
+            ? editor?.isFocused
+            : target.tagName === "INPUT" &&
+              editorShellRef.current?.contains(target);
+        if (!ownsFocus || event.isComposing) return;
         event.stopPropagation();
         event.stopImmediatePropagation();
 
         if (embedComposer.mode === "choice") {
-          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-            event.preventDefault();
+          if (
+            handleSuggestionNavigation(event, 2, (direction) => {
+              setEmbedComposer((current) =>
+                moveSuggestionHighlight(current, 2, direction),
+              );
+            })
+          ) {
             return;
           }
         }
@@ -971,7 +995,11 @@ export default function TaskDescription({ taskId }: TaskDescriptionProps) {
         if (event.key === "Enter") {
           event.preventDefault();
           submitEmbedComposer(
-            embedComposer.mode === "choice" ? "embed" : "link",
+            embedComposer.mode === "choice"
+              ? embedComposer.selectedIndex === 1
+                ? "link"
+                : "embed"
+              : "link",
           );
           return;
         }
@@ -984,7 +1012,7 @@ export default function TaskDescription({ taskId }: TaskDescriptionProps) {
       }
 
       const current = slashMenuRef.current;
-      if (!editor || !current || !editor.isFocused) return;
+      if (!editor || !current || !editor.isFocused || event.isComposing) return;
 
       const commands = filteredSlashCommandsRef.current;
       if (event.key === "Escape") {
@@ -996,30 +1024,13 @@ export default function TaskDescription({ taskId }: TaskDescriptionProps) {
 
       if (!commands.length) return;
 
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        setSlashMenu((value) =>
-          value
-            ? {
-                ...value,
-                selectedIndex: (value.selectedIndex + 1) % commands.length,
-              }
-            : value,
-        );
-        return;
-      }
-
-      if (event.key === "ArrowUp") {
-        event.preventDefault();
-        setSlashMenu((value) =>
-          value
-            ? {
-                ...value,
-                selectedIndex:
-                  (value.selectedIndex - 1 + commands.length) % commands.length,
-              }
-            : value,
-        );
+      if (
+        handleSuggestionNavigation(event, commands.length, (direction) => {
+          setSlashMenu((current) =>
+            moveSuggestionHighlight(current, commands.length, direction),
+          );
+        })
+      ) {
         return;
       }
 
@@ -1597,6 +1608,7 @@ export default function TaskDescription({ taskId }: TaskDescriptionProps) {
 
       {editor && canEdit && slashMenu && (
         <div
+          ref={slashListRef}
           className="kaneo-tiptap-slash-menu"
           style={{
             top: slashMenu.top,
@@ -1674,7 +1686,10 @@ export default function TaskDescription({ taskId }: TaskDescriptionProps) {
             <div className="kaneo-embed-choice-menu">
               <button
                 type="button"
-                className="kaneo-embed-choice-item is-primary"
+                className={cn(
+                  "kaneo-embed-choice-item",
+                  embedComposer.selectedIndex !== 1 && "is-primary",
+                )}
                 onMouseDown={(event) => {
                   event.preventDefault();
                   submitEmbedComposer("embed");
@@ -1685,7 +1700,10 @@ export default function TaskDescription({ taskId }: TaskDescriptionProps) {
               </button>
               <button
                 type="button"
-                className="kaneo-embed-choice-item"
+                className={cn(
+                  "kaneo-embed-choice-item",
+                  embedComposer.selectedIndex === 1 && "is-primary",
+                )}
                 onMouseDown={(event) => {
                   event.preventDefault();
                   setEmbedComposer(null);

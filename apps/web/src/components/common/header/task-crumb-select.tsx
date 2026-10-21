@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/menu";
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
+import { getBacklogTasks } from "@/lib/backlog-sections";
 
 type TaskCrumbSelectProps = {
   projectId: string;
@@ -31,8 +32,7 @@ export default function TaskCrumbSelect({
   });
   const tasks = [
     ...(project?.columns?.flatMap((column) => column.tasks) ?? []),
-    ...(project?.plannedTasks ?? []),
-    ...(project?.archivedTasks ?? []),
+    ...getBacklogTasks(project),
   ];
 
   return (

@@ -5,6 +5,7 @@ import db from "../../database";
 import {
   assetTable,
   columnTable,
+  craftTable,
   customFieldDefinitionTable,
   customFieldValueTable,
   taskTable,
@@ -57,6 +58,7 @@ async function createTask({
   priority,
   customFields,
   draftAssetIds,
+  craftId,
 }: {
   projectId: string;
   currentUserId: string;
@@ -69,6 +71,7 @@ async function createTask({
   priority?: string;
   customFields?: CustomFieldInput[];
   draftAssetIds?: string[];
+  craftId?: string | null;
 }) {
   const resolvedStatus = status || "to-do";
   const resolvedPriority = priority || "no-priority";
@@ -111,18 +114,41 @@ async function createTask({
   await assertRequiredCustomFields(projectId, mergedCustomFields);
 
   let assignee: { name: string } | undefined;
+  // Kept for the task.created payload: the forge handlers label the new issue
+  // by craft name and colour, which the task row itself doesn't carry.
+  let craft: { name: string; color: string } | undefined;
 
-  if (normalizedUserId) {
-    await assertAssignableUser(
-      normalizedUserId,
-      await getProjectWorkspaceId(projectId),
-      projectId,
-    );
+  // The craft and assignee checks both need the workspace; resolve it once.
+  if (craftId || normalizedUserId) {
+    const workspaceId = await getProjectWorkspaceId(projectId);
 
-    [assignee] = await db
-      .select({ name: userTable.name })
-      .from(userTable)
-      .where(eq(userTable.id, normalizedUserId));
+    if (craftId) {
+      // Mirrors update-task-craft: the foreign key alone would let a task
+      // point at another workspace's craft.
+      const found = await db.query.craftTable.findFirst({
+        where: and(
+          eq(craftTable.id, craftId),
+          eq(craftTable.workspaceId, workspaceId),
+        ),
+      });
+
+      if (!found) {
+        throw new HTTPException(400, {
+          message: "Craft not found in this task's workspace",
+        });
+      }
+
+      craft = { name: found.name, color: found.color };
+    }
+
+    if (normalizedUserId) {
+      await assertAssignableUser(normalizedUserId, workspaceId, projectId);
+
+      [assignee] = await db
+        .select({ name: userTable.name })
+        .from(userTable)
+        .where(eq(userTable.id, normalizedUserId));
+    }
   }
 
   const column = await db.query.columnTable.findFirst({
@@ -153,6 +179,7 @@ async function createTask({
         dueDate: dueDate || null,
         description: description || "",
         priority: resolvedPriority,
+        craftId: craftId ?? null,
         number: taskNumber,
         position: nextPosition,
       })
@@ -220,6 +247,8 @@ async function createTask({
     taskId: createdTask.id,
     userId: createdTask.userId ?? "",
     currentUserId: currentUserId,
+    craftName: craft?.name ?? null,
+    craftColor: craft?.color ?? null,
     type: "created",
     content: null,
   });

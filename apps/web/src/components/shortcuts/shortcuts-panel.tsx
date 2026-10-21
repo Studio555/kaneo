@@ -3,8 +3,10 @@ import { Search, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { cn } from "@/lib/cn";
 import {
+  DATE_SHORTCUTS,
   SHORTCUT_CATEGORIES,
   SHORTCUTS,
   type ShortcutId,
@@ -24,6 +26,7 @@ export function ShortcutsPanel() {
   const [query, setQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const datesEnabled = useDatesEnabled();
 
   useShortcut("openShortcuts", () =>
     setOpen(!useShortcutsPanelStore.getState().open),
@@ -32,7 +35,11 @@ export function ShortcutsPanel() {
   const isHighlighted = capMatcher(query);
   const sections = SHORTCUT_CATEGORIES.map((category) => ({
     category,
-    items: SHORTCUT_IDS.filter((id) => SHORTCUTS[id].category === category)
+    items: SHORTCUT_IDS.filter(
+      (id) =>
+        SHORTCUTS[id].category === category &&
+        (datesEnabled || !DATE_SHORTCUTS.has(id)),
+    )
       .map((id) => ({ id, label: t(`navigation:shortcuts.items.${id}`) }))
       .filter((item) =>
         matchesShortcut(item.label, shortcutCaps(item.id), query),

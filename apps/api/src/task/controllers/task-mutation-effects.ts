@@ -35,7 +35,9 @@ export async function recordTaskMutation(
     await tx.insert(activityTable).values({
       taskId: before.id,
       type: "title_changed",
-      userId: userId ?? null,
+      // Empty for tasks filed from Slack by someone without a Kaneo account;
+      // the column is a foreign key, so that actor is recorded as no user.
+      userId: userId || null,
       content: null,
       eventData: { oldTitle: before.title, newTitle: changes.title },
     });

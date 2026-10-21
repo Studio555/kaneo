@@ -19,6 +19,7 @@ import { removeLabelFromGitlab } from "../../plugins/gitlab/utils/sync-label-to-
 import { assertAssignableUser } from "../../utils/assert-assignable-user";
 import { publishTaskMutation } from "./task-mutation-effects";
 import { getSubtaskParentProjects } from "../get-subtask-parent-projects";
+import { assertDatesEnabled } from "../../utils/validate-dates";
 import {
   assertValidPriority,
   assertValidTaskStatus,
@@ -465,6 +466,11 @@ async function bulkUpdateTasks({
     }
 
     case "updateDueDate": {
+      // An empty string means "clear", matching the dedicated due-date route;
+      // clearing a stale value must stay possible while dates are disabled.
+      if (value) {
+        assertDatesEnabled(value);
+      }
       let parsedDate: Date | null = null;
       if (value) {
         parsedDate = new Date(value);

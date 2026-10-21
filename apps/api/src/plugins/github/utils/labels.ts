@@ -1,5 +1,6 @@
 import type { IssueWrite } from "../../sync/issue-write";
 import type { Octokit } from "octokit";
+import { FALLBACK_LABEL_HEX, toHexColor } from "../../label-color";
 
 const labelColors: Record<string, string> = {
   "priority:low": "0EA5E9",
@@ -15,7 +16,27 @@ const labelColors: Record<string, string> = {
 };
 
 export function getLabelColor(labelName: string): string {
-  return labelColors[labelName] || "6B7280";
+  return labelColors[labelName] || FALLBACK_LABEL_HEX;
+}
+
+/**
+ * Colours for labels whose names aren't known ahead of time. `craft:` labels
+ * carry whatever colour the workspace picked, so the static map above can't
+ * cover them.
+ */
+export type LabelColorOverrides = Record<string, string>;
+
+function resolveLabelColor(
+  labelName: string,
+  overrides?: LabelColorOverrides,
+): string {
+  const override = overrides?.[labelName];
+  if (override) {
+    // Craft colours arrive as palette keys ("gray") or hex; the forge only
+    // accepts bare six-digit hex.
+    return toHexColor(override);
+  }
+  return getLabelColor(labelName);
 }
 
 export async function ensureLabelsExist(
@@ -25,6 +46,7 @@ export async function ensureLabelsExist(
   labels: string[],
   requireSuccess = false,
   write: IssueWrite = (send) => send(),
+  overrides?: LabelColorOverrides,
 ) {
   for (const labelName of labels) {
     try {
@@ -35,7 +57,7 @@ export async function ensureLabelsExist(
       });
     } catch {
       try {
-        const color = getLabelColor(labelName);
+        const color = resolveLabelColor(labelName, overrides);
         await write(() =>
           octokit.rest.issues.createLabel({
             owner,
@@ -60,6 +82,7 @@ export async function addLabelsToIssue(
   labels: string[],
   requireSuccess = false,
   write: IssueWrite = (send) => send(),
+  overrides?: LabelColorOverrides,
 ) {
   try {
     await ensureLabelsExist(
@@ -69,6 +92,7 @@ export async function addLabelsToIssue(
       labels,
       requireSuccess,
       write,
+      overrides,
     );
 
     await write(() =>

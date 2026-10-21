@@ -28,6 +28,10 @@ import { LayoutSwitch } from "@/components/project/views/layout-switch";
 import TaskDetailsSheet from "@/components/task/task-details-sheet";
 import { Button } from "@/components/ui/button";
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
+import {
+  useDatesEnabled,
+  useDatesKnownDisabled,
+} from "@/hooks/use-dates-enabled";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/cn";
 import { getStatusLabel } from "@/lib/i18n/domain";
@@ -51,6 +55,12 @@ function RouteComponent() {
   const { projectId, workspaceId } = Route.useParams();
   const { taskId } = Route.useSearch();
   const navigate = useNavigate();
+  // Redirecting must wait for a definite answer: `useDatesEnabled()` is also false
+  // while the config query is in flight, and bouncing a cold page load off
+  // this route is not something the user can undo (the redirect replaces the
+  // history entry).
+  const datesKnownDisabled = useDatesKnownDisabled();
+  const datesEnabled = useDatesEnabled();
   const { data: project } = useGetTasks(projectId);
   const weekStartsOn = useUserPreferencesStore((state) => state.weekStartsOn);
   const view = useProjectTaskView({
@@ -105,10 +115,24 @@ function RouteComponent() {
     setIsTaskRailOpen(false);
   }, [isMobile]);
 
+  // The Gantt view renders nothing useful without dates; when the instance
+  // disables them, bounce back to the board rather than showing a dead page.
+  useEffect(() => {
+    if (datesKnownDisabled) {
+      navigate({
+        to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
+        params: { workspaceId, projectId },
+        replace: true,
+      });
+    }
+  }, [datesKnownDisabled, navigate, workspaceId, projectId]);
+
   const allTasks = useMemo(
     () => [
       ...(project?.columns.flatMap((column) => column.tasks) ?? []),
-      ...(project?.plannedTasks ?? []),
+      ...(project?.backlogSections
+        .filter((section) => section.systemKey !== "archived")
+        .flatMap((section) => section.tasks) ?? []),
     ],
     [project],
   );
@@ -143,7 +167,9 @@ function RouteComponent() {
     const visibleIds = new Set(
       [
         ...(filteredProject?.columns.flatMap((column) => column.tasks) ?? []),
-        ...(filteredProject?.plannedTasks ?? []),
+        ...(filteredProject?.backlogSections
+          .filter((section) => section.systemKey !== "archived")
+          .flatMap((section) => section.tasks) ?? []),
       ].map((task) => task.id),
     );
     return parsedTasks.filter((task) => visibleIds.has(task.id));
@@ -233,6 +259,29 @@ function RouteComponent() {
     hasCenteredOnTodayRef.current = true;
     scrollToToday("auto");
   }, [todayInRange, scrollToToday, projectId, scheduledTasks.length]);
+
+  // Hold the timeline back until the instance confirms dates are on. Rendering
+  // it while the config query is still pending — or after it failed — would put
+  // stored task dates on screen on an instance that has them turned off, which
+  // the redirect above cannot prevent because it waits for a definite answer.
+  if (!datesEnabled) {
+    return (
+      <ProjectLayout
+        projectId={projectId}
+        workspaceId={workspaceId}
+        activeView="gantt"
+      >
+        <PageTitle
+          title={t("tasks:gantt.pageTitle", { name: project?.name })}
+        />
+        <div className="px-4 py-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            {t("common:empty.loading")}
+          </p>
+        </div>
+      </ProjectLayout>
+    );
+  }
 
   return (
     <ProjectLayout

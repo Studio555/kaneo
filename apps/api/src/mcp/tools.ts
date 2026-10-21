@@ -1,6 +1,7 @@
 import { registerTools, type ToolRegistrar } from "@kaneo/mcp/tools";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { z } from "zod";
+import { areDatesEnabled } from "../utils/dates-enabled";
 
 export type McpToolRegistrar = ToolRegistrar;
 
@@ -76,5 +77,9 @@ export function registerMcpTools(
   baseUrl: string,
   token: string,
 ): void {
-  registerTools(server, { client: new ApiClient(baseUrl, token) });
+  registerTools(
+    server,
+    { client: new ApiClient(baseUrl, token) },
+    { datesEnabled: areDatesEnabled() },
+  );
 }

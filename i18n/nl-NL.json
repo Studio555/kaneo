@@ -603,7 +603,24 @@
 				"title": "Delete account",
 				"sessionTooOld": "For security, sign out and sign back in before deleting your account."
 			},
-			"emailHint": "Met dit adres log je in."
+			"emailHint": "Met dit adres log je in.",
+			"githubIdentity": {
+				"connect": "Connect GitHub",
+				"connectedAs": "Connected as {{login}}",
+				"connectedHint": "Assigning a task assigns you on the linked GitHub issue, and being assigned on GitHub assigns you the task.",
+				"connectFailed": "Couldn't connect your GitHub account",
+				"connecting": "Connecting...",
+				"disconnect": "Disconnect",
+				"disconnected": "GitHub account disconnected",
+				"disconnectFailed": "Couldn't disconnect your GitHub account",
+				"notConnected": "GitHub account not connected",
+				"notConnectedHint": "Connecting signs you in to GitHub once to confirm the account is yours. It does not change how you sign in to Kaneo.",
+				"onlyAccount": "GitHub is your only way to sign in, so it cannot be disconnected. Set a password first.",
+				"sectionSubtitle": "Connect your GitHub account so task assignments stay in step with the linked GitHub issues.",
+				"sectionTitle": "GitHub account",
+				"sessionTooOld": "For your security, sign in again before disconnecting your GitHub account.",
+				"unavailable": "This Kaneo instance has no GitHub sign-in configured, so accounts cannot be connected."
+			}
 		},
 		"preferencesPage": {
 			"title": "Voorkeuren",
@@ -639,7 +656,8 @@
 			"priority": "Prioriteit",
 			"projectBackgrounds": "Project backgrounds",
 			"projectBackgroundsDescription": "Toon de afbeelding die een project achter het bord instelt.",
-			"advancedTitle": "Geavanceerd"
+			"advancedTitle": "Geavanceerd",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "API-sleutels",
@@ -1043,7 +1061,8 @@
 				"pr_opened": "Pull request geopend",
 				"pr_merged": "Pull request gemerged",
 				"issue_opened": "Issue geopend",
-				"issue_closed": "Issue gesloten"
+				"issue_closed": "Issue gesloten",
+				"issue_reopened": "Issue Heropend"
 			},
 			"connectMore": "Koppel {{providers}} in <link>Integraties</link> om die ook te automatiseren.",
 			"dontMove": "Niet verplaatsen",
@@ -2357,6 +2376,31 @@
 		},
 		"shared": {
 			"autosave": "Wijzigingen worden automatisch opgeslagen"
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -2751,7 +2795,10 @@
 			"importedBy": "Imported by {{name}}",
 			"commentedOnForge": "heeft gereageerd op {{forge}}"
 		},
-		"movedFromOtherProject": "moved task from another project to \"{{to}}\""
+		"movedFromOtherProject": "moved task from another project to \"{{to}}\"",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft"
 	},
 	"tasks": {
 		"title": "Taken",
@@ -2777,7 +2824,8 @@
 			"list": "Lijst",
 			"backlog": "Backlog",
 			"gantt": "Gantt",
-			"heading": "Weergave"
+			"heading": "Weergave",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Selecteer taak",
@@ -2955,12 +3003,15 @@
 			"startDate": "Startdatum",
 			"noDate": "Geen datum",
 			"dates": "Datums",
-			"project": "Project"
+			"project": "Project",
+			"craft": "Craft"
 		},
 		"popover": {
 			"assignee": {
 				"unassigned": "Niet toegewezen",
-				"updateError": "Bijwerken toegewezen persoon mislukt"
+				"updateError": "Bijwerken toegewezen persoon mislukt",
+				"searchPlaceholder": "Personen zoeken...",
+				"empty": "Geen personen gevonden"
 			},
 			"status": {
 				"updateError": "Bijwerken taakstatus mislukt"
@@ -2996,6 +3047,12 @@
 					"crimson": "Karmozijn"
 				},
 				"editLabels": "Labels bewerken"
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft",
+				"searchPlaceholder": "Search crafts..."
 			}
 		},
 		"backlog": {
@@ -3016,6 +3073,26 @@
 				"dueThisWeek": "Deze week vervallen",
 				"dueNextWeek": "Volgende week vervallen",
 				"noDueDate": "Geen einddatum"
+			},
+			"sectionActions": {
+				"add": "Section",
+				"addTooltip": "Add a backlog section",
+				"create": "Create section",
+				"created": "Section created",
+				"createError": "Failed to create section",
+				"createTitle": "New backlog section",
+				"delete": "Delete",
+				"deleted": "Section deleted",
+				"deleteDescription": "Only an empty section can be deleted. Move its tasks to another section first.",
+				"deleteError": "Failed to delete section",
+				"deleteTitle": "Delete the \"{{name}}\" section?",
+				"menu": "Section options",
+				"namePlaceholder": "Section name",
+				"rename": "Rename",
+				"renamed": "Section renamed",
+				"renameError": "Failed to rename section",
+				"renameTitle": "Rename section",
+				"save": "Save"
 			}
 		},
 		"sort": {
@@ -3028,7 +3105,8 @@
 				"priority": "Prioriteit",
 				"dueDate": "Einddatum",
 				"title": "Titel",
-				"number": "Taaknummer"
+				"number": "Taaknummer",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -3038,7 +3116,8 @@
 				"priority": "Prioriteit",
 				"assignee": "Toegewezen persoon",
 				"dueDate": "Einddatum",
-				"labels": "Labels"
+				"labels": "Labels",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "is een van",
@@ -3051,7 +3130,8 @@
 			},
 			"allCustomFieldValues": "All values",
 			"noCustomFieldValues": "No custom field values",
-			"noValuesUsedYet": "No values used yet"
+			"noValuesUsedYet": "No values used yet",
+			"allCrafts": "All crafts"
 		},
 		"gantt": {
 			"searchPlaceholder": "Zoek geplande tickets...",
@@ -3094,7 +3174,10 @@
 		"listView": {
 			"addTask": "Taak toevoegen",
 			"archiveAllTooltip": "Alle voltooide taken archiveren",
-			"noTasks": "Geen taken"
+			"noTasks": "Geen taken",
+			"collapseSubtasks": "Subtaken van {{title}} verbergen",
+			"expandSubtasks": "Subtaken van {{title}} tonen",
+			"subtaskLevel": "Subtaak, niveau {{level}}"
 		},
 		"kanban": {
 			"addTask": "Taak toevoegen",
@@ -3294,6 +3377,16 @@
 			"startsOn": "Begint {{date}}",
 			"beforeStart": "{{date}} ligt vóór de startdatum",
 			"afterDue": "{{date}} ligt na de vervaldatum"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

@@ -1,5 +1,6 @@
 import type db from "../../database";
 import { activityTable, taskTable } from "../../database/schema";
+import { areDatesEnabled } from "../../utils/dates-enabled";
 import { chunk } from "./chunk";
 import type { PlannedImportTask } from "./plan-import-tasks";
 
@@ -11,6 +12,8 @@ export async function writeImportTasks(
   importedBy: string,
   tasks: readonly PlannedImportTask[],
 ) {
+  // Imported dates are dropped rather than failing the whole import.
+  const datesEnabled = areDatesEnabled();
   for (const batch of chunk(tasks)) {
     await tx.insert(taskTable).values(
       batch.map((task) => ({
@@ -23,8 +26,8 @@ export async function writeImportTasks(
         columnId: task.columnId,
         position: task.position,
         priority: task.priority,
-        startDate: task.startDate,
-        dueDate: task.dueDate,
+        startDate: datesEnabled ? task.startDate : null,
+        dueDate: datesEnabled ? task.dueDate : null,
         createdAt: task.createdAt,
         userId: task.userId,
       })),

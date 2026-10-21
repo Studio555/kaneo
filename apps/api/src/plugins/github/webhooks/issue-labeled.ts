@@ -8,8 +8,11 @@ import { handleIssueOpened } from "./issue-opened";
 import { withIntegrationLink } from "../services/with-integration-link";
 import { linkedTaskScope } from "../services/integration-task-scope";
 import { eq } from "drizzle-orm";
-import { labelTable } from "../../../database/schema";
+import database from "../../../database";
+import { labelTable, taskTable } from "../../../database/schema";
 import { publishEvent } from "../../../events";
+import { reconcileCraftFromIssueLabels } from "../../reconcile-craft-from-labels";
+import { isSystemLabelName, parseCraftLabelName } from "../../system-labels";
 import { findExternalLink, updateExternalLink } from "../services/link-manager";
 import { findAllIntegrationsByRepo } from "../services/task-service";
 
@@ -76,6 +79,28 @@ export async function handleIssueLabeled(payload: IssueLabeledPayload) {
         deadline,
       );
 
+    // A craft label changed, so the craft is reconciled against the issue's
+    // whole label set: whatever `craft:` label it carries now is the task's.
+    if (addedLabel && parseCraftLabelName(addedLabel.name)) {
+      const craftTask = await database.query.taskTable.findFirst({
+        where: eq(taskTable.id, existingLink.taskId),
+        with: { project: true },
+      });
+      if (craftTask?.project?.workspaceId) {
+        await reconcileCraftFromIssueLabels({
+          taskId: existingLink.taskId,
+          workspaceId: craftTask.project.workspaceId,
+          labels: issue.labels,
+          delta: {
+            label: addedLabel.name,
+            op: payload.action === "unlabeled" ? "removed" : "added",
+          },
+          link: { id: existingLink.id, metadata: existingLink.metadata },
+          source: "github",
+        });
+      }
+    }
+
     await withIntegrationLink(
       existingLink,
       integration,
@@ -91,7 +116,7 @@ export async function handleIssueLabeled(payload: IssueLabeledPayload) {
             { metadata: { syncResumeLabelBaseline: names } },
             db,
           );
-        if (!addedLabel || fieldEvent) return;
+        if (!addedLabel || isSystemLabelName(addedLabel.name)) return;
 
         if (payload.action === "labeled") {
           const task = await db.query.taskTable.findFirst({

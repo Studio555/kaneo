@@ -1,12 +1,14 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import db from "../../database";
-import { columnTable } from "../../database/schema";
+import { type ColumnKind, columnTable } from "../../database/schema";
 
-async function getColumns(projectId: string) {
+async function getColumns(projectId: string, kind: ColumnKind = "board") {
   const columns = await db
     .select()
     .from(columnTable)
-    .where(eq(columnTable.projectId, projectId))
+    .where(
+      and(eq(columnTable.projectId, projectId), eq(columnTable.kind, kind)),
+    )
     .orderBy(asc(columnTable.position));
 
   return columns;

@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import type { SortConfig, SortField } from "@/lib/sort-tasks";
 import { nextSortForField, SORT_FIELDS } from "./sort-fields";
 
@@ -21,6 +22,7 @@ export function SortOrderControl({
   onSortChange,
 }: SortOrderControlProps) {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
   const label = t("tasks:display.sortBy");
   const isManual = sort.field === "position";
   const fieldLabels: Record<SortField, string> = {
@@ -30,7 +32,16 @@ export function SortOrderControl({
     dueDate: t("tasks:sort.fields.dueDate"),
     title: t("tasks:sort.fields.title"),
     number: t("tasks:sort.fields.number"),
+    assignee: t("tasks:sort.fields.assignee"),
+    craft: t("tasks:properties.craft"),
   };
+  const sortFields = datesEnabled
+    ? SORT_FIELDS
+    : SORT_FIELDS.filter((field) => field !== "dueDate");
+  // A persisted dueDate sort falls back to the generic label once hidden.
+  const activeLabel = sortFields.includes(sort.field)
+    ? fieldLabels[sort.field]
+    : label;
   const directionLabel =
     sort.direction === "asc"
       ? t("tasks:sort.ascending")
@@ -46,10 +57,10 @@ export function SortOrderControl({
         }}
       >
         <SelectTrigger size="sm" className="w-40" aria-label={label}>
-          <SelectValue>{fieldLabels[sort.field]}</SelectValue>
+          <SelectValue>{activeLabel}</SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {SORT_FIELDS.map((field) => (
+          {sortFields.map((field) => (
             <SelectItem key={field} value={field}>
               {fieldLabels[field]}
             </SelectItem>

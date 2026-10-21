@@ -50,6 +50,9 @@ vi.mock("@/store/project", () => ({
   default: () => ({ setProject: m.setProject }),
 }));
 vi.mock("./task-row", () => ({ default: () => null }));
+vi.mock("@/hooks/queries/task-relation/use-get-project-task-relations", () => ({
+  default: () => ({ data: [], isLoading: false }),
+}));
 vi.mock("../bulk-selection/bulk-toolbar", () => ({ default: () => null }));
 vi.mock("../shared/modals/create-task-modal", () => ({ default: () => null }));
 vi.mock("../shared/modals/archive-tasks-modal", () => ({
@@ -78,8 +81,7 @@ it("disables keyboard sensors and rejects drag completion on a partial board", (
         ],
       },
     ],
-    plannedTasks: [],
-    archivedTasks: [],
+    backlogSections: [],
   } as unknown as ProjectWithTasks;
   const { rerender } = render(<ListView project={project} />, {
     wrapper: Providers,
@@ -109,8 +111,7 @@ it("blocks archive-all during pagination or errors, including an already-open co
     id: "p",
     workspaceId: "w",
     columns: [column],
-    plannedTasks: [],
-    archivedTasks: [],
+    backlogSections: [],
   } as unknown as ProjectWithTasks;
   const { rerender } = render(<ListView project={project} />, {
     wrapper: Providers,
@@ -149,8 +150,7 @@ it("keeps collapsed lanes per project after the list view unmounts", () => {
         { id: "todo", slug: "todo", name: "To do", tasks: [] },
         { id: "done", slug: "done", name: "Done", tasks: [] },
       ],
-      plannedTasks: [],
-      archivedTasks: [],
+      backlogSections: [],
     }) as unknown as ProjectWithTasks;
   const lane = (name: string) =>
     screen.getByRole("button", { name: new RegExp(`^${name}`) });

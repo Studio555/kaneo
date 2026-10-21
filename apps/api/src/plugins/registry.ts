@@ -4,16 +4,19 @@ import db from "../database";
 import { integrationTable } from "../database/schema";
 import { subscribeToEvent } from "../events";
 import type {
+  CraftLabelSyncEvent,
   IntegrationPlugin,
   PluginContext,
   TaskAssigneeChangedEvent,
   TaskCommentCreatedEvent,
+  TaskCraftChangedEvent,
   TaskCreatedEvent,
   TaskDeletedEvent,
   TaskDescriptionChangedEvent,
   TaskDueDateChangedEvent,
   TaskMovedEvent,
   TaskPriorityChangedEvent,
+  TaskRelationChangedEvent,
   TaskStatusChangedEvent,
   TaskTitleChangedEvent,
   TaskUnassignedEvent,
@@ -44,6 +47,8 @@ export function initializeEventSubscriptions(): void {
     status: string;
     number: number;
     projectId: string;
+    craftName?: string | null;
+    craftColor?: string | null;
   }>("task.created", async (data) => {
     await broadcastTaskCreated({
       taskId: data.taskId,
@@ -54,6 +59,8 @@ export function initializeEventSubscriptions(): void {
       priority: data.priority,
       status: data.status,
       number: data.number,
+      craftName: data.craftName,
+      craftColor: data.craftColor,
     });
   });
 
@@ -92,6 +99,57 @@ export function initializeEventSubscriptions(): void {
       oldPriority: data.oldPriority,
       newPriority: data.newPriority,
       title: data.title,
+    });
+  });
+
+  subscribeToEvent<TaskCraftChangedEvent>(
+    "task.craft_changed",
+    async (data) => {
+      await broadcastTaskCraftChanged({
+        taskId: data.taskId,
+        projectId: data.projectId,
+        userId: data.userId,
+        oldCraftId: data.oldCraftId,
+        newCraftId: data.newCraftId,
+        oldCraftName: data.oldCraftName,
+        newCraftName: data.newCraftName,
+        newCraftColor: data.newCraftColor,
+        title: data.title,
+      });
+    },
+  );
+
+  subscribeToEvent<{
+    craftId: string;
+    workspaceId: string;
+    oldName: string;
+    newName: string;
+    color: string;
+    targets: Array<{ taskId: string; projectId: string }>;
+  }>("craft.renamed", async (data) => {
+    await broadcastCraftLabelSync({
+      craftId: data.craftId,
+      workspaceId: data.workspaceId,
+      oldName: data.oldName,
+      newName: data.newName,
+      color: data.color,
+      targets: data.targets,
+    });
+  });
+
+  subscribeToEvent<{
+    craftId: string;
+    workspaceId: string;
+    name: string;
+    targets: Array<{ taskId: string; projectId: string }>;
+  }>("craft.deleted", async (data) => {
+    await broadcastCraftLabelSync({
+      craftId: data.craftId,
+      workspaceId: data.workspaceId,
+      oldName: data.name,
+      newName: null,
+      color: null,
+      targets: data.targets,
     });
   });
 
@@ -259,6 +317,21 @@ export function initializeEventSubscriptions(): void {
       await reconcileProjectSync(data.projectId, data.integrationId);
     },
   );
+  for (const [eventType, hook] of [
+    ["task-relation.created", "onTaskRelationCreated"],
+    ["task-relation.deleted", "onTaskRelationDeleted"],
+  ] as const) {
+    subscribeToEvent<TaskRelationChangedEvent>(eventType, async (data) => {
+      await broadcastTaskRelationChanged(eventType, hook, {
+        sourceTaskId: data.sourceTaskId,
+        targetTaskId: data.targetTaskId,
+        relationType: data.relationType,
+        projectId: data.projectId,
+        userId: data.userId,
+        origin: data.origin,
+      });
+    });
+  }
 
   eventSubscriptionsInitialized = true;
   console.log("✓ Plugin event subscriptions initialized");
@@ -334,6 +407,82 @@ export async function broadcastTaskStatusChanged(
         `Plugin ${plugin.type} error on task.status_changed:`,
         error,
       );
+    }
+  }
+}
+
+export async function broadcastTaskCraftChanged(
+  event: TaskCraftChangedEvent,
+): Promise<void> {
+  const integrations = await getActiveIntegrations(event.projectId);
+
+  for (const integration of integrations) {
+    const plugin = getPlugin(integration.type);
+    if (!plugin?.onTaskCraftChanged) continue;
+
+    const context = createContext(integration);
+
+    try {
+      await plugin.onTaskCraftChanged(event, context);
+    } catch (error) {
+      console.error(
+        `Plugin ${plugin.type} error on task.craft_changed:`,
+        error,
+      );
+    }
+  }
+}
+
+/**
+ * Re-label the forge issues of tasks that carried a renamed or deleted craft.
+ *
+ * Craft is workspace-scoped while integrations hang off a project, so the
+ * targets arrive pre-resolved and get grouped by project here; each plugin
+ * then sees only the tasks belonging to the project its integration covers.
+ */
+export async function broadcastCraftLabelSync(event: {
+  craftId: string;
+  workspaceId: string;
+  oldName: string;
+  newName: string | null;
+  color: string | null;
+  targets: Array<{ taskId: string; projectId: string }>;
+}): Promise<void> {
+  const byProject = new Map<string, string[]>();
+  for (const target of event.targets) {
+    const existing = byProject.get(target.projectId);
+    if (existing) {
+      existing.push(target.taskId);
+    } else {
+      byProject.set(target.projectId, [target.taskId]);
+    }
+  }
+
+  for (const [projectId, taskIds] of byProject) {
+    const integrations = await getActiveIntegrations(projectId);
+
+    for (const integration of integrations) {
+      const plugin = getPlugin(integration.type);
+      if (!plugin?.onCraftLabelSync) continue;
+
+      const context = createContext(integration);
+      const payload: CraftLabelSyncEvent = {
+        craftId: event.craftId,
+        workspaceId: event.workspaceId,
+        oldName: event.oldName,
+        newName: event.newName,
+        color: event.color,
+        taskIds,
+      };
+
+      try {
+        await plugin.onCraftLabelSync(payload, context);
+      } catch (error) {
+        console.error(
+          `Plugin ${plugin.type} error on craft label sync:`,
+          error,
+        );
+      }
     }
   }
 }
@@ -520,6 +669,28 @@ export async function broadcastTaskUnassigned(
       await plugin.onTaskUnassigned(event, context);
     } catch (error) {
       console.error(`Plugin ${plugin.type} error on task.unassigned:`, error);
+    }
+  }
+}
+
+export async function broadcastTaskRelationChanged(
+  eventType: "task-relation.created" | "task-relation.deleted",
+  hook: "onTaskRelationCreated" | "onTaskRelationDeleted",
+  event: TaskRelationChangedEvent,
+): Promise<void> {
+  const integrations = await getActiveIntegrations(event.projectId);
+
+  for (const integration of integrations) {
+    const plugin = getPlugin(integration.type);
+    const handler = plugin?.[hook];
+    if (!plugin || !handler) continue;
+
+    const context = createContext(integration);
+
+    try {
+      await handler(event, context);
+    } catch (error) {
+      console.error(`Plugin ${plugin.type} error on ${eventType}:`, error);
     }
   }
 }

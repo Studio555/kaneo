@@ -66,6 +66,7 @@ export async function writeProjectContent(
     tasks: project.tasks,
     columns: board.byKey,
     fallbackColumn: board.fallback,
+    sections: board.sections,
     numbers,
     now,
     newId: createId,

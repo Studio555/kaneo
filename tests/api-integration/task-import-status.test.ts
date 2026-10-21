@@ -15,7 +15,7 @@ beforeEach(resetTestDatabase);
 describe("JSON imports after column renames", () => {
   it("accepts the renamed name and its slug while retaining stored status identities", async () => {
     const { user, workspace } = await createWorkspaceMember({ role: "owner" });
-    const { project, columns } = await createProjectFixture({
+    const { project, columns, backlogSections } = await createProjectFixture({
       workspaceId: workspace.id,
     });
     await updateColumn(columns.todo.id, { name: "Ready to Start" });
@@ -50,7 +50,7 @@ describe("JSON imports after column renames", () => {
     for (const title of ["planned", "unknown"]) {
       expect(imported.find((task) => task.title === title)).toMatchObject({
         status: "planned",
-        columnId: null,
+        columnId: backlogSections.planned.id,
       });
     }
     expect(

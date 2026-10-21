@@ -1,4 +1,10 @@
-import { Calendar, CircleAlert, History, UserRound } from "lucide-react";
+import {
+  Calendar,
+  CircleAlert,
+  Hammer,
+  History,
+  UserRound,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import useGetWorkspaceUsers from "@/hooks/queries/workspace-users/use-get-workspace-users";
@@ -55,6 +61,8 @@ function getActivityTypeIcon(type: string) {
       return <History className={iconClass} />;
     case "priority_changed":
       return <CircleAlert className={iconClass} />;
+    case "craft_changed":
+      return <Hammer className={iconClass} />;
     case "due_date_changed":
       return <Calendar className={iconClass} />;
     case "assignee_changed":
@@ -172,6 +180,37 @@ function renderActivityContent({
 }) {
   const content = activity.content || "";
   const eventData = getEventDataRecord(activity.eventData);
+
+  if (activity.type === "craft_changed") {
+    const oldCraftName = eventData?.oldCraftName
+      ? String(eventData.oldCraftName)
+      : null;
+    const newCraftName = eventData?.newCraftName
+      ? String(eventData.newCraftName)
+      : null;
+
+    if (!newCraftName) {
+      return (
+        <span className="text-sm text-muted-foreground">
+          {t("activity:clearedCraft")}
+        </span>
+      );
+    }
+
+    if (!oldCraftName) {
+      return (
+        <span className="text-sm text-muted-foreground">
+          {t("activity:setCraft", { to: newCraftName })}
+        </span>
+      );
+    }
+
+    return (
+      <span className="text-sm text-muted-foreground">
+        {t("activity:changedCraft", { from: oldCraftName, to: newCraftName })}
+      </span>
+    );
+  }
 
   if (activity.type === "priority_changed") {
     if (eventData) {

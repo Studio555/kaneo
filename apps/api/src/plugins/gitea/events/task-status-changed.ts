@@ -7,6 +7,7 @@ import type { PluginContext, TaskStatusChangedEvent } from "../../types";
 import type { GiteaConfig } from "../config";
 import { createGiteaClient } from "../utils/gitea-api";
 import { addLabelsToIssueGitea, removeLabelGitea } from "../utils/labels";
+import { handleTaskCreated } from "./task-created";
 
 export async function handleTaskStatusChanged(
   event: TaskStatusChangedEvent,
@@ -37,7 +38,22 @@ export async function handleTaskStatusChanged(
         link.resourceType === "issue",
     );
 
+    // task.created skipped backlog tasks; moving into a board column is what
+    // commits the task and opens its issue (handleTaskCreated re-reads it).
     if (!issueLink) {
+      await handleTaskCreated(
+        {
+          taskId: event.taskId,
+          projectId: event.projectId,
+          userId: "",
+          title: event.title,
+          description: null,
+          priority: null,
+          status: event.newStatus,
+          number: 0,
+        },
+        context,
+      );
       return;
     }
     const client = createGiteaClient(config);

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { CardFieldList } from "@/components/custom-fields/card-field-list";
 import { useTaskCardFields } from "@/components/custom-fields/use-task-card-fields";
+import { TaskCraft } from "@/components/kanban-board/task-craft";
 import TaskPriorityPopover from "@/components/task/task-priority-popover";
 import { TaskPullRequests } from "@/components/task/task-pull-requests";
 import { AssigneeButton } from "@/components/task-chips/assignee-button";
@@ -9,6 +10,7 @@ import { DueDateChip } from "@/components/task-chips/due-date-chip";
 import { LabelChips } from "@/components/task-chips/label-chips";
 import { stopCardEvents } from "@/components/task-chips/stop-card-events";
 import { SubtasksChip } from "@/components/task-chips/subtasks-chip";
+import { useShowDueDates } from "@/hooks/use-dates-enabled";
 import { cn } from "@/lib/cn";
 import { getPriorityLabel } from "@/lib/i18n/domain";
 import { getPriorityIcon } from "@/lib/priority";
@@ -44,11 +46,11 @@ export function TaskRowBody({
   const {
     showAssignees,
     showPriority,
-    showDueDates,
     showLabels,
     showTaskNumbers,
     showTaskItemCounts,
   } = useUserPreferencesStore();
+  const showDueDates = useShowDueDates();
   const cardFields = useTaskCardFields(task.projectId, task.id);
   const priorityLabel = `${t("tasks:priority.label")}: ${getPriorityLabel(task.priority ?? "")}`;
 
@@ -98,6 +100,7 @@ export function TaskRowBody({
 
       <div className="flex shrink-0 items-center justify-end gap-1">
         <CardFieldList fields={cardFields} max={3} />
+        <TaskCraft craft={task.craft ?? null} />
         {showLabels && (
           <LabelChips task={task} workspaceId={workspaceId} max={2} />
         )}

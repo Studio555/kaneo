@@ -83,6 +83,26 @@ describe("planImportTasks", () => {
     ]);
   });
 
+  it("files planned and archived tasks under their backlog sections", () => {
+    const planned = planImportTasks({
+      tasks: [task("a", { columnKey: null }), task("b", { archived: true })],
+      columns: new Map(),
+      fallbackColumn: null,
+      sections: { planned: "col-planned", archived: "col-archived" },
+      numbers: [1, 2],
+      now,
+      newId: () => "task",
+      assign: () => null,
+    });
+
+    expect(
+      planned.map(({ status, columnId }) => ({ status, columnId })),
+    ).toEqual([
+      { status: "planned", columnId: "col-planned" },
+      { status: "archived", columnId: "col-archived" },
+    ]);
+  });
+
   it("keeps the given numbers apart from board order", () => {
     const planned = plan(
       [task("a"), task("b"), task("c", { columnKey: "done" })],
