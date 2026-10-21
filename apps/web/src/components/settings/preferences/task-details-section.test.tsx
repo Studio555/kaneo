@@ -6,6 +6,9 @@ import { TaskDetailsSection } from "./task-details-section";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => true,
+}));
 
 describe("TaskDetailsSection", () => {
   afterEach(cleanup);

@@ -13,6 +13,8 @@ export type TaskCreatedEvent = {
   priority: string | null;
   status: string;
   number: number;
+  craftName?: string | null;
+  craftColor?: string | null;
 };
 
 export type TaskStatusChangedEvent = {
@@ -104,10 +106,59 @@ export type TaskUnassignedEvent = {
   title: string;
 };
 
+export type TaskCraftChangedEvent = {
+  taskId: string;
+  projectId: string;
+  userId: string | null;
+  oldCraftId: string | null;
+  newCraftId: string | null;
+  oldCraftName: string | null;
+  newCraftName: string | null;
+  newCraftColor: string | null;
+  title: string;
+};
+
+/**
+ * A relation between two tasks was added or removed. `projectId` is the
+ * source task's project; for a subtask the source is the parent.
+ */
+export type TaskRelationChangedEvent = {
+  sourceTaskId: string;
+  targetTaskId: string;
+  /** Absent when the relation went with a deleted task. */
+  relationType?: string;
+  projectId: string;
+  userId: string | null;
+  /** Set to an integration's name when that integration made the change. */
+  origin?: string;
+};
+
+/**
+ * A craft rename or delete, fanned out per project. Craft is workspace-scoped
+ * but integrations are project-scoped, so the registry resolves the affected
+ * tasks and hands each plugin only the ones in its own project.
+ */
+export type CraftLabelSyncEvent = {
+  craftId: string;
+  workspaceId: string;
+  /** The label name currently on the forge issues. */
+  oldName: string;
+  /** The replacement name, or null when the craft was deleted. */
+  newName: string | null;
+  color: string | null;
+  taskIds: string[];
+};
+
+export type CraftLabelSyncHandler = (
+  event: CraftLabelSyncEvent,
+  context: PluginContext,
+) => Promise<void>;
+
 export type TaskEvent =
   | TaskCreatedEvent
   | TaskStatusChangedEvent
   | TaskPriorityChangedEvent
+  | TaskCraftChangedEvent
   | TaskTitleChangedEvent
   | TaskDescriptionChangedEvent
   | TaskCommentCreatedEvent
@@ -115,7 +166,8 @@ export type TaskEvent =
   | TaskMovedEvent
   | TaskDueDateChangedEvent
   | TaskAssigneeChangedEvent
-  | TaskUnassignedEvent;
+  | TaskUnassignedEvent
+  | TaskRelationChangedEvent;
 
 export type ExternalMetadata = {
   type: "issue" | "pull_request" | "branch";
@@ -153,6 +205,8 @@ export type IntegrationPlugin = {
   onTaskCreated?: TaskEventHandler<TaskCreatedEvent>;
   onTaskStatusChanged?: TaskEventHandler<TaskStatusChangedEvent>;
   onTaskPriorityChanged?: TaskEventHandler<TaskPriorityChangedEvent>;
+  onTaskCraftChanged?: TaskEventHandler<TaskCraftChangedEvent>;
+  onCraftLabelSync?: CraftLabelSyncHandler;
   onTaskTitleChanged?: TaskEventHandler<TaskTitleChangedEvent>;
   onTaskDescriptionChanged?: TaskEventHandler<TaskDescriptionChangedEvent>;
   onTaskCommentCreated?: TaskEventHandler<TaskCommentCreatedEvent>;
@@ -161,6 +215,8 @@ export type IntegrationPlugin = {
   onTaskDueDateChanged?: TaskEventHandler<TaskDueDateChangedEvent>;
   onTaskAssigneeChanged?: TaskEventHandler<TaskAssigneeChangedEvent>;
   onTaskUnassigned?: TaskEventHandler<TaskUnassignedEvent>;
+  onTaskRelationCreated?: TaskEventHandler<TaskRelationChangedEvent>;
+  onTaskRelationDeleted?: TaskEventHandler<TaskRelationChangedEvent>;
 
   handleWebhook?: WebhookHandler;
   getTaskMetadata?: MetadataProvider;

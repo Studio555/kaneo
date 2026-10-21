@@ -26,12 +26,12 @@ Use these repository permissions:
 
 | Permission | Access | Used for |
 | --- | --- | --- |
-| Issues | Read and write | Issue creation, edits, comments, labels, and open/closed state |
+| Issues | Read and write | Issue creation, edits, comments, labels, assignees, sub-issues, and open/closed state |
 | Pull requests | Read | Pull-request links and status changes |
 | Contents | Read | Branch and push activity |
 | Metadata | Read | Repository discovery and installation checks |
 
-Subscribe to **Issues**, **Issue comments**, **Pull requests**, and **Push**. If you later change the app’s permissions, approve the updated permissions on its installation too.
+Subscribe to **Issues**, **Issue comments**, **Pull requests**, **Push**, and **Sub issues** (mirrors GitHub sub-issues and Kaneo subtasks). If you later change the app’s permissions, approve the updated permissions on its installation too.
 
 Create the app. GitHub’s [app registration guide](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) explains the remaining platform settings.
 
@@ -51,6 +51,6 @@ An organization may require an owner to approve the installation or permission c
 
 Follow [Connect a GitHub repository](/core/integrations/github/configuration) to add the instance credentials, connect a project, and import issues.
 
-Tasks and issues can sync in both directions. Branch and pull-request activity can move tasks according to your [workflow mappings](/core/functional/configure-workflows); check those mappings against your project’s actual columns.
+Tasks and issues can sync in both directions. A task in the backlog stays in Kaneo; its issue is created when it first moves into a board column. Pull requests in other repositories where the app is installed link to a task when they reference its issue as `owner/repo#123` or by URL. Branch and pull-request activity can move tasks according to your [workflow mappings](/core/functional/configure-workflows); check those mappings against your project’s actual columns.
 
 If verification or sync fails, check [GitHub troubleshooting](/core/integrations/github/troubleshooting).

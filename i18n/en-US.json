@@ -827,7 +827,24 @@
 				"error": "Failed to delete account",
 				"sessionTooOld": "For security, sign out and sign back in before deleting your account."
 			},
-			"emailHint": "You sign in with this address."
+			"emailHint": "You sign in with this address.",
+			"githubIdentity": {
+				"sectionTitle": "GitHub account",
+				"sectionSubtitle": "Connect your GitHub account so task assignments stay in step with the linked GitHub issues.",
+				"connect": "Connect GitHub",
+				"connecting": "Connecting...",
+				"connectFailed": "Couldn't connect your GitHub account",
+				"connectedAs": "Connected as {{login}}",
+				"connectedHint": "Assigning a task assigns you on the linked GitHub issue, and being assigned on GitHub assigns you the task.",
+				"notConnected": "GitHub account not connected",
+				"notConnectedHint": "Connecting signs you in to GitHub once to confirm the account is yours. It does not change how you sign in to Kaneo.",
+				"unavailable": "This Kaneo instance has no GitHub sign-in configured, so accounts cannot be connected.",
+				"disconnect": "Disconnect",
+				"disconnected": "GitHub account disconnected",
+				"disconnectFailed": "Couldn't disconnect your GitHub account",
+				"sessionTooOld": "For your security, sign in again before disconnecting your GitHub account.",
+				"onlyAccount": "GitHub is your only way to sign in, so it cannot be disconnected. Set a password first."
+			}
 		},
 		"notificationsPage": {
 			"pageTitle": "Notifications",
@@ -984,7 +1001,8 @@
 			"priority": "Priority",
 			"projectBackgrounds": "Project backgrounds",
 			"projectBackgroundsDescription": "Show the image a project sets behind its board.",
-			"advancedTitle": "Advanced"
+			"advancedTitle": "Advanced",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "API keys",
@@ -2085,7 +2103,8 @@
 				"pr_opened": "Pull request opened",
 				"pr_merged": "Pull request merged",
 				"issue_opened": "Issue opened",
-				"issue_closed": "Issue closed"
+				"issue_closed": "Issue closed",
+				"issue_reopened": "Issue Reopened"
 			},
 			"dontMove": "Don't move",
 			"emptyTitle": "No connected repositories",
@@ -2357,6 +2376,31 @@
 			"newField": "New field",
 			"fieldsTitle": "Fields",
 			"fieldsDescription": "Drag to change the order they appear in on a task."
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -2751,7 +2795,10 @@
 			},
 			"importedFrom": "Imported from {{source}}",
 			"importedBy": "Imported by {{name}}"
-		}
+		},
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft"
 	},
 	"tasks": {
 		"checklistProgress": "{{completed}} of {{total}} checklist items completed",
@@ -2778,7 +2825,8 @@
 			"list": "List",
 			"backlog": "Backlog",
 			"gantt": "Gantt",
-			"heading": "View"
+			"heading": "View",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Select task",
@@ -2956,7 +3004,8 @@
 			"startDate": "Start date",
 			"noDate": "No date",
 			"dates": "Dates",
-			"project": "Project"
+			"project": "Project",
+			"craft": "Craft"
 		},
 		"move": {
 			"title": "Move task",
@@ -2972,7 +3021,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Unassigned",
-				"updateError": "Failed to update task assignee"
+				"updateError": "Failed to update task assignee",
+				"searchPlaceholder": "Search people...",
+				"empty": "No people found"
 			},
 			"status": {
 				"updateError": "Failed to update task status"
@@ -3008,6 +3059,12 @@
 					"crimson": "Crimson"
 				},
 				"editLabels": "Edit labels"
+			},
+			"craft": {
+				"searchPlaceholder": "Search crafts...",
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -3028,6 +3085,26 @@
 				"dueThisWeek": "Due this week",
 				"dueNextWeek": "Due next week",
 				"noDueDate": "No due date"
+			},
+			"sectionActions": {
+				"add": "Section",
+				"addTooltip": "Add a backlog section",
+				"menu": "Section options",
+				"rename": "Rename",
+				"delete": "Delete",
+				"createTitle": "New backlog section",
+				"renameTitle": "Rename section",
+				"namePlaceholder": "Section name",
+				"create": "Create section",
+				"save": "Save",
+				"created": "Section created",
+				"createError": "Failed to create section",
+				"renamed": "Section renamed",
+				"renameError": "Failed to rename section",
+				"deleteTitle": "Delete the \"{{name}}\" section?",
+				"deleteDescription": "Only an empty section can be deleted. Move its tasks to another section first.",
+				"deleted": "Section deleted",
+				"deleteError": "Failed to delete section"
 			}
 		},
 		"sort": {
@@ -3040,7 +3117,8 @@
 				"priority": "Priority",
 				"dueDate": "Due date",
 				"title": "Title",
-				"number": "Task number"
+				"number": "Task number",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -3053,7 +3131,8 @@
 				"priority": "Priority",
 				"assignee": "Assignee",
 				"dueDate": "Due date",
-				"labels": "Labels"
+				"labels": "Labels",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "is any of",
@@ -3063,7 +3142,8 @@
 				"isNoneOf": "is none of",
 				"include": "include",
 				"exclude": "exclude"
-			}
+			},
+			"allCrafts": "All crafts"
 		},
 		"calendar": {
 			"pageTitle": "{{name}} – Calendar",
@@ -3120,7 +3200,10 @@
 		"listView": {
 			"addTask": "Add task",
 			"archiveAllTooltip": "Archive all completed tasks",
-			"noTasks": "No tasks"
+			"noTasks": "No tasks",
+			"expandSubtasks": "Show subtasks of {{title}}",
+			"collapseSubtasks": "Hide subtasks of {{title}}",
+			"subtaskLevel": "Subtask, level {{level}}"
 		},
 		"kanban": {
 			"addTask": "Add task",
@@ -3294,6 +3377,16 @@
 			"startsOn": "Starts {{date}}",
 			"beforeStart": "{{date}} is before the start date",
 			"afterDue": "{{date}} is after the due date"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

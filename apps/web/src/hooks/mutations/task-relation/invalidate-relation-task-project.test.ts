@@ -3,15 +3,15 @@ import { describe, expect, it } from "vite-plus/test";
 import { invalidateRelationTaskProject } from "./invalidate-relation-task-project";
 
 describe("invalidateRelationTaskProject", () => {
-  it.each(["columns", "plannedTasks", "archivedTasks"])(
+  it.each(["columns", "backlogSections"])(
     "refreshes the parent in %s without invalidating unrelated boards",
     async (location) => {
       const client = new QueryClient();
       const parent = { id: "parent" };
       client.setQueryData(["tasks", "parent-project"], {
         columns: location === "columns" ? [{ tasks: [parent] }] : [],
-        plannedTasks: location === "plannedTasks" ? [parent] : [],
-        archivedTasks: location === "archivedTasks" ? [parent] : [],
+        backlogSections:
+          location === "backlogSections" ? [{ tasks: [parent] }] : [],
       });
       client.setQueryData(["tasks", "unrelated-project"], {
         columns: [{ tasks: [{ id: "other" }] }],

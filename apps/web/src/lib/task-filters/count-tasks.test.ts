@@ -4,8 +4,7 @@ import { countBacklogTasks, countColumnTasks } from "./count-tasks";
 
 const project = {
   columns: [{ tasks: [{}, {}] }, { tasks: [{}] }],
-  plannedTasks: [{}],
-  archivedTasks: [{}, {}],
+  backlogSections: [{ tasks: [{}] }, { tasks: [{}, {}] }],
 } as unknown as ProjectWithTasks;
 
 it("counts board tasks and backlog tasks separately", () => {

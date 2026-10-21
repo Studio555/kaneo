@@ -9,11 +9,15 @@ import { boundedRequestBody } from "../utils/bounded-request-body";
 import { MAX_AVATAR_BYTES, MAX_AVATAR_REQUEST_BYTES } from "./avatar";
 import deleteAvatar from "./controllers/delete-avatar";
 import getCurrentUser from "./controllers/get-current-user";
+import getGithubIdentity from "./controllers/get-github-identity";
 import saveAvatar from "./controllers/save-avatar";
+import unlinkGithubIdentity from "./controllers/unlink-github-identity";
 import {
   avatarDeletedSchema,
   avatarSchema,
   currentUserSchema,
+  githubIdentityStateSchema,
+  githubIdentityUnlinkedSchema,
 } from "./response";
 import { uploadAvatarBody } from "./schema";
 
@@ -70,6 +74,32 @@ const deleteAvatarRoute = createRoute({
   },
 });
 
+const getGithubIdentityRoute = createRoute({
+  method: "get",
+  operationId: "getUserGithubIdentity",
+  path: "/github-identity",
+  tags: ["User"],
+  summary: "Get linked GitHub account",
+  description:
+    "Return the GitHub account connected to the current user, so task assignment can name the same person on a linked GitHub issue. Null when nothing is connected. Accounts are connected through the GitHub OAuth flow, not by supplying a username.",
+  responses: {
+    200: jsonResponse("Current GitHub link", githubIdentityStateSchema),
+  },
+});
+
+const unlinkGithubIdentityRoute = createRoute({
+  method: "delete",
+  operationId: "unlinkUserGithubIdentity",
+  path: "/github-identity",
+  tags: ["User"],
+  summary: "Forget the cached GitHub account",
+  description:
+    "Drop the current user's cached GitHub handle. Disconnecting for real also revokes the linked GitHub account through Better Auth; this only clears what Kaneo cached. Succeeds even when there was nothing to remove.",
+  responses: {
+    200: jsonResponse("GitHub account unlinked", githubIdentityUnlinkedSchema),
+  },
+});
+
 const user = apiRouter()
   .openapi(getCurrentUserRoute, async (c) =>
     c.json(await getCurrentUser(c.get("userId")), 200),
@@ -90,6 +120,12 @@ const user = apiRouter()
   })
   .openapi(deleteAvatarRoute, async (c) =>
     c.json(await deleteAvatar(c.get("userId")), 200),
+  )
+  .openapi(getGithubIdentityRoute, async (c) =>
+    c.json({ identity: await getGithubIdentity(c.get("userId")) }, 200),
+  )
+  .openapi(unlinkGithubIdentityRoute, async (c) =>
+    c.json(await unlinkGithubIdentity(c.get("userId")), 200),
   );
 
 export default user;

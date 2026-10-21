@@ -5,6 +5,13 @@ import TaskCardContextMenuContent from "./task-card-context-menu-content";
 
 const duplicateTask = vi.fn();
 const canCreateTasks = vi.fn(() => true);
+const datesEnabled = vi.hoisted(() => ({ value: true }));
+
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => datesEnabled.value,
+  useShowDueDates: () => datesEnabled.value,
+}));
+
 vi.mock("@/hooks/mutations/task/use-duplicate-task", () => ({
   useDuplicateTask: () => ({ mutate: duplicateTask }),
 }));
@@ -13,6 +20,7 @@ afterEach(() => {
   canCreateTasks.mockReturnValue(true);
   cleanup();
   vi.clearAllMocks();
+  datesEnabled.value = true;
 });
 
 vi.mock("@/components/ui/context-menu", () => ({
@@ -197,4 +205,17 @@ it("hides duplication without task-create permission", () => {
   canCreateTasks.mockReturnValue(false);
   renderTask(task);
   expect(screen.queryByText("tasks:actions.duplicate")).toBeNull();
+});
+
+describe("task card context menu with dates disabled", () => {
+  it("omits the due date action", () => {
+    datesEnabled.value = false;
+    renderTask(task);
+    expect(screen.queryByText(/dueDate/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the due date action when dates are enabled", () => {
+    renderTask(task);
+    expect(screen.getByText("tasks:dueDate.label")).toBeInTheDocument();
+  });
 });

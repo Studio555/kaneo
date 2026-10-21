@@ -414,11 +414,14 @@ describe("API integration: import from other tools", () => {
       lastTaskNumber: 5,
     });
 
-    const columns = await db
+    const allColumns = await db
       .select()
       .from(schema.columnTable)
       .where(eq(schema.columnTable.projectId, projectId))
       .orderBy(asc(schema.columnTable.position));
+    const columns = allColumns.filter((column) => column.kind === "board");
+    const sectionId = (systemKey: string) =>
+      allColumns.find((column) => column.systemKey === systemKey)?.id;
     expect(
       columns.map(({ name, slug, position, isFinal }) => ({
         name,
@@ -478,7 +481,7 @@ describe("API integration: import from other tools", () => {
         number: 3,
         title: "Someday",
         status: "planned",
-        columnId: null,
+        columnId: sectionId("planned"),
         position: 1,
         priority: "low",
         userId: null,
@@ -487,7 +490,7 @@ describe("API integration: import from other tools", () => {
         number: 4,
         title: "Old launch",
         status: "archived",
-        columnId: null,
+        columnId: sectionId("archived"),
         position: 1,
         priority: "no-priority",
         userId: null,

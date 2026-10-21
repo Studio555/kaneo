@@ -73,7 +73,7 @@ import {
   getInvitationRoleLabel,
   getWorkspaceInvitationEmailCopy,
 } from "./utils/get-workspace-invitation-email-copy";
-import { getGithubSsoOAuthCredentials } from "./utils/github-sso-env";
+import { getGithubSocialProvider } from "./utils/github-sso-env";
 import {
   hasInstanceAdminRole,
   instanceAdminRoleSql,
@@ -96,8 +96,6 @@ import { queueSignInEmail } from "./utils/sign-in-email-tasks";
 import { authCaptchaPaths, verifyTurnstile } from "./utils/verify-turnstile";
 
 config();
-
-const githubSso = getGithubSsoOAuthCredentials();
 
 const isRegistrationDisabled = process.env.DISABLE_REGISTRATION === "true";
 const isPasswordRegistrationDisabled =
@@ -284,12 +282,21 @@ export const auth = betterAuth({
       // Require the provider's verified-email claim for implicit linking;
       // configuration alone must not make an unverified identity trusted.
       enabled: true,
-      allowDifferentEmails: true,
       // Only link to an existing local account after its email has been
       // verified. Without this check, an attacker could pre-register a victim's
       // email with a password account and retain access after the victim signs
       // in through a trusted OAuth/OIDC provider.
       requireLocalEmailVerified: true,
+      // Connecting a GitHub account from settings is how a user proves which
+      // GitHub identity is theirs, and people sign in to Kaneo with a work
+      // address while their GitHub carries a personal one. Requiring the two
+      // to match would refuse exactly the accounts worth connecting.
+      //
+      // This is narrower than it looks: the requireLocalEmailVerified check
+      // above still governs an unauthenticated sign-in claiming an existing
+      // account. This clause only lets an already authenticated user attach a
+      // provider account they just consented to.
+      allowDifferentEmails: true,
     },
   },
   emailAndPassword: {
@@ -325,11 +332,7 @@ export const auth = betterAuth({
     },
   },
   socialProviders: {
-    github: {
-      clientId: githubSso.clientId,
-      clientSecret: githubSso.clientSecret,
-      scope: ["user:email"],
-    },
+    github: getGithubSocialProvider(),
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",

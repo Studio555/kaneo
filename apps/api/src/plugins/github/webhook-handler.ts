@@ -1,4 +1,5 @@
 import { getGithubApp } from "./utils/github-app";
+import { handleIssueAssigneeChanged } from "./webhooks/issue-assignee-changed";
 import { handleIssueClosed } from "./webhooks/issue-closed";
 import { handleIssueCommentCreated } from "./webhooks/issue-comment-created";
 import { handleIssueEdited } from "./webhooks/issue-edited";
@@ -9,6 +10,7 @@ import { handleLabelCreated } from "./webhooks/label-created";
 import { handlePullRequestClosed } from "./webhooks/pull-request-closed";
 import { handlePullRequestOpened } from "./webhooks/pull-request-opened";
 import { handlePush } from "./webhooks/push";
+import { handleSubIssueChanged } from "./webhooks/sub-issue-changed";
 
 export async function handleGitHubWebhook(
   body: string,
@@ -36,7 +38,8 @@ export async function handleGitHubWebhook(
         | "pull_request"
         | "push"
         | "label"
-        | "issue_comment",
+        | "issue_comment"
+        | "sub_issues",
       signature,
       payload: body,
     });
@@ -126,6 +129,21 @@ export function setupWebhookHandlers() {
     }
   });
 
+  for (const event of ["issues.assigned", "issues.unassigned"] as const) {
+    githubApp.webhooks.on(event, async ({ payload }) => {
+      console.log(`[GitHub Webhook] Handling ${event}`);
+      try {
+        await handleIssueAssigneeChanged(
+          payload as Parameters<typeof handleIssueAssigneeChanged>[0],
+        );
+        console.log(`[GitHub Webhook] ${event} handled successfully`);
+      } catch (error) {
+        console.error(`[GitHub Webhook] ${event} handler error:`, error);
+        throw error;
+      }
+    });
+  }
+
   githubApp.webhooks.on("issues.edited", async ({ payload }) => {
     console.log("[GitHub Webhook] Handling issues.edited");
     try {
@@ -138,6 +156,26 @@ export function setupWebhookHandlers() {
       throw error;
     }
   });
+
+  for (const event of [
+    "sub_issues.sub_issue_added",
+    "sub_issues.sub_issue_removed",
+    "sub_issues.parent_issue_added",
+    "sub_issues.parent_issue_removed",
+  ] as const) {
+    githubApp.webhooks.on(event, async ({ payload }) => {
+      console.log(`[GitHub Webhook] Handling ${event}`);
+      try {
+        await handleSubIssueChanged(
+          payload as Parameters<typeof handleSubIssueChanged>[0],
+        );
+        console.log(`[GitHub Webhook] ${event} handled successfully`);
+      } catch (error) {
+        console.error(`[GitHub Webhook] ${event} handler error:`, error);
+        throw error;
+      }
+    });
+  }
 
   githubApp.webhooks.on("push", async ({ payload }) => {
     console.log("[GitHub Webhook] Handling push");
@@ -176,6 +214,24 @@ export function setupWebhookHandlers() {
     } catch (error) {
       console.error(
         "[GitHub Webhook] pull_request.closed handler error:",
+        error,
+      );
+      throw error;
+    }
+  });
+
+  // The `Closes owner/repo#12` line that links a pull request from another
+  // repository is often added after the pull request is opened.
+  githubApp.webhooks.on("pull_request.edited", async ({ payload }) => {
+    console.log("[GitHub Webhook] Handling pull_request.edited");
+    try {
+      await handlePullRequestOpened(
+        payload as Parameters<typeof handlePullRequestOpened>[0],
+      );
+      console.log("[GitHub Webhook] pull_request.edited handled successfully");
+    } catch (error) {
+      console.error(
+        "[GitHub Webhook] pull_request.edited handler error:",
         error,
       );
       throw error;

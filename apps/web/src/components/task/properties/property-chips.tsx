@@ -9,6 +9,7 @@ import { getPriorityLabel } from "@/lib/i18n/domain";
 import { getPriorityIcon } from "@/lib/priority";
 import { TaskCustomFieldChips } from "../custom-fields/task-custom-field-chips";
 import TaskAssigneePopover from "../task-assignee-popover";
+import TaskCraftPopover from "../task-craft-popover";
 import TaskDueDatePopover from "../task-due-date-popover";
 import TaskLabelsPopover from "../task-labels-popover";
 import TaskMovePopover from "../task-move-popover";
@@ -16,6 +17,7 @@ import TaskPriorityPopover from "../task-priority-popover";
 import TaskStartDatePopover from "../task-start-date-popover";
 import TaskStatusPopover from "../task-status-popover";
 import { AssigneeAvatar } from "./assignee-avatar";
+import { CraftValue } from "./craft-value";
 import { dueDateTextClass } from "./due-date-text-class";
 import { LabelsValue } from "./labels-value";
 import { useTaskProperties } from "./use-task-properties";
@@ -41,8 +43,17 @@ export function PropertyChips({
   className,
 }: PropertyChipsProps) {
   const { t } = useTranslation();
-  const { task, project, labels, status, assignee, dueStatus, canMoveTask } =
-    useTaskProperties(taskId, projectId, workspaceId);
+  const {
+    task,
+    project,
+    labels,
+    craft,
+    datesEnabled,
+    status,
+    assignee,
+    dueStatus,
+    canMoveTask,
+  } = useTaskProperties(taskId, projectId, workspaceId);
 
   if (!task) return null;
 
@@ -95,41 +106,48 @@ export function PropertyChips({
             </span>
           </button>
         </TaskAssigneePopover>
-        <div className={cn(chip, "gap-0.5 px-1 hover:bg-accent/30")}>
-          <TaskStartDatePopover task={task}>
-            <button type="button" className={dateButton}>
-              <Calendar
+        {datesEnabled && (
+          <div className={cn(chip, "gap-0.5 px-1 hover:bg-accent/30")}>
+            <TaskStartDatePopover task={task}>
+              <button type="button" className={dateButton}>
+                <Calendar
+                  className={cn(
+                    task.dueDate
+                      ? dueDateTextClass[dueStatus]
+                      : "text-muted-foreground",
+                  )}
+                />
+                <span className="text-muted-foreground">
+                  {task.startDate
+                    ? formatDateShort(task.startDate)
+                    : t("tasks:properties.start")}
+                </span>
+              </button>
+            </TaskStartDatePopover>
+            <ArrowRight className="text-muted-foreground/60" />
+            <TaskDueDatePopover task={task}>
+              <button
+                type="button"
+                data-task-action="dueDate"
                 className={cn(
+                  dateButton,
                   task.dueDate
                     ? dueDateTextClass[dueStatus]
                     : "text-muted-foreground",
                 )}
-              />
-              <span className="text-muted-foreground">
-                {task.startDate
-                  ? formatDateShort(task.startDate)
-                  : t("tasks:properties.start")}
-              </span>
-            </button>
-          </TaskStartDatePopover>
-          <ArrowRight className="text-muted-foreground/60" />
-          <TaskDueDatePopover task={task}>
-            <button
-              type="button"
-              data-task-action="dueDate"
-              className={cn(
-                dateButton,
-                task.dueDate
-                  ? dueDateTextClass[dueStatus]
-                  : "text-muted-foreground",
-              )}
-            >
-              {task.dueDate
-                ? formatDateShort(task.dueDate)
-                : t("tasks:dueDate.label")}
-            </button>
-          </TaskDueDatePopover>
-        </div>
+              >
+                {task.dueDate
+                  ? formatDateShort(task.dueDate)
+                  : t("tasks:dueDate.label")}
+              </button>
+            </TaskDueDatePopover>
+          </div>
+        )}
+        <TaskCraftPopover task={task} workspaceId={workspaceId}>
+          <button type="button" className={chip}>
+            <CraftValue craft={craft} />
+          </button>
+        </TaskCraftPopover>
         <TaskLabelsPopover task={task} workspaceId={workspaceId}>
           <button
             type="button"

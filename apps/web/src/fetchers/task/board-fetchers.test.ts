@@ -39,6 +39,7 @@ function data(page: number) {
         ],
       },
     ],
+    backlogSections: [],
     archivedTasks: [],
     plannedTasks: [],
   };

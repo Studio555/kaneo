@@ -30,6 +30,7 @@ import { useUpdateTaskTitle } from "@/hooks/mutations/task/use-update-task-title
 import type getProjects from "@/fetchers/project/get-projects";
 import { useGetColumns } from "@/hooks/queries/column/use-get-columns";
 import useGetProjectMembers from "@/hooks/queries/workspace-users/use-get-project-members";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { getColumnIcon } from "@/lib/column";
 import { generateLink } from "@/lib/generate-link";
@@ -95,6 +96,7 @@ export default function TaskCardContextMenuContent({
   const canEdit = canUpdateTasks();
   const canDelete = canDeleteTasks();
   const canAssign = canAssignTasks();
+  const datesEnabled = useDatesEnabled();
 
   const usersOptions = useMemo(() => {
     return projectMembers?.map((member) => ({
@@ -232,7 +234,7 @@ export default function TaskCardContextMenuContent({
         </ContextMenuSub>
       )}
 
-      {canEdit && <DueDateSubmenu task={task} />}
+      {canEdit && datesEnabled && <DueDateSubmenu task={task} />}
 
       {canAssign && usersOptions && (
         <ContextMenuSub>

@@ -2,6 +2,7 @@ import { Calendar, CalendarClock, CalendarX } from "lucide-react";
 import { useRef } from "react";
 import { TaskProgressBadges } from "@/components/task/task-progress-badges";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import {
   dueDateStatusColors,
   getDueDateStatus,
@@ -33,6 +34,7 @@ export function PublicTaskCard({
   isCompleted,
   onTaskClick,
 }: PublicTaskCardProps) {
+  const datesEnabled = useDatesEnabled();
   const taskIsCompleted = isCompleted ?? isTaskCompleted(task.status);
   const labels = task.labels || [];
   const externalLinks = task.externalLinks || [];
@@ -128,7 +130,7 @@ export function PublicTaskCard({
             </span>
           )}
 
-          {task.dueDate && (
+          {datesEnabled && task.dueDate && (
             <div
               className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded ${dueDateStatusColors[getDueDateStatus(task.dueDate, taskIsCompleted)]}`}
             >

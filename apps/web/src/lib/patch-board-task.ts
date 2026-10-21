@@ -19,8 +19,7 @@ export function patchBoardTask(
   }
   const existing = [
     ...board.columns.flatMap((column) => column.tasks),
-    ...board.plannedTasks,
-    ...board.archivedTasks,
+    ...board.backlogSections.flatMap((section) => section.tasks),
   ].find((task) => task.id === taskId);
   const belongs = patch && patch.projectId === board.id;
   const task =
@@ -38,20 +37,17 @@ export function patchBoardTask(
     ...column,
     tasks: column.tasks.filter((task) => task.id !== taskId),
   }));
-  const plannedTasks = board.plannedTasks.filter((task) => task.id !== taskId);
-  const archivedTasks = board.archivedTasks.filter(
-    (task) => task.id !== taskId,
-  );
+  const backlogSections = board.backlogSections.map((section) => ({
+    ...section,
+    tasks: section.tasks.filter((task) => task.id !== taskId),
+  }));
   if (task) {
-    const target =
-      task.status === "planned"
-        ? plannedTasks
-        : task.status === "archived"
-          ? archivedTasks
-          : columns.find((column) => column.slug === task.status)?.tasks;
+    const target = [...columns, ...backlogSections].find(
+      (bucket) => bucket.slug === task.status,
+    )?.tasks;
     if (!target) return null;
     target.push(task);
     target.sort((left, right) => (left.position ?? 0) - (right.position ?? 0));
   }
-  return { ...board, columns, plannedTasks, archivedTasks };
+  return { ...board, columns, backlogSections };
 }

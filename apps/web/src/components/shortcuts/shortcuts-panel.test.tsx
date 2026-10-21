@@ -21,6 +21,9 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
   initReactI18next: { type: "3rdParty", init: vi.fn() },
 }));
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => true,
+}));
 
 beforeEach(() => {
   useShortcutsPanelStore.setState({ open: false });

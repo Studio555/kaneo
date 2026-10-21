@@ -1,4 +1,5 @@
 import { SearchIcon } from "lucide-react";
+import type { KeyboardEvent } from "react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -9,12 +10,14 @@ type RepositoryPickerSearchProps = {
   value: string;
   placeholder: string;
   onChange: (value: string) => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 };
 
 export function RepositoryPickerSearch({
   value,
   placeholder,
   onChange,
+  onKeyDown,
 }: RepositoryPickerSearchProps) {
   return (
     <InputGroup>
@@ -29,6 +32,7 @@ export function RepositoryPickerSearch({
         maxLength={100}
         autoComplete="off"
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={onKeyDown}
       />
     </InputGroup>
   );

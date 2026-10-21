@@ -43,6 +43,13 @@ RUN pnpm run build
 WORKDIR /app/packages/importers
 RUN pnpm run build
 
+# packages/email builds incrementally (tsBuildInfoFile in tsconfig.json), so a build-info
+# file reaching the build context makes tsc consider its outputs current, skip emit and
+# still exit 0 - shipping a package with no dist that only fails when the API starts.
+# .dockerignore keeps that file out of the context; this makes a regression fail here
+# instead of in a running container.
+RUN node -e "const fs=require('fs');for(const p of ['/app/packages/email/dist/index.js','/app/packages/permissions/dist/index.js']){fs.accessSync(p)}"
+
 # Fix TypeScript config and build API
 WORKDIR /app/apps/api
 RUN sed -i 's/"extends": "@kaneo\/typescript-config\/base.json"/"extends": "..\/..\/packages\/typescript-config\/base.json"/g' /app/apps/api/tsconfig.json && \

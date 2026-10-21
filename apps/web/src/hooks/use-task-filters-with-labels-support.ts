@@ -20,6 +20,7 @@ const DEFAULT_FILTERS: BoardFilters = {
   labels: null,
   customFields: null,
   negated: null,
+  craft: null,
 };
 
 const NO_IGNORED_FILTERS: ReadonlyArray<keyof BoardFilters> = [];
@@ -32,6 +33,7 @@ const FILTER_KEYS: Array<keyof BoardFilters> = [
   "labels",
   "customFields",
   "negated",
+  "craft",
 ];
 
 function normalizeFilters(raw: unknown): BoardFilters {

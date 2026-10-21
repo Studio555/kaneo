@@ -30,6 +30,9 @@ vi.mock("react-i18next", () => ({
 vi.mock("@/hooks/queries/project/use-get-project", () => ({
   default: () => project.current,
 }));
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => true,
+}));
 vi.mock("@/hooks/use-project-websocket", () => ({
   useProjectWebSocket: () => undefined,
 }));

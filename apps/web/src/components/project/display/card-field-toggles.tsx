@@ -1,10 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { Toggle } from "@/components/ui/toggle";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useUserPreferencesStore } from "@/store/user-preferences";
 
 export function CardFieldToggles() {
   const { t } = useTranslation();
   const preferences = useUserPreferencesStore();
+  const datesEnabled = useDatesEnabled();
 
   const fields = [
     {
@@ -19,12 +21,16 @@ export function CardFieldToggles() {
       pressed: preferences.showAssignees,
       onPressedChange: preferences.setShowAssignees,
     },
-    {
-      id: "dueDates",
-      label: t("settings:preferencesPage.dueDates"),
-      pressed: preferences.showDueDates,
-      onPressedChange: preferences.setShowDueDates,
-    },
+    ...(datesEnabled
+      ? [
+          {
+            id: "dueDates",
+            label: t("settings:preferencesPage.dueDates"),
+            pressed: preferences.showDueDates,
+            onPressedChange: preferences.setShowDueDates,
+          },
+        ]
+      : []),
     {
       id: "labels",
       label: t("settings:preferencesPage.labels"),

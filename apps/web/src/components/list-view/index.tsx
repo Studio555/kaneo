@@ -14,14 +14,20 @@ import {
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { produce } from "immer";
 import { Flag, ArchiveIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { priorityColorsTaskCard } from "@/constants/priority-colors";
 import { useUpdateTask } from "@/hooks/mutations/task/use-update-task";
+import useGetProjectTaskRelations from "@/hooks/queries/task-relation/use-get-project-task-relations";
 import { useTaskViewShortcuts } from "@/components/project/task-view-keys/use-task-view-shortcuts";
 import { useCollapsedSections } from "@/hooks/use-collapsed-sections";
 import { cn } from "@/lib/cn";
+import {
+  readExpandedRows,
+  writeExpandedRows,
+} from "@/lib/expanded-rows-storage";
+import { buildSubtaskChildren, findNestedTaskIds } from "@/lib/subtask-tree";
 import { toast } from "@/lib/toast";
 import useBulkSelectionStore from "@/store/bulk-selection";
 import useProjectStore from "@/store/project";
@@ -29,7 +35,7 @@ import type { ProjectWithTasks } from "@/types/project";
 import BulkToolbar from "../bulk-selection/bulk-toolbar";
 import { ArchiveTasksModal } from "../shared/modals/archive-tasks-modal";
 import CreateTaskModal from "../shared/modals/create-task-modal";
-import ListColumnSection from "./list-column-section";
+import ListColumnSection, { type ListSubtasks } from "./list-column-section";
 
 type ListViewProps = {
   project: ProjectWithTasks;
@@ -62,6 +68,72 @@ function ListView({
   const [columnToArchive, setColumnToArchive] = useState<string | null>(null);
   const archiveColumn = project.columns.find(
     (column) => column.id === columnToArchive,
+  );
+
+  // isLoading rather than isPending: a disabled query is also pending, and an
+  // empty project should not look like it is still fetching.
+  const { data: relations, isLoading: relationsLoading } =
+    useGetProjectTaskRelations(project.id);
+  const subtaskChildren = useMemo(
+    () => buildSubtaskChildren(relations ?? []),
+    [relations],
+  );
+  const tasksById = useMemo(
+    () =>
+      new Map(
+        project.columns.flatMap((column) =>
+          column.tasks.map((task) => [task.id, task] as const),
+        ),
+      ),
+    [project.columns],
+  );
+  const nestedTaskIds = useMemo(
+    () => findNestedTaskIds(subtaskChildren, tasksById),
+    [subtaskChildren, tasksById],
+  );
+
+  // Per viewer and per project; a row that cannot be restored starts collapsed.
+  // The board route swaps this component's project rather than remounting it,
+  // so the map is rehydrated when the project changes.
+  const [expanded, setExpanded] = useState(() => ({
+    projectId: project.id,
+    rows: readExpandedRows(project.id),
+  }));
+  if (expanded.projectId !== project.id) {
+    setExpanded({ projectId: project.id, rows: readExpandedRows(project.id) });
+  }
+  const expandedTasks = expanded.rows;
+
+  useEffect(() => {
+    writeExpandedRows(expanded.projectId, expanded.rows);
+  }, [expanded]);
+
+  const toggleTaskExpanded = useCallback((rowId: string) => {
+    setExpanded((previous) => ({
+      ...previous,
+      rows: { ...previous.rows, [rowId]: !previous.rows[rowId] },
+    }));
+  }, []);
+
+  const subtasks = useMemo<ListSubtasks>(
+    () => ({
+      children: subtaskChildren,
+      tasksById,
+      nestedTaskIds,
+      expandedRows: expandedTasks,
+      loading: relationsLoading,
+      activeId: activeId?.toString() ?? null,
+      onToggleExpanded: toggleTaskExpanded,
+    }),
+    [
+      subtaskChildren,
+      tasksById,
+      nestedTaskIds,
+      expandedTasks,
+      relationsLoading,
+      activeId,
+      toggleTaskExpanded,
+    ],
   );
 
   useEffect(() => {
@@ -195,13 +267,22 @@ function ListView({
     if (over) moveTask(active.id.toString(), over.id.toString());
   };
 
+  // Escape cancels without onDragEnd; a stale activeId would keep every
+  // parent collapsed.
+  const handleDragCancel = () => {
+    setActiveId(null);
+    setOverColumnId(null);
+  };
+
   useTaskViewShortcuts({
     layout: "list",
     selection: useBulkSelectionStore,
     getGroups: () =>
       project.columns.map((column) => ({
         id: column.id,
-        taskIds: column.tasks.map((task) => task.id),
+        taskIds: column.tasks
+          .filter((task) => !nestedTaskIds.has(task.id))
+          .map((task) => task.id),
         collapsed: !isExpanded(column.id),
       })),
     project,
@@ -283,10 +364,11 @@ function ListView({
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
       modifiers={[snapCenterToCursor]}
     >
       <div className="w-full h-full overflow-auto bg-muted/20">
-        <div className="divide-y divide-border/50">
+        <div aria-busy={relationsLoading} className="divide-y divide-border/50">
           {project.columns.map((column) => (
             <ListColumnSection
               key={column.id}
@@ -300,6 +382,7 @@ function ListView({
               onToggle={toggleSection}
               onAddTask={handleAddTask}
               onArchive={handleArchiveClick}
+              subtasks={subtasks}
             />
           ))}
         </div>

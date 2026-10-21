@@ -176,6 +176,12 @@ export const SHORTCUTS = {
 
 export type ShortcutId = keyof typeof SHORTCUTS;
 
+// Hidden and inert when the instance has DISABLE_DATES set.
+export const DATE_SHORTCUTS: ReadonlySet<ShortcutId> = new Set([
+  "setDueDate",
+  "removeDueDate",
+]);
+
 export const SHORTCUT_CATEGORIES: readonly ShortcutCategory[] = [
   "general",
   "navigation",

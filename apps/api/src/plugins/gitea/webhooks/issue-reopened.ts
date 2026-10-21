@@ -23,13 +23,13 @@ import {
   updateTaskStatus,
 } from "../../github/services/task-service";
 import {
+  OUTBOUND_STATE_ECHO_WINDOW_MS,
+  parseIssueUpdatedAtMs,
+} from "../../github/utils/outbound-echo";
+import {
   findAllIntegrationsByGiteaRepo,
   repoOwnerLogin,
 } from "../services/integration-lookup";
-import {
-  OUTBOUND_STATE_ECHO_WINDOW_MS,
-  parseIssueUpdatedAtMs,
-} from "../utils/outbound-echo";
 import { resolveTargetStatus } from "../utils/resolve-column";
 import { baseUrlFromRepositoryHtmlUrl } from "../utils/webhook-repo";
 

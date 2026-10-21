@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import PageTitle from "@/components/page-title";
 import useAuth from "@/components/providers/auth-provider/hooks/use-auth";
 import { AutosaveNote } from "@/components/settings/autosave-note";
+import GithubIdentityCard from "@/components/settings/github-identity-card";
 import { DeleteAccountSection } from "@/components/settings/profile/delete-account-section";
 import { ProfileDetailsSection } from "@/components/settings/profile/profile-details-section";
 import { useProfileNameAutosave } from "@/components/settings/profile/use-profile-name-autosave";
@@ -25,6 +26,7 @@ export function ProfilePage() {
           user={user ?? undefined}
           refetchUser={refetchUser}
         />
+        <GithubIdentityCard />
         <DeleteAccountSection email={user?.email} />
       </SettingsPage>
     </>

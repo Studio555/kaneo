@@ -7,6 +7,9 @@ import { VALID_PRIORITIES } from "../../task/validate-task-fields";
 
 export type BoardColumn = { id: string; slug: string };
 
+/** Column ids of the project's built-in Planned and Archived backlog sections. */
+export type SystemSections = Partial<Record<"planned" | "archived", string>>;
+
 export type PlannedImportTask = {
   id: string;
   key: string;
@@ -29,6 +32,7 @@ type PlanImportTasksInput = {
   tasks: readonly ImportedTask[];
   columns: ReadonlyMap<string, BoardColumn>;
   fallbackColumn: BoardColumn | null;
+  sections?: SystemSections;
   numbers: readonly number[];
   now: Date;
   newId: () => string;
@@ -58,19 +62,22 @@ function placeTask(
   task: ImportedTask,
   columns: ReadonlyMap<string, BoardColumn>,
   fallbackColumn: BoardColumn | null,
+  sections: SystemSections,
 ): { status: string; columnId: string | null } {
-  if (task.archived) return { status: "archived", columnId: null };
-  if (task.columnKey === null) return { status: "planned", columnId: null };
+  const planned = { status: "planned", columnId: sections.planned ?? null };
+  if (task.archived) {
+    return { status: "archived", columnId: sections.archived ?? null };
+  }
+  if (task.columnKey === null) return planned;
   const column = columns.get(task.columnKey) ?? fallbackColumn;
-  return column
-    ? { status: column.slug, columnId: column.id }
-    : { status: "planned", columnId: null };
+  return column ? { status: column.slug, columnId: column.id } : planned;
 }
 
 export function planImportTasks({
   tasks,
   columns,
   fallbackColumn,
+  sections = {},
   numbers,
   now,
   newId,
@@ -83,7 +90,7 @@ export function planImportTasks({
     if (number === undefined) {
       throw new Error("Every imported task needs a number");
     }
-    const placement = placeTask(task, columns, fallbackColumn);
+    const placement = placeTask(task, columns, fallbackColumn, sections);
     const bucket = placement.columnId ?? `status:${placement.status}`;
     const position = (positions.get(bucket) ?? 0) + 1;
     positions.set(bucket, position);

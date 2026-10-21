@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { CustomFieldDefinition } from "@/components/project/custom-fields/types";
+import useGetCraftsByWorkspace from "@/hooks/queries/craft/use-get-crafts-by-workspace";
 import useGetCustomFieldFilterValues from "@/hooks/queries/custom-field/use-get-custom-field-filter-values";
 import useGetCustomFieldsByProject from "@/hooks/queries/custom-field/use-get-custom-fields-by-project";
 import useGetLabelsByWorkspace from "@/hooks/queries/label/use-get-labels-by-workspace";
@@ -10,6 +11,7 @@ export type TaskFilterOptions = ReturnType<typeof useTaskFilterOptions>;
 export function useTaskFilterOptions(projectId: string, workspaceId: string) {
   const { data: users } = useGetActiveWorkspaceUsers(workspaceId);
   const { data: labels = [] } = useGetLabelsByWorkspace(workspaceId);
+  const { data: crafts = [] } = useGetCraftsByWorkspace(workspaceId);
   const { data: rawCustomFields = [] } = useGetCustomFieldsByProject(projectId);
   const { data: filterValues = [] } = useGetCustomFieldFilterValues(projectId);
 
@@ -34,6 +36,7 @@ export function useTaskFilterOptions(projectId: string, workspaceId: string) {
   return {
     members: users?.members ?? [],
     labels,
+    crafts,
     customFields,
     usedCustomFieldValues,
   };

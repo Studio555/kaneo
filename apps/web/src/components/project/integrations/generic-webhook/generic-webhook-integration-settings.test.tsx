@@ -18,10 +18,15 @@ import { toGenericWebhookEvents } from "./generic-webhook-events";
 import { GenericWebhookIntegrationSettings } from "./generic-webhook-integration-settings";
 
 const mocks = vi.hoisted(() => ({
+  datesEnabled: true,
   integration: null as unknown,
   createIntegration: vi.fn(),
   updateIntegration: vi.fn(),
   deleteIntegration: vi.fn(),
+}));
+
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => mocks.datesEnabled,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -94,6 +99,7 @@ describe("GenericWebhookIntegrationSettings", () => {
   afterEach(cleanup);
 
   beforeEach(() => {
+    mocks.datesEnabled = true;
     mocks.integration = null;
     mocks.createIntegration.mockReset().mockResolvedValue(undefined);
     mocks.updateIntegration.mockReset().mockResolvedValue(undefined);
@@ -287,6 +293,58 @@ describe("GenericWebhookIntegrationSettings", () => {
 
     await waitFor(() =>
       expect(mocks.deleteIntegration).toHaveBeenCalledWith("project-1"),
+    );
+  });
+});
+
+describe("GenericWebhookIntegrationSettings with dates disabled", () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    mocks.datesEnabled = false;
+    mocks.integration = null;
+    mocks.updateIntegration.mockReset().mockResolvedValue(undefined);
+  });
+
+  it("omits the due-date event controls", () => {
+    render(<GenericWebhookIntegrationSettings projectId="project-1" />);
+
+    for (const event of ["dueDateReminder", "taskDueDateChanged"]) {
+      expect(
+        screen.queryByRole("checkbox", {
+          name: `settings:genericWebhookIntegration.events.${event}`,
+        }),
+      ).toBeNull();
+    }
+  });
+
+  it("saves a stored due-date reminder unchanged while its controls are hidden", async () => {
+    mocks.integration = {
+      ...connectedIntegration,
+      events: toGenericWebhookEvents({ dueDateReminder: true }),
+      dueDateReminderLeadTimeMinutes: 2880,
+    };
+    render(<GenericWebhookIntegrationSettings projectId="project-1" />);
+
+    expect(
+      screen.queryByLabelText(
+        "settings:genericWebhookIntegration.reminderLeadTimeLabel",
+      ),
+    ).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:chatIntegrations.saveChanges",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.updateIntegration).toHaveBeenCalledWith({
+        projectId: "project-1",
+        json: expect.objectContaining({
+          dueDateReminderLeadTimeMinutes: 2880,
+          events: expect.objectContaining({ dueDateReminder: true }),
+        }),
+      }),
     );
   });
 });

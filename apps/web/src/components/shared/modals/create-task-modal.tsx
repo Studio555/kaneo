@@ -57,6 +57,7 @@ import {
 import { useGetColumns } from "@/hooks/queries/column/use-get-columns";
 import { getColumnIcon } from "@/lib/column";
 import { getStatusDisplayLabel } from "@/lib/i18n/domain";
+import { SuggestionInput } from "@/components/ui/suggestion-input";
 import useCreateLabel from "@/hooks/mutations/label/use-create-label";
 import useCreateTask from "@/hooks/mutations/task/use-create-task";
 import useGetCustomFieldsByProject from "@/hooks/queries/custom-field/use-get-custom-fields-by-project";
@@ -65,6 +66,8 @@ import useGetProjects from "@/hooks/queries/project/use-get-projects";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
 import useGetProjectMembers from "@/hooks/queries/workspace-users/use-get-project-members";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
+import { useSuggestionNavigation } from "@/hooks/use-suggestion-navigation";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { cn } from "@/lib/cn";
 import { uploadDraftAsset } from "@/lib/upload-draft-asset";
@@ -214,6 +217,8 @@ function CreateTaskModalContent({
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("no-priority");
   const [assigneeId, setAssigneeId] = useState("");
+  const [assigneeSearchValue, setAssigneeSearchValue] = useState("");
+  const datesEnabled = useDatesEnabled();
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [startDateOpen, setStartDateOpen] = useState(false);
@@ -250,6 +255,7 @@ function CreateTaskModalContent({
       (workspaceUsers?.members ?? []).map((member) => ({
         id: member.userId,
         name: member.user?.name ?? "",
+        email: member.user?.email ?? "",
         image: member.user?.image ?? null,
       })),
     [workspaceUsers?.members],
@@ -263,6 +269,7 @@ function CreateTaskModalContent({
         ? (projectMembers ?? []).map((member) => ({
             id: member.id,
             name: member.name,
+            email: member.email,
             image: member.image,
           }))
         : workspaceAssigneeOptions,
@@ -332,6 +339,15 @@ function CreateTaskModalContent({
     );
   }, [customFields]);
 
+  const filteredAssigneeOptions = useMemo(() => {
+    const query = assigneeSearchValue.trim().toLowerCase();
+    return assigneeOptions.filter(
+      (member) =>
+        member.name.toLowerCase().includes(query) ||
+        member.email.toLowerCase().includes(query),
+    );
+  }, [assigneeOptions, assigneeSearchValue]);
+
   const filteredLabels = (() => {
     const searchFiltered = workspaceLabels.filter((label) =>
       label.name.toLowerCase().includes(searchValue.toLowerCase()),
@@ -353,6 +369,22 @@ function CreateTaskModalContent({
     !workspaceLabels.some(
       (label) => label.name.toLowerCase() === searchValue.toLowerCase(),
     );
+
+  const assigneeSuggestions = useSuggestionNavigation({
+    items: ["", ...filteredAssigneeOptions.map((member) => member.id)],
+    query: assigneeSearchValue,
+    autoHighlightIndex: 1,
+  });
+  const labelSuggestions = useSuggestionNavigation({
+    items: [
+      ...filteredLabels.map((label) => label.id),
+      ...(canCreateLabelCapability && isCreatingNewLabel
+        ? ["create-label"]
+        : []),
+    ],
+    query: searchValue,
+    enabled: labelsOpen && labelsStep === "select",
+  });
 
   const buildDefaultCustomFieldValues = useCallback(() => {
     return customFields.reduce<Record<string, string>>((acc, field) => {
@@ -420,24 +452,25 @@ function CreateTaskModalContent({
           | (typeof draft.columns)[number]["tasks"][number]
           | undefined;
 
-        for (const column of draft.columns ?? []) {
-          const taskIndex = column.tasks.findIndex(
-            (columnTask) => columnTask.id === task.id,
+        const containers = [
+          ...(draft.columns ?? []),
+          ...(draft.backlogSections ?? []),
+        ];
+
+        for (const container of containers) {
+          const taskIndex = container.tasks.findIndex(
+            (containerTask) => containerTask.id === task.id,
           );
 
           if (taskIndex !== -1) {
-            existingTask = column.tasks[taskIndex];
-            column.tasks.splice(taskIndex, 1);
+            existingTask = container.tasks[taskIndex];
+            container.tasks.splice(taskIndex, 1);
             break;
           }
         }
 
-        if (task.status === "planned" || task.status === "archived") {
-          return;
-        }
-
-        const targetColumn = draft.columns?.find(
-          (column) => column.id === task.status,
+        const targetColumn = containers.find(
+          (container) => container.id === task.status,
         );
         if (!targetColumn) return;
 
@@ -886,40 +919,42 @@ function CreateTaskModalContent({
                 {statusLabel}
               </div>
 
-              <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors border border-border hover:bg-accent/50",
-                      startDate
-                        ? "bg-accent/30 text-foreground"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="w-3.5 h-3.5" />
-                    <span>
-                      {startDate
-                        ? formatDateMedium(startDate)
-                        : t("common:modals.createTask.startDate")}
-                    </span>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-65 p-0" align="start">
-                  <DatePickerMenu
-                    label={t("common:modals.createTask.startDate")}
-                    placeholder={t("tasks:datePicker.startDatePlaceholder")}
-                    clearLabel={t("common:modals.createTask.clearStartDate")}
-                    value={startDate ?? null}
-                    onChange={(date) => {
-                      setStartDate(date ?? undefined);
-                      setStartDateOpen(false);
-                    }}
-                    bounds={dueDate ? { after: dueDate } : undefined}
-                    formatLimit={(date) => t("tasks:due.fullDate", { date })}
-                  />
-                </PopoverContent>
-              </Popover>
+              {datesEnabled && (
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors border border-border hover:bg-accent/50",
+                        startDate
+                          ? "bg-accent/30 text-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarIcon className="w-3.5 h-3.5" />
+                      <span>
+                        {startDate
+                          ? formatDateMedium(startDate)
+                          : t("common:modals.createTask.startDate")}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-65 p-0" align="start">
+                    <DatePickerMenu
+                      label={t("common:modals.createTask.startDate")}
+                      placeholder={t("tasks:datePicker.startDatePlaceholder")}
+                      clearLabel={t("common:modals.createTask.clearStartDate")}
+                      value={startDate ?? null}
+                      onChange={(date) => {
+                        setStartDate(date ?? undefined);
+                        setStartDateOpen(false);
+                      }}
+                      bounds={dueDate ? { after: dueDate } : undefined}
+                      formatLimit={(date) => t("tasks:due.fullDate", { date })}
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
 
               <Popover>
                 <PopoverTrigger asChild>
@@ -960,7 +995,7 @@ function CreateTaskModalContent({
                 </PopoverContent>
               </Popover>
 
-              <Popover>
+              <Popover onOpenChange={() => setAssigneeSearchValue("")}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
@@ -992,9 +1027,29 @@ function CreateTaskModalContent({
                     )}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-48 p-1" align="start">
-                  <div className="space-y-1">
+                <PopoverContent className="w-56 p-0" align="start">
+                  <div className="flex items-center gap-2 p-2 border-b border-border">
+                    <Search className="w-3 h-3 shrink-0 text-muted-foreground" />
+                    <SuggestionInput
+                      unstyled
+                      size="sm"
+                      navigation={assigneeSuggestions.inputProps}
+                      value={assigneeSearchValue}
+                      onChange={(event) =>
+                        setAssigneeSearchValue(event.target.value)
+                      }
+                      placeholder={t(
+                        "tasks:popover.assignee.searchPlaceholder",
+                      )}
+                      aria-label={t("tasks:popover.assignee.searchPlaceholder")}
+                    />
+                  </div>
+                  <div
+                    {...assigneeSuggestions.listProps}
+                    className="max-h-80 space-y-1 overflow-y-auto p-1"
+                  >
                     <button
+                      {...assigneeSuggestions.getOptionProps(0)}
                       type="button"
                       className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent/50 text-left transition-colors h-8"
                       onClick={() => setAssigneeId("")}
@@ -1012,16 +1067,27 @@ function CreateTaskModalContent({
                       <span className="text-sm">
                         {t("common:modals.createTask.assignUnassigned")}
                       </span>
-                      {!selectedUser && <Check className="ml-auto h-4 w-4" />}
+                      {!selectedUser && (
+                        <Check className="ml-auto h-4 w-4 shrink-0" />
+                      )}
                     </button>
-                    {assigneeOptions.map((member) => (
+                    {filteredAssigneeOptions.length === 0 && (
+                      <p
+                        className="px-2 py-1.5 text-xs text-muted-foreground"
+                        role="status"
+                      >
+                        {t("tasks:popover.assignee.empty")}
+                      </p>
+                    )}
+                    {filteredAssigneeOptions.map((member, index) => (
                       <button
+                        {...assigneeSuggestions.getOptionProps(index + 1)}
                         key={member.id}
                         type="button"
                         className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent/50 text-left transition-colors h-8"
                         onClick={() => setAssigneeId(member.id)}
                       >
-                        <Avatar className="h-6 w-6">
+                        <Avatar className="h-6 w-6 shrink-0">
                           <AvatarImage
                             src={member.image ?? ""}
                             alt={member.name}
@@ -1030,9 +1096,9 @@ function CreateTaskModalContent({
                             {getInitials(member.name)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">{member.name}</span>
+                        <span className="text-sm truncate">{member.name}</span>
                         {selectedUser?.id === member.id && (
-                          <Check className="ml-auto h-4 w-4" />
+                          <Check className="ml-auto h-4 w-4 shrink-0" />
                         )}
                       </button>
                     ))}
@@ -1040,42 +1106,44 @@ function CreateTaskModalContent({
                 </PopoverContent>
               </Popover>
 
-              <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors border border-border hover:bg-accent/50",
-                      dueDate
-                        ? "bg-accent/30 text-foreground"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="w-3.5 h-3.5" />
-                    <span>
-                      {dueDate
-                        ? formatDateMedium(dueDate)
-                        : t("common:modals.createTask.dueDate")}
-                    </span>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-65 p-0" align="start">
-                  <DatePickerMenu
-                    label={t("common:modals.createTask.dueDate")}
-                    placeholder={t("tasks:datePicker.dueDatePlaceholder")}
-                    clearLabel={t("common:modals.createTask.clearDueDate")}
-                    value={dueDate ?? null}
-                    onChange={(date) => {
-                      setDueDate(date ?? undefined);
-                      setDueDateOpen(false);
-                    }}
-                    bounds={startDate ? { before: startDate } : undefined}
-                    formatLimit={(date) =>
-                      t("tasks:datePicker.startsOn", { date })
-                    }
-                  />
-                </PopoverContent>
-              </Popover>
+              {datesEnabled && (
+                <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors border border-border hover:bg-accent/50",
+                        dueDate
+                          ? "bg-accent/30 text-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarIcon className="w-3.5 h-3.5" />
+                      <span>
+                        {dueDate
+                          ? formatDateMedium(dueDate)
+                          : t("common:modals.createTask.dueDate")}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-65 p-0" align="start">
+                    <DatePickerMenu
+                      label={t("common:modals.createTask.dueDate")}
+                      placeholder={t("tasks:datePicker.dueDatePlaceholder")}
+                      clearLabel={t("common:modals.createTask.clearDueDate")}
+                      value={dueDate ?? null}
+                      onChange={(date) => {
+                        setDueDate(date ?? undefined);
+                        setDueDateOpen(false);
+                      }}
+                      bounds={startDate ? { before: startDate } : undefined}
+                      formatLimit={(date) =>
+                        t("tasks:datePicker.startsOn", { date })
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
 
               <Popover open={labelsOpen} onOpenChange={setLabelsOpen}>
                 <PopoverTrigger asChild>
@@ -1097,7 +1165,11 @@ function CreateTaskModalContent({
                     <div className="w-auto">
                       <div className="flex items-center gap-2 p-2 border-b border-border">
                         <Search className="w-3 h-3 text-muted-foreground" />
-                        <input
+                        <SuggestionInput
+                          unstyled
+                          nativeInput
+                          size="sm"
+                          navigation={labelSuggestions.inputProps}
                           ref={searchInputRef}
                           value={searchValue}
                           onChange={(e) => setSearchValue(e.target.value)}
@@ -1108,15 +1180,16 @@ function CreateTaskModalContent({
                         />
                       </div>
 
-                      <div className="py-1">
+                      <div {...labelSuggestions.listProps} className="py-1">
                         {filteredLabels.length === 0 &&
                           searchValue.length === 0 && (
                             <span className="text-xs text-muted-foreground px-2">
                               {t("common:modals.createTask.noLabelsFound")}
                             </span>
                           )}
-                        {filteredLabels.map((label) => (
+                        {filteredLabels.map((label, index) => (
                           <button
+                            {...labelSuggestions.getOptionProps(index)}
                             key={label.id}
                             type="button"
                             className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent/50 text-left"
@@ -1148,6 +1221,9 @@ function CreateTaskModalContent({
                           <button
                             type="button"
                             className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent/50 text-left"
+                            {...labelSuggestions.getOptionProps(
+                              filteredLabels.length,
+                            )}
                             onClick={handleCreateNewClick}
                           >
                             <div className="flex-shrink-0 w-3 flex justify-center">

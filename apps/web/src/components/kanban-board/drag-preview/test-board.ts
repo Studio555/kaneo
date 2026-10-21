@@ -22,8 +22,7 @@ export function testBoard() {
       },
       { id: "done", slug: "done", tasks: [] },
     ],
-    plannedTasks: [],
-    archivedTasks: [],
+    backlogSections: [],
   } as unknown as ProjectWithTasks;
 }
 

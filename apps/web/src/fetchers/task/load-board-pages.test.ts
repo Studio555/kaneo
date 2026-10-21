@@ -23,6 +23,20 @@ function task(id: string, status = "to-do"): Task {
     externalLinks: [],
   };
 }
+function section(slug: "planned" | "archived", tasks: Task[]) {
+  return {
+    id: slug,
+    columnId: `${slug}-column`,
+    slug,
+    name: slug,
+    icon: null,
+    color: null,
+    systemKey: slug,
+    tasks,
+  };
+}
+const sectionTasks = (board: ProjectWithTasks, slug: string) =>
+  board.backlogSections.find((entry) => entry.slug === slug)?.tasks ?? [];
 function board(id: string): ProjectWithTasks {
   return {
     id: "project",
@@ -42,8 +56,10 @@ function board(id: string): ProjectWithTasks {
         tasks: [task(id)],
       },
     ],
-    plannedTasks: [task(`planned-${id}`, "planned")],
-    archivedTasks: [task(`archived-${id}`, "archived")],
+    backlogSections: [
+      section("planned", [task(`planned-${id}`, "planned")]),
+      section("archived", [task(`archived-${id}`, "archived")]),
+    ],
   };
 }
 function page(number: number, totalPages = 3) {
@@ -84,7 +100,7 @@ describe("complete board loading through bounded pages", () => {
     ]);
     expect(snapshots[0].columns[0].tasks).toHaveLength(1);
   });
-  it("loads sequentially and merges every column, planned and archived task with its complete fields", async () => {
+  it("loads sequentially and merges every column and backlog section task with its complete fields", async () => {
     let active = 0;
     let peak = 0;
     const load = vi.fn(async (number: number) => {
@@ -102,12 +118,12 @@ describe("complete board loading through bounded pages", () => {
       "2",
       "3",
     ]);
-    expect(result.plannedTasks.map((task) => task.id)).toEqual([
+    expect(sectionTasks(result, "planned").map((task) => task.id)).toEqual([
       "planned-1",
       "planned-2",
       "planned-3",
     ]);
-    expect(result.archivedTasks).toHaveLength(3);
+    expect(sectionTasks(result, "archived")).toHaveLength(3);
     expect(result.columns[0].tasks[2]).toMatchObject({
       description: "3 searchable description",
       labels: [{ id: "label-3" }],
@@ -163,8 +179,8 @@ describe("complete board loading through bounded pages", () => {
       );
       expect(value.externalLinks).toHaveLength(3);
     }
-    expect(result.plannedTasks).toHaveLength(2);
-    expect(result.archivedTasks).toHaveLength(2);
+    expect(sectionTasks(result, "planned")).toHaveLength(2);
+    expect(sectionTasks(result, "archived")).toHaveLength(2);
   });
   it("rejects a failed related continuation instead of exposing a partially hydrated board", async () => {
     const first = page(1, 1);
@@ -241,8 +257,7 @@ it("keeps progress cloning linear across large task and related-page loads", asy
   const weight = (snapshot: ProjectWithTasks) =>
     [
       ...snapshot.columns.flatMap((column) => column.tasks),
-      ...snapshot.plannedTasks,
-      ...snapshot.archivedTasks,
+      ...snapshot.backlogSections.flatMap((entry) => entry.tasks),
     ].reduce(
       (count, task) =>
         count +

@@ -9,6 +9,7 @@ type LookupResource =
   | "project"
   | "task"
   | "label"
+  | "craft"
   | "timeEntry"
   | "activity"
   | "comment"
@@ -38,6 +39,7 @@ const RESOURCE_NOT_FOUND: Record<LookupResource, string> = {
   project: "Project not found",
   task: "Task not found",
   label: "Label not found",
+  craft: "Craft not found",
   timeEntry: "Time entry not found",
   activity: "Activity not found",
   comment: "Comment not found",
@@ -226,6 +228,15 @@ async function lookupScope(
       };
     }
 
+    case "craft": {
+      const [craft] = await db
+        .select({ workspaceId: schema.craftTable.workspaceId })
+        .from(schema.craftTable)
+        .where(eq(schema.craftTable.id, id))
+        .limit(1);
+      return craft ? { workspaceId: craft.workspaceId, projectId: null } : null;
+    }
+
     case "timeEntry": {
       const [timeEntry] = await db
         .select({
@@ -387,6 +398,14 @@ export const workspaceAccess = {
     workspaceAccessMiddleware({
       sources: [
         { type: "lookup", resource: "label", idKey },
+        { type: "query", key: "workspaceId" },
+      ],
+    }),
+
+  fromCraft: (idKey = "id") =>
+    workspaceAccessMiddleware({
+      sources: [
+        { type: "lookup", resource: "craft", idKey },
         { type: "query", key: "workspaceId" },
       ],
     }),

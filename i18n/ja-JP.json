@@ -599,7 +599,24 @@
 				"error": "アカウントの削除に失敗しました",
 				"sessionTooOld": "セキュリティのため、アカウントを削除する前に一度サインアウトして再サインインしてください。"
 			},
-			"emailHint": "このアドレスでサインインします。"
+			"emailHint": "このアドレスでサインインします。",
+			"githubIdentity": {
+				"connect": "Connect GitHub",
+				"connectedAs": "Connected as {{login}}",
+				"connectedHint": "Assigning a task assigns you on the linked GitHub issue, and being assigned on GitHub assigns you the task.",
+				"connectFailed": "Couldn't connect your GitHub account",
+				"connecting": "Connecting...",
+				"disconnect": "Disconnect",
+				"disconnected": "GitHub account disconnected",
+				"disconnectFailed": "Couldn't disconnect your GitHub account",
+				"notConnected": "GitHub account not connected",
+				"notConnectedHint": "Connecting signs you in to GitHub once to confirm the account is yours. It does not change how you sign in to Kaneo.",
+				"onlyAccount": "GitHub is your only way to sign in, so it cannot be disconnected. Set a password first.",
+				"sectionSubtitle": "Connect your GitHub account so task assignments stay in step with the linked GitHub issues.",
+				"sectionTitle": "GitHub account",
+				"sessionTooOld": "For your security, sign in again before disconnecting your GitHub account.",
+				"unavailable": "This Kaneo instance has no GitHub sign-in configured, so accounts cannot be connected."
+			}
 		},
 		"notificationsPage": {
 			"pageTitle": "通知",
@@ -753,7 +770,8 @@
 			"priority": "優先度",
 			"projectBackgrounds": "Project backgrounds",
 			"projectBackgroundsDescription": "プロジェクトがボードの背景に設定した画像を表示します。",
-			"advancedTitle": "詳細設定"
+			"advancedTitle": "詳細設定",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "APIキー",
@@ -1463,7 +1481,8 @@
 				"pr_opened": "プルリクエストのオープン",
 				"pr_merged": "プルリクエストのマージ",
 				"issue_opened": "Issue のオープン",
-				"issue_closed": "Issue のクローズ"
+				"issue_closed": "Issue のクローズ",
+				"issue_reopened": "Issue 再オープン"
 			},
 			"connectMore": "<link>連携</link>で {{providers}} を接続すると、こちらも自動化できます。",
 			"dontMove": "移動しない",
@@ -2315,6 +2334,31 @@
 		},
 		"shared": {
 			"autosave": "変更は自動的に保存されます"
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -2704,7 +2748,10 @@
 			"importedBy": "Imported by {{name}}",
 			"commentedOnForge": "{{forge}} でコメント"
 		},
-		"movedFromOtherProject": "moved task from another project to \"{{to}}\""
+		"movedFromOtherProject": "moved task from another project to \"{{to}}\"",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft"
 	},
 	"tasks": {
 		"title": "タスク",
@@ -2730,7 +2777,8 @@
 			"list": "リスト",
 			"backlog": "バックログ",
 			"gantt": "ガント",
-			"heading": "ビュー"
+			"heading": "ビュー",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "タスクを選択",
@@ -2908,7 +2956,8 @@
 			"startDate": "開始日",
 			"noDate": "日付なし",
 			"dates": "日付",
-			"project": "プロジェクト"
+			"project": "プロジェクト",
+			"craft": "Craft"
 		},
 		"move": {
 			"title": "タスクを移動",
@@ -2924,7 +2973,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "未割り当て",
-				"updateError": "担当者の更新に失敗しました"
+				"updateError": "担当者の更新に失敗しました",
+				"searchPlaceholder": "ユーザーを検索...",
+				"empty": "ユーザーが見つかりません"
 			},
 			"status": {
 				"updateError": "ステータスの更新に失敗しました"
@@ -2960,6 +3011,12 @@
 					"crimson": "クリムゾン"
 				},
 				"editLabels": "ラベルを編集"
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft",
+				"searchPlaceholder": "Search crafts..."
 			}
 		},
 		"backlog": {
@@ -2980,6 +3037,26 @@
 				"dueThisWeek": "今週が期限",
 				"dueNextWeek": "来週が期限",
 				"noDueDate": "期限なし"
+			},
+			"sectionActions": {
+				"add": "Section",
+				"addTooltip": "Add a backlog section",
+				"create": "Create section",
+				"created": "Section created",
+				"createError": "Failed to create section",
+				"createTitle": "New backlog section",
+				"delete": "Delete",
+				"deleted": "Section deleted",
+				"deleteDescription": "Only an empty section can be deleted. Move its tasks to another section first.",
+				"deleteError": "Failed to delete section",
+				"deleteTitle": "Delete the \"{{name}}\" section?",
+				"menu": "Section options",
+				"namePlaceholder": "Section name",
+				"rename": "Rename",
+				"renamed": "Section renamed",
+				"renameError": "Failed to rename section",
+				"renameTitle": "Rename section",
+				"save": "Save"
 			}
 		},
 		"sort": {
@@ -2992,7 +3069,8 @@
 				"priority": "優先度",
 				"dueDate": "期限",
 				"title": "タイトル",
-				"number": "タスク番号"
+				"number": "タスク番号",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -3002,7 +3080,8 @@
 				"priority": "優先度",
 				"assignee": "担当者",
 				"dueDate": "期限",
-				"labels": "ラベル"
+				"labels": "ラベル",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "次のいずれか",
@@ -3015,7 +3094,8 @@
 			},
 			"allCustomFieldValues": "All values",
 			"noCustomFieldValues": "No custom field values",
-			"noValuesUsedYet": "No values used yet"
+			"noValuesUsedYet": "No values used yet",
+			"allCrafts": "All crafts"
 		},
 		"calendar": {
 			"pageTitle": "{{name}} – カレンダー",
@@ -3066,7 +3146,10 @@
 		"listView": {
 			"addTask": "タスクを追加",
 			"archiveAllTooltip": "完了したタスクをすべてアーカイブ",
-			"noTasks": "タスクはありません"
+			"noTasks": "タスクはありません",
+			"collapseSubtasks": "{{title}} のサブタスクを非表示",
+			"expandSubtasks": "{{title}} のサブタスクを表示",
+			"subtaskLevel": "サブタスク、レベル {{level}}"
 		},
 		"kanban": {
 			"addTask": "タスクを追加",
@@ -3237,6 +3320,16 @@
 			"startsOn": "開始: {{date}}",
 			"beforeStart": "{{date}} は開始日より前です",
 			"afterDue": "{{date}} は期日より後です"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

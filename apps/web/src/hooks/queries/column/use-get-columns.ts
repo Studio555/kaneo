@@ -1,18 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import getColumns from "@/fetchers/column/get-columns";
 
-type ColumnRefreshOptions = {
+type ColumnQueryOptions = {
+  /** `"backlog"` returns the project's backlog sections instead of its board columns. */
+  kind?: "board" | "backlog";
   refreshOnMount?: boolean;
   refreshWhileVisible?: boolean;
 };
 
 export function useGetColumns(
   projectId: string,
-  options: ColumnRefreshOptions = {},
+  options: ColumnQueryOptions = {},
 ) {
+  const kind = options.kind ?? "board";
   return useQuery({
-    queryKey: ["columns", projectId],
-    queryFn: () => getColumns(projectId),
+    // Board columns keep the key they always had, so every existing
+    // ["columns", projectId] invalidation still reaches them.
+    queryKey:
+      kind === "board" ? ["columns", projectId] : ["columns", projectId, kind],
+    queryFn: () => getColumns(projectId, kind),
     enabled: !!projectId,
     ...(options.refreshOnMount || options.refreshWhileVisible
       ? {

@@ -18,6 +18,12 @@ async function deleteColumn(id: string) {
       throw new HTTPException(404, { message: "Column not found" });
     }
 
+    if (column.systemKey) {
+      throw new HTTPException(409, {
+        message: "Built-in backlog sections cannot be deleted",
+      });
+    }
+
     const [taskCount] = await tx
       .select({ count: sql<number>`count(*)` })
       .from(taskTable)

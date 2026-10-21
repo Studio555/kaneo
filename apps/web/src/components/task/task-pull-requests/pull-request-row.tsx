@@ -1,9 +1,6 @@
 import { useTranslation } from "react-i18next";
-import {
-  getPullRequestRepoName,
-  getPullRequestStatus,
-  type PullRequest,
-} from "@/lib/pull-request";
+import { getLinkRepository } from "@/lib/external-link-repository";
+import { getPullRequestStatus, type PullRequest } from "@/lib/pull-request";
 import { PullRequestStatusIcon } from "./pull-request-status-icon";
 
 type PullRequestRowProps = {
@@ -13,7 +10,7 @@ type PullRequestRowProps = {
 export function PullRequestRow({ pullRequest }: PullRequestRowProps) {
   const { t } = useTranslation();
   const status = getPullRequestStatus(pullRequest);
-  const repoName = getPullRequestRepoName(pullRequest.url);
+  const repoName = getLinkRepository(pullRequest);
   const statusLabel = {
     merged: t("tasks:pr.merged"),
     draft: t("tasks:pr.draft"),

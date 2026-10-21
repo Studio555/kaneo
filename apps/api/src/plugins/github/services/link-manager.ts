@@ -18,6 +18,7 @@ import {
   taskTable,
 } from "../../../database/schema";
 
+import { sameRepository } from "../utils/repository";
 import { externalLinkScope } from "./integration-task-scope";
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -25,11 +26,31 @@ type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type CreateExternalLinkParams = {
   taskId: string;
   integrationId: string;
-  resourceType: "issue" | "pull_request" | "branch";
+  resourceType:
+    | "issue"
+    | "pull_request"
+    | "branch"
+    | "slack_message"
+    | "agent_run";
   externalId: string;
   url: string;
   title?: string | null;
   metadata?: Record<string, unknown>;
+};
+
+export type PullRequestLinkMetadata = {
+  state?: string;
+  draft?: boolean;
+  merged?: boolean;
+  mergedAt?: string | null;
+  branch?: string;
+  author?: string;
+  /**
+   * `owner/name` of the repository the pull request lives in. Absent on rows
+   * written before pull requests from other repositories could be linked;
+   * those can only have come from the integration's own repository.
+   */
+  repository?: string;
 };
 
 export type UpdateExternalLinkParams = {
@@ -118,6 +139,40 @@ export async function findExternalLink(
       eq(externalLinkTable.externalId, externalId),
       externalLinkScope(),
     ),
+  });
+}
+
+/**
+ * The links for one pull request. A pull request number is only unique within
+ * its repository, and one integration now sees pull requests from many, so the
+ * bare `externalId` is not enough on its own. Returns every match because one
+ * pull request may be linked to several tasks.
+ */
+export async function findPullRequestLinks(
+  integrationId: string,
+  pullRequestNumber: number,
+  repositoryFullName: string,
+  integrationRepositoryFullName: string,
+  database: DbOrTx = db,
+) {
+  const candidates = await database.query.externalLinkTable.findMany({
+    where: and(
+      eq(externalLinkTable.integrationId, integrationId),
+      eq(externalLinkTable.resourceType, "pull_request"),
+      eq(externalLinkTable.externalId, pullRequestNumber.toString()),
+      externalLinkScope(),
+    ),
+  });
+
+  return candidates.filter((link) => {
+    const metadata = parseLinkMetadata<PullRequestLinkMetadata>(link.metadata, {
+      externalLinkId: link.id,
+      source: "find_pull_request_links",
+    });
+    return sameRepository(
+      metadata.repository ?? integrationRepositoryFullName,
+      repositoryFullName,
+    );
   });
 }
 

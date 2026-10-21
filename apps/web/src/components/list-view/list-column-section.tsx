@@ -5,15 +5,27 @@ import {
 } from "@dnd-kit/sortable";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, ChevronRight, Plus } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import { getColumnIcon } from "@/lib/column";
 import { EASE_OUT } from "@/lib/motion";
+import { flattenSubtaskRows } from "@/lib/subtask-tree";
 import type { ProjectWithTasks } from "@/types/project";
 import TaskRow from "./task-row";
 
 type Column = ProjectWithTasks["columns"][number];
+type Task = Column["tasks"][number];
+
+export type ListSubtasks = {
+  children: Map<string, string[]>;
+  tasksById: Map<string, Task>;
+  nestedTaskIds: Set<string>;
+  expandedRows: Record<string, boolean>;
+  loading: boolean;
+  activeId: string | null;
+  onToggleExpanded: (rowId: string) => void;
+};
 
 type ListColumnSectionProps = {
   column: Column;
@@ -24,6 +36,7 @@ type ListColumnSectionProps = {
   onToggle: (columnId: string) => void;
   onAddTask: (columnId: string) => void;
   onArchive: (column: Column) => void;
+  subtasks: ListSubtasks;
 };
 
 const ListColumnSection = memo(function ListColumnSection({
@@ -35,6 +48,7 @@ const ListColumnSection = memo(function ListColumnSection({
   onToggle,
   onAddTask,
   onArchive,
+  subtasks,
 }: ListColumnSectionProps) {
   const { t } = useTranslation();
   const [animateExpand, setAnimateExpand] = useState(false);
@@ -42,6 +56,30 @@ const ListColumnSection = memo(function ListColumnSection({
     id: column.id,
     data: { type: "column", column },
   });
+
+  // Nothing stays expanded during a drag: nested repeats are not sortable, so
+  // they would not follow their parent's transform and the subtree would split.
+  const rows = useMemo(
+    () =>
+      flattenSubtaskRows({
+        tasks: column.tasks,
+        children: subtasks.children,
+        tasksById: subtasks.tasksById,
+        nestedTaskIds: subtasks.nestedTaskIds,
+        isExpanded: (rowId) =>
+          !subtasks.activeId && Boolean(subtasks.expandedRows[rowId]),
+      }),
+    [column.tasks, subtasks],
+  );
+  // A subtask renders under its parent, so the group counts and sorts only
+  // its own rows.
+  const topLevelTasks = useMemo(
+    () => rows.filter((row) => row.depth === 0).map((row) => row.task),
+    [rows],
+  );
+  // Reserve the toggle column while relations load so chevrons appear in place.
+  const reserveToggleSpace =
+    subtasks.loading || rows.some((row) => row.childCount > 0 || row.depth > 0);
 
   return (
     <div
@@ -71,7 +109,7 @@ const ListColumnSection = memo(function ListColumnSection({
             <div className="flex items-center gap-1">
               <span className="mt-1 mr-1">{column.name}</span>
               <span className="text-xs text-muted-foreground mt-0.5">
-                {column.tasks.length}
+                {topLevelTasks.length}
               </span>
             </div>
           </div>
@@ -112,26 +150,38 @@ const ListColumnSection = memo(function ListColumnSection({
               "transition-[translate,opacity] duration-150 ease-out starting:-translate-y-1 starting:opacity-0 motion-reduce:starting:translate-y-0",
           )}
         >
+          {/* Only top-level rows are sortable; a nested row can share its
+              task id with a row under another parent. */}
           <SortableContext
-            items={column.tasks}
+            items={topLevelTasks}
             strategy={verticalListSortingStrategy}
           >
             <AnimatePresence initial={false} mode="popLayout">
-              {column.tasks.map((task) => (
+              {rows.map((row) => (
                 <motion.div
-                  key={task.id}
+                  key={row.rowId}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15, ease: EASE_OUT }}
                 >
-                  <TaskRow task={task} projectSlug={projectSlug} />
+                  <TaskRow
+                    task={row.task}
+                    projectSlug={projectSlug}
+                    depth={row.depth}
+                    rowId={row.rowId}
+                    childCount={row.childCount}
+                    isExpanded={row.isExpanded}
+                    onToggleExpanded={subtasks.onToggleExpanded}
+                    reserveToggleSpace={reserveToggleSpace}
+                    isTaskDragging={subtasks.activeId === row.task.id}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>
           </SortableContext>
 
-          {column.tasks.length === 0 && (
+          {rows.length === 0 && (
             <div className="py-6 px-4 text-center text-xs text-muted-foreground">
               {t("tasks:listView.noTasks")}
             </div>

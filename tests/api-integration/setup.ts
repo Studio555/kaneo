@@ -74,6 +74,7 @@ process.env.DISABLE_REGISTRATION = "false";
 process.env.DISABLE_PASSWORD_REGISTRATION = "false";
 process.env.DISABLE_EMAIL_OTP_SIGN_IN = "false";
 process.env.DISABLE_LOGIN_FORM = "";
+process.env.DISABLE_DATES = "false";
 process.env.DEMO_MODE = "false";
 process.env.SMTP_HOST = "";
 process.env.SMTP_PORT = "";

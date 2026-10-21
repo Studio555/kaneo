@@ -59,8 +59,28 @@ function makeProject() {
         tasks: [makeTask("delete-me"), makeTask("keep-me")],
       },
     ],
-    plannedTasks: [makeTask("delete-me")],
-    archivedTasks: [makeTask("delete-me")],
+    backlogSections: [
+      {
+        id: "planned",
+        columnId: "column-planned",
+        slug: "planned",
+        name: "Planned",
+        icon: null,
+        color: null,
+        systemKey: "planned" as const,
+        tasks: [makeTask("delete-me")],
+      },
+      {
+        id: "archived",
+        columnId: "column-archived",
+        slug: "archived",
+        name: "Archived",
+        icon: null,
+        color: null,
+        systemKey: "archived" as const,
+        tasks: [makeTask("delete-me")],
+      },
+    ],
   };
 }
 
@@ -94,6 +114,7 @@ describe("useDeleteTask", () => {
     const deletedTask = {
       ...makeTask("delete-me"),
       priority: "no-priority",
+      craftId: null,
     };
     queryClient.setQueryData(["tasks", project.id], project);
     queryClient.setQueryData(["task", deletedTask.id], deletedTask);
@@ -112,8 +133,10 @@ describe("useDeleteTask", () => {
     expect(cachedProject?.columns[0]?.tasks.map(({ id }) => id)).toEqual([
       "keep-me",
     ]);
-    expect(cachedProject?.plannedTasks).toEqual([]);
-    expect(cachedProject?.archivedTasks).toEqual([]);
+    expect(cachedProject?.backlogSections.map(({ tasks }) => tasks)).toEqual([
+      [],
+      [],
+    ]);
     expect(queryClient.getQueryData(["task", deletedTask.id])).toBeUndefined();
     expect(
       queryClient.getQueryState(["tasks", project.id])?.isInvalidated,
@@ -123,8 +146,10 @@ describe("useDeleteTask", () => {
     expect(storedProject?.columns[0]?.tasks.map(({ id }) => id)).toEqual([
       "keep-me",
     ]);
-    expect(storedProject?.plannedTasks).toEqual([]);
-    expect(storedProject?.archivedTasks).toEqual([]);
+    expect(storedProject?.backlogSections.map(({ tasks }) => tasks)).toEqual([
+      [],
+      [],
+    ]);
   });
 
   it("leaves query and project-store state unchanged when deletion fails", async () => {

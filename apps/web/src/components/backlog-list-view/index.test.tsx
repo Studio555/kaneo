@@ -66,6 +66,9 @@ vi.mock("../shared/modals/create-task-modal", () => ({
 vi.mock("../bulk-selection/backlog-bulk-toolbar", () => ({
   default: () => null,
 }));
+vi.mock("@/hooks/use-workspace-permission", () => ({
+  useWorkspacePermission: () => ({ canUpdateProjects: () => true }),
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
   initReactI18next: { type: "3rdParty", init: vi.fn() },
@@ -90,7 +93,24 @@ function makeTasks(status: string, count: number): Task[] {
   }));
 }
 
-const project: ProjectWithTasks = {
+function makeSection(systemKey: "planned" | "archived", tasks: Task[]) {
+  return {
+    id: systemKey,
+    columnId: `column-${systemKey}`,
+    slug: systemKey,
+    name: systemKey,
+    icon: null,
+    color: null,
+    systemKey,
+    tasks,
+  };
+}
+
+// Exact lifecycle counts catch remounts without a large DOM slowing CI.
+const plannedTasks = makeTasks("planned", 2);
+const archivedTasks = makeTasks("archived", 3);
+
+const project = {
   id: "project-1",
   workspaceId: "workspace-1",
   name: "Imported project",
@@ -99,13 +119,13 @@ const project: ProjectWithTasks = {
   description: null,
   isPublic: false,
   columns: [],
-  // Exact lifecycle counts catch remounts without a large DOM slowing CI.
-  plannedTasks: makeTasks("planned", 2),
-  archivedTasks: makeTasks("archived", 3),
-};
+  backlogSections: [
+    makeSection("planned", plannedTasks),
+    makeSection("archived", archivedTasks),
+  ],
+} as unknown as ProjectWithTasks;
 
-const totalTaskCount =
-  project.plannedTasks.length + project.archivedTasks.length;
+const totalTaskCount = plannedTasks.length + archivedTasks.length;
 
 beforeEach(() => {
   useBacklogBulkSelectionStore.setState(
@@ -136,17 +156,17 @@ describe("backlog row lifecycle", () => {
 
     expect(plannedToggle).toHaveAttribute("aria-expanded", "false");
     expect(mountRow).not.toHaveBeenCalled();
-    expect(unmountRow).toHaveBeenCalledTimes(project.plannedTasks.length);
+    expect(unmountRow).toHaveBeenCalledTimes(plannedTasks.length);
     expect(screen.getByLabelText("archived-0")).toBe(archivedRow);
     expect(archivedRow).toHaveValue("Local row state");
     expect(useBacklogBulkSelectionStore.getState().availableTaskIds).toEqual(
-      project.archivedTasks.map((task) => task.id),
+      archivedTasks.map((task) => task.id),
     );
 
     fireEvent.click(plannedToggle);
     expect(plannedToggle).toHaveAttribute("aria-expanded", "true");
-    expect(mountRow).toHaveBeenCalledTimes(project.plannedTasks.length);
-    expect(unmountRow).toHaveBeenCalledTimes(project.plannedTasks.length);
+    expect(mountRow).toHaveBeenCalledTimes(plannedTasks.length);
+    expect(unmountRow).toHaveBeenCalledTimes(plannedTasks.length);
     expect(archivedRow).toHaveValue("Local row state");
     expect(
       useBacklogBulkSelectionStore.getState().availableTaskIds,
@@ -227,7 +247,13 @@ describe("backlog row lifecycle", () => {
     expect(screen.getByRole("dialog")).toHaveTextContent("planned");
     rerender(
       <BacklogListView
-        project={{ ...project, archivedTasks: [...project.archivedTasks] }}
+        project={{
+          ...project,
+          backlogSections: [
+            makeSection("planned", plannedTasks),
+            makeSection("archived", [...archivedTasks]),
+          ],
+        }}
       />,
     );
     expect(screen.getByLabelText("archived-0")).toBe(archivedRow);

@@ -4,6 +4,12 @@ type TaskLabel = {
   color: string;
 };
 
+type TaskCraft = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type TaskExternalLink = {
   id: string;
   taskId: string;
@@ -41,8 +47,11 @@ type Task = {
   columnId?: string | null;
   subtaskCounts?: { completed: number; total: number };
   labels?: TaskLabel[];
+  craftId?: string | null;
+  craft?: TaskCraft | null;
   externalLinks?: TaskExternalLink[];
   customFieldValues?: TaskCustomFieldValue[];
 };
 
+export type { TaskCraft };
 export default Task;

@@ -59,10 +59,15 @@ export async function migrateColumns() {
 async function migrateProject(projectId: string, pending: Set<string>) {
   return db.transaction(async (tx) => {
     const projectColumns = await tx
-      .select({ id: columnTable.id, slug: columnTable.slug })
+      .select({
+        id: columnTable.id,
+        slug: columnTable.slug,
+        kind: columnTable.kind,
+      })
       .from(columnTable)
       .where(eq(columnTable.projectId, projectId));
-    const legacy = projectColumns.length === 0;
+    // Backlog sections are seeded by a SQL migration and do not count here.
+    const legacy = !projectColumns.some((column) => column.kind === "board");
     // Existing columns are the durable evidence of the old migration. Without
     // this inference the first upgrade would restore rules users already deleted.
     const integrations = await tx.query.integrationTable.findMany({

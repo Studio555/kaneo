@@ -16,21 +16,49 @@ type ToolCallback = (args: unknown) => Promise<{
   isError?: boolean;
 }>;
 
-function collectTools() {
-  const tools = new Map<string, ToolCallback>();
+type ToolRegistration = {
+  inputSchema: { shape: Record<string, unknown> };
+  callback: ToolCallback;
+};
+
+function collectToolRegistrations() {
+  const collected = new Map<string, ToolRegistration>();
   const registrar: McpToolRegistrar = {
-    registerTool: (name, _config, callback) => tools.set(name, callback),
+    registerTool: (name, config, callback) =>
+      collected.set(name, { inputSchema: config.inputSchema, callback }),
   };
   registerMcpTools(registrar, "http://api.test", "test-token");
-  return tools;
+  return collected;
 }
 
-const tools = collectTools();
+const toolRegistrations = collectToolRegistrations();
 
-function call(name: string, args: unknown = {}) {
-  const tool = tools.get(name);
+function collectToolRegistrationsWithDatesDisabled() {
+  const original = process.env.DISABLE_DATES;
+  process.env.DISABLE_DATES = "true";
+  try {
+    return collectToolRegistrations();
+  } finally {
+    if (original === undefined) {
+      delete process.env.DISABLE_DATES;
+    } else {
+      process.env.DISABLE_DATES = original;
+    }
+  }
+}
+
+function callFrom(
+  registrations: Map<string, ToolRegistration>,
+  name: string,
+  args: unknown = {},
+) {
+  const tool = registrations.get(name)?.callback;
   if (!tool) throw new Error(`Tool ${name} is not registered`);
   return tool(args);
+}
+
+function call(name: string, args: unknown = {}) {
+  return callFrom(toolRegistrations, name, args);
 }
 
 let apiFetch: ReturnType<typeof vi.fn>;
@@ -259,5 +287,79 @@ describe("MCP tool catalog", () => {
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("Task not found");
+  });
+});
+
+describe("MCP tools with dates disabled", () => {
+  const disabledTools = collectToolRegistrationsWithDatesDisabled();
+
+  it("does not register the date and time-entry tools", () => {
+    for (const name of [
+      "update_task_due_date",
+      "get_time_entry",
+      "create_time_entry",
+      "update_time_entry",
+      "list_task_time_entries",
+    ]) {
+      expect(disabledTools.has(name)).toBe(false);
+    }
+  });
+
+  it("still registers the non-date tools", () => {
+    for (const name of ["whoami", "create_task", "update_task", "list_tasks"]) {
+      expect(disabledTools.has(name)).toBe(true);
+    }
+  });
+
+  it("no longer advertises startDate/dueDate on create_task and update_task", () => {
+    for (const name of ["create_task", "update_task"]) {
+      const shape = disabledTools.get(name)?.inputSchema.shape ?? {};
+      expect(Object.keys(shape)).not.toContain("startDate");
+      expect(Object.keys(shape)).not.toContain("dueDate");
+    }
+  });
+
+  it("still advertises startDate/dueDate on create_task and update_task when dates are enabled", () => {
+    for (const name of ["create_task", "update_task"]) {
+      const shape = toolRegistrations.get(name)?.inputSchema.shape ?? {};
+      expect(Object.keys(shape)).toContain("startDate");
+      expect(Object.keys(shape)).toContain("dueDate");
+    }
+  });
+
+  it("echoes a task's stored dates on update_task instead of treating them as a change", async () => {
+    const existingTask = {
+      id: "t1",
+      title: "old title",
+      description: "",
+      status: "to-do",
+      priority: "medium",
+      projectId: "p1",
+      position: 1,
+      startDate: "2026-08-01T00:00:00.000Z",
+      dueDate: "2026-08-10T00:00:00.000Z",
+    };
+    apiFetch.mockImplementation(
+      async (_input: RequestInfo | URL, init?: RequestInit) => {
+        if ((init?.method ?? "GET") === "GET") {
+          return Response.json(existingTask);
+        }
+        return Response.json({ ok: true });
+      },
+    );
+
+    const result = await callFrom(disabledTools, "update_task", {
+      taskId: "t1",
+      title: "new title",
+    });
+
+    expect(result.isError).toBeFalsy();
+    const putRequest = lastRequest();
+    expect(putRequest.method).toBe("PUT");
+    expect(putRequest.body).toMatchObject({
+      title: "new title",
+      startDate: existingTask.startDate,
+      dueDate: existingTask.dueDate,
+    });
   });
 });

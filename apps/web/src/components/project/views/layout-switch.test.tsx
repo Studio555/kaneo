@@ -6,11 +6,15 @@ const m = vi.hoisted(() => ({
   navigate: vi.fn(),
   setViewMode: vi.fn(),
   setTaskLayout: vi.fn(),
+  datesEnabled: true,
 }));
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => m.navigate }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
+}));
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => m.datesEnabled,
 }));
 vi.mock("@/store/user-preferences", () => ({
   useUserPreferencesStore: (selector: (state: typeof m) => unknown) =>
@@ -20,6 +24,7 @@ vi.mock("@/store/user-preferences", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  m.datesEnabled = true;
 });
 
 function renderSwitch() {
@@ -56,4 +61,14 @@ it("switches to list in place and navigates to other layouts", () => {
     to: "/dashboard/workspace/$workspaceId/project/$projectId/calendar",
     params: { workspaceId: "w", projectId: "p" },
   });
+});
+
+it("hides the calendar and gantt layouts when dates are disabled", () => {
+  m.datesEnabled = false;
+  renderSwitch();
+
+  expect(
+    screen.queryByRole("button", { name: "tasks:calendar.title" }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "tasks:view.gantt" })).toBeNull();
 });

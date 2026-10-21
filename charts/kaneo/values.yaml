@@ -100,6 +100,7 @@ kaneo:
     disableRegistration: false
     disablePasswordRegistration: false
     disableEmailOtpSignIn: false
+    disableDates: false
     # Database configuration
     database:
       # Use external PostgreSQL (set postgresql.enabled to false)

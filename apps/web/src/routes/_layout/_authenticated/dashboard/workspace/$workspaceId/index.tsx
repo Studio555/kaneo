@@ -15,6 +15,7 @@ import CreateTaskModal from "@/components/shared/modals/create-task-modal";
 import { Button } from "@/components/ui/button";
 import useGetProjects from "@/hooks/queries/project/use-get-projects";
 import useGetAssignedTasks from "@/hooks/queries/task/use-get-assigned-tasks";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useLocalDay } from "@/hooks/use-local-day";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { formatDate } from "@/lib/format";
@@ -28,6 +29,7 @@ export const Route = createFileRoute(
 function RouteComponent() {
   const { t } = useTranslation();
   const day = useLocalDay();
+  const datesEnabled = useDatesEnabled();
   const { workspaceId } = Route.useParams();
   const {
     data: assigned,
@@ -84,19 +86,23 @@ function RouteComponent() {
               )}
             </header>
 
-            <WeekStrip
-              tasks={assigned?.tasks ?? []}
-              workspaceId={workspaceId}
-            />
-
-            {assigned && assigned.total > assigned.tasks.length && (
-              <p className="text-muted-foreground text-xs">
-                {t("workspace:home.week.truncated", {
-                  shown: assigned.tasks.length,
-                  total: assigned.total,
-                })}
-              </p>
+            {datesEnabled && (
+              <WeekStrip
+                tasks={assigned?.tasks ?? []}
+                workspaceId={workspaceId}
+              />
             )}
+
+            {datesEnabled &&
+              assigned &&
+              assigned.total > assigned.tasks.length && (
+                <p className="text-muted-foreground text-xs">
+                  {t("workspace:home.week.truncated", {
+                    shown: assigned.tasks.length,
+                    total: assigned.total,
+                  })}
+                </p>
+              )}
 
             <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
               <div className="flex min-w-0 flex-col gap-9">

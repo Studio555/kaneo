@@ -13,6 +13,7 @@ import {
 } from "../../../database/schema";
 import { claimTaskNumber } from "../../../task/controllers/claim-task-numbers";
 import type { GitHubConfig } from "../config";
+import { reconcileIssueHierarchySafely } from "../services/issue-hierarchy";
 import { createExternalLink, findExternalLink } from "../services/link-manager";
 import { confirmedFieldLabels } from "../../sync/field-labels";
 import { findAllIntegrationsByRepo } from "../services/task-service";
@@ -181,6 +182,10 @@ export async function handleIssueOpened(
       { id: link.id, taskId: createdTask.id, integrationId: integration.id },
       integration.config,
     );
+
+    // An issue opened as a sub-issue, or given sub-issues, before this task
+    // existed sent its sub_issues webhook with nothing here to apply it to.
+    await reconcileIssueHierarchySafely(createdTask.id);
 
     const project = await db.query.projectTable.findFirst({
       where: eq(projectTable.id, projectId),

@@ -604,7 +604,24 @@
 				"title": "Delete account",
 				"sessionTooOld": "For security, sign out and sign back in before deleting your account."
 			},
-			"emailHint": "आप इसी पते से साइन इन करते हैं।"
+			"emailHint": "आप इसी पते से साइन इन करते हैं।",
+			"githubIdentity": {
+				"connect": "Connect GitHub",
+				"connectedAs": "Connected as {{login}}",
+				"connectedHint": "Assigning a task assigns you on the linked GitHub issue, and being assigned on GitHub assigns you the task.",
+				"connectFailed": "Couldn't connect your GitHub account",
+				"connecting": "Connecting...",
+				"disconnect": "Disconnect",
+				"disconnected": "GitHub account disconnected",
+				"disconnectFailed": "Couldn't disconnect your GitHub account",
+				"notConnected": "GitHub account not connected",
+				"notConnectedHint": "Connecting signs you in to GitHub once to confirm the account is yours. It does not change how you sign in to Kaneo.",
+				"onlyAccount": "GitHub is your only way to sign in, so it cannot be disconnected. Set a password first.",
+				"sectionSubtitle": "Connect your GitHub account so task assignments stay in step with the linked GitHub issues.",
+				"sectionTitle": "GitHub account",
+				"sessionTooOld": "For your security, sign in again before disconnecting your GitHub account.",
+				"unavailable": "This Kaneo instance has no GitHub sign-in configured, so accounts cannot be connected."
+			}
 		},
 		"notificationsPage": {
 			"pageTitle": "सूचनाएँ",
@@ -761,7 +778,8 @@
 			"priority": "प्राथमिकता",
 			"projectBackgrounds": "Project backgrounds",
 			"projectBackgroundsDescription": "प्रोजेक्ट द्वारा अपने बोर्ड के पीछे सेट की गई छवि दिखाएँ।",
-			"advancedTitle": "उन्नत"
+			"advancedTitle": "उन्नत",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "API कुंजियाँ",
@@ -1472,7 +1490,8 @@
 				"pr_opened": "पुल रिक्वेस्ट खोली गई",
 				"pr_merged": "पुल रिक्वेस्ट मर्ज हुई",
 				"issue_opened": "इश्यू खोला गया",
-				"issue_closed": "इश्यू बंद हुआ"
+				"issue_closed": "इश्यू बंद हुआ",
+				"issue_reopened": "Issue फिर से खुला"
 			},
 			"connectMore": "{{providers}} को भी ऑटोमेट करने के लिए उन्हें <link>एकीकरण</link> में कनेक्ट करें।",
 			"dontMove": "न ले जाएँ",
@@ -2357,6 +2376,31 @@
 		},
 		"shared": {
 			"autosave": "बदलाव अपने आप सहेजे जाते हैं"
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -2751,7 +2795,10 @@
 			"importedBy": "Imported by {{name}}",
 			"commentedOnForge": "{{forge}} पर टिप्पणी की"
 		},
-		"movedFromOtherProject": "moved task from another project to \"{{to}}\""
+		"movedFromOtherProject": "moved task from another project to \"{{to}}\"",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft"
 	},
 	"tasks": {
 		"title": "कार्य",
@@ -2777,7 +2824,8 @@
 			"list": "सूची",
 			"backlog": "बैकलॉग",
 			"gantt": "गैंट",
-			"heading": "व्यू"
+			"heading": "व्यू",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "कार्य चुनें",
@@ -2955,7 +3003,8 @@
 			"startDate": "शुरू की तारीख",
 			"noDate": "कोई तारीख नहीं",
 			"dates": "तारीखें",
-			"project": "प्रोजेक्ट"
+			"project": "प्रोजेक्ट",
+			"craft": "Craft"
 		},
 		"move": {
 			"title": "कार्य ले जाएँ",
@@ -2971,7 +3020,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "असाइन नहीं",
-				"updateError": "कार्य का सौंपा गया अपडेट करने में विफल"
+				"updateError": "कार्य का सौंपा गया अपडेट करने में विफल",
+				"searchPlaceholder": "लोगों को खोजें...",
+				"empty": "कोई व्यक्ति नहीं मिला"
 			},
 			"status": {
 				"updateError": "कार्य की स्थिति अपडेट करने में विफल"
@@ -3007,6 +3058,12 @@
 					"crimson": "किरमिज़ी"
 				},
 				"editLabels": "लेबल संपादित करें"
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft",
+				"searchPlaceholder": "Search crafts..."
 			}
 		},
 		"backlog": {
@@ -3027,6 +3084,26 @@
 				"dueThisWeek": "इस सप्ताह देय",
 				"dueNextWeek": "अगले सप्ताह देय",
 				"noDueDate": "कोई नियत तारीख नहीं"
+			},
+			"sectionActions": {
+				"add": "Section",
+				"addTooltip": "Add a backlog section",
+				"create": "Create section",
+				"created": "Section created",
+				"createError": "Failed to create section",
+				"createTitle": "New backlog section",
+				"delete": "Delete",
+				"deleted": "Section deleted",
+				"deleteDescription": "Only an empty section can be deleted. Move its tasks to another section first.",
+				"deleteError": "Failed to delete section",
+				"deleteTitle": "Delete the \"{{name}}\" section?",
+				"menu": "Section options",
+				"namePlaceholder": "Section name",
+				"rename": "Rename",
+				"renamed": "Section renamed",
+				"renameError": "Failed to rename section",
+				"renameTitle": "Rename section",
+				"save": "Save"
 			}
 		},
 		"sort": {
@@ -3039,7 +3116,8 @@
 				"priority": "प्राथमिकता",
 				"dueDate": "नियत तारीख",
 				"title": "शीर्षक",
-				"number": "कार्य संख्या"
+				"number": "कार्य संख्या",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -3049,7 +3127,8 @@
 				"priority": "प्राथमिकता",
 				"assignee": "सौंपा गया",
 				"dueDate": "नियत तारीख",
-				"labels": "लेबल"
+				"labels": "लेबल",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "में से कोई है",
@@ -3062,7 +3141,8 @@
 			},
 			"allCustomFieldValues": "All values",
 			"noCustomFieldValues": "No custom field values",
-			"noValuesUsedYet": "No values used yet"
+			"noValuesUsedYet": "No values used yet",
+			"allCrafts": "All crafts"
 		},
 		"gantt": {
 			"searchPlaceholder": "शेड्यूल किए गए टिकट खोजें...",
@@ -3105,7 +3185,10 @@
 		"listView": {
 			"addTask": "कार्य जोड़ें",
 			"archiveAllTooltip": "सभी पूर्ण कार्य संग्रहित करें",
-			"noTasks": "कोई कार्य नहीं"
+			"noTasks": "कोई कार्य नहीं",
+			"collapseSubtasks": "{{title}} के उप-कार्य छिपाएँ",
+			"expandSubtasks": "{{title}} के उप-कार्य दिखाएँ",
+			"subtaskLevel": "उप-कार्य, स्तर {{level}}"
 		},
 		"kanban": {
 			"addTask": "कार्य जोड़ें",
@@ -3294,6 +3377,16 @@
 			"startsOn": "शुरुआत: {{date}}",
 			"beforeStart": "{{date}} प्रारंभ तारीख से पहले है",
 			"afterDue": "{{date}} नियत तारीख के बाद है"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

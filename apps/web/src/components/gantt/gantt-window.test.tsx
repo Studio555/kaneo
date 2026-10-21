@@ -15,6 +15,11 @@ const m = vi.hoisted(() => ({
   update: vi.fn(),
   tasks: [] as Record<string, unknown>[],
 }));
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => true,
+  useDatesKnownDisabled: () => false,
+  useShowDueDates: () => true,
+}));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: { component: ComponentType }) => {
     m.component = options.component;
@@ -38,7 +43,7 @@ vi.mock("@/hooks/queries/task/use-get-tasks", () => ({
       name: "Project",
       slug: "PROJ",
       columns: [{ tasks: m.tasks }],
-      plannedTasks: [],
+      backlogSections: [],
     },
   }),
 }));
@@ -69,6 +74,7 @@ vi.mock("@/components/project/task-filters/use-task-filter-options", () => ({
   useTaskFilterOptions: () => ({
     members: [],
     labels: [],
+    crafts: [],
     customFields: [],
     usedCustomFieldValues: {},
   }),

@@ -237,9 +237,11 @@ describe.each(["github", "gitea"] as const)(
 
     it("checks for an existing PR link only once per integration", async () => {
       await linkIssue(fixture.intended.id);
-      const lookup = vi.spyOn(db.query.externalLinkTable, "findFirst");
+      // GitHub lists links (one per source repository); Gitea finds one.
+      const findFirst = vi.spyOn(db.query.externalLinkTable, "findFirst");
+      const findMany = vi.spyOn(db.query.externalLinkTable, "findMany");
       await open();
-      expect(lookup).toHaveBeenCalledTimes(1);
+      expect(findFirst.mock.calls.length + findMany.mock.calls.length).toBe(1);
       expect(await links()).toMatchObject([{ taskId: fixture.intended.id }]);
     });
 
@@ -470,7 +472,10 @@ describe.each(["github", "gitea"] as const)(
       });
       expect(await links()).toMatchObject([{ taskId: fixture.unrelated.id }]);
       expect((await task(fixture.intended.id))?.status).toBe("to-do");
-      expect((await task(fixture.unrelated.id))?.status).toBe("to-do");
+      // GitHub re-applies the open transition to the linked task on reopen.
+      expect((await task(fixture.unrelated.id))?.status).toBe(
+        provider === "github" ? "in-review" : "to-do",
+      );
     });
 
     it("moves a completed task back to review when a new PR opens", async () => {

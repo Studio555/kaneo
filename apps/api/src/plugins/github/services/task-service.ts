@@ -5,11 +5,17 @@ import {
   columnTable,
   integrationTable,
   taskTable,
+  userTable,
 } from "../../../database/schema";
 import { type GitHubConfig, hasVerifiedGitHubBinding } from "../config";
 import { extractTaskLinks } from "../utils/task-references";
 
 import type { IntegrationDatabase } from "./integration-task-scope";
+import { SYSTEM_BACKLOG_STATUSES } from "../../../task/validate-task-fields";
+import {
+  filterAssignableUsers,
+  getProjectWorkspaceId,
+} from "../../../utils/assert-assignable-user";
 
 export type TaskRow = InferSelectModel<typeof taskTable>;
 
@@ -17,7 +23,15 @@ export type UpdateTaskStatusResult =
   | { applied: false }
   | { applied: true; before: TaskRow; after: TaskRow };
 
-const NON_COLUMN_STATUSES = new Set(["planned", "archived"]);
+export type UpdateTaskAssigneeResult =
+  | { applied: false }
+  | {
+      applied: true;
+      before: TaskRow;
+      after: TaskRow;
+      /** The new assignee's display name, for the published event. */
+      assigneeName: string | undefined;
+    };
 
 export async function findTaskByNumber(
   projectId: string,
@@ -58,6 +72,17 @@ export async function findTaskById(
   });
 }
 
+/**
+ * The task plus its craft, which the issue labels need but the task row only
+ * references by id.
+ */
+export async function findTaskWithCraft(taskId: string) {
+  return db.query.taskTable.findFirst({
+    where: eq(taskTable.id, taskId),
+    with: { craft: true },
+  });
+}
+
 export async function updateTaskStatus(
   taskId: string,
   newStatus: string,
@@ -82,7 +107,9 @@ export async function updateTaskStatus(
 
   if (column) {
     columnId = column.id;
-  } else if (!NON_COLUMN_STATUSES.has(newStatus)) {
+  } else if (
+    !(SYSTEM_BACKLOG_STATUSES as readonly string[]).includes(newStatus)
+  ) {
     console.warn(
       `[GitHub] Skipping status update for task ${taskId}: column "${newStatus}" not found in project ${task.projectId}`,
     );
@@ -153,31 +180,133 @@ export type GitHubWebhookSource = {
   repository: { id: number };
 };
 
-export async function findAllIntegrationsByRepo(source: GitHubWebhookSource) {
-  const installationId = source.installation?.id;
-  const repositoryId = source.repository.id;
-  if (
-    !Number.isSafeInteger(installationId) ||
-    !Number.isSafeInteger(repositoryId)
-  )
-    return [];
-  const integrations = await db.query.integrationTable.findMany({
+export async function findAllActiveGithubIntegrations() {
+  return db.query.integrationTable.findMany({
     where: and(
       eq(integrationTable.type, "github"),
       eq(integrationTable.isActive, true),
     ),
     with: { project: true },
   });
+}
+
+/**
+ * Verified integrations under the webhook's installation, whatever repository
+ * each is bound to. Pull requests may reach a task through its issue from any
+ * repository the App sees, but never across installations.
+ */
+export async function findAllIntegrationsByInstallation(source: {
+  installation?: { id: number };
+}) {
+  const installationId = source.installation?.id;
+  if (!Number.isSafeInteger(installationId)) return [];
+  const integrations = await findAllActiveGithubIntegrations();
   return integrations.filter((integration) => {
     try {
       const config = JSON.parse(integration.config) as GitHubConfig;
       return (
         hasVerifiedGitHubBinding(config) &&
-        config.installationId === installationId &&
-        config.repositoryId === repositoryId
+        config.installationId === installationId
       );
     } catch {
       return false;
     }
   });
+}
+
+export async function findAllIntegrationsByRepo(source: GitHubWebhookSource) {
+  const repositoryId = source.repository.id;
+  if (!Number.isSafeInteger(repositoryId)) return [];
+  const integrations = await findAllIntegrationsByInstallation(source);
+  return integrations.filter(
+    (integration) =>
+      (JSON.parse(integration.config) as GitHubConfig).repositoryId ===
+      repositoryId,
+  );
+}
+
+/**
+ * Verified integrations bound to `owner/repo`, for lookups that start from an
+ * issue reference rather than a webhook payload.
+ */
+export async function findAllIntegrationsByRepoName(
+  owner: string,
+  repo: string,
+) {
+  const integrations = await findAllActiveGithubIntegrations();
+  return integrations.filter((integration) => {
+    try {
+      const config = JSON.parse(integration.config) as GitHubConfig;
+      return (
+        hasVerifiedGitHubBinding(config) &&
+        config.repositoryOwner.toLowerCase() === owner.toLowerCase() &&
+        config.repositoryName.toLowerCase() === repo.toLowerCase()
+      );
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * Sets a task's assignee on behalf of an inbound forge event, or clears it
+ * when `assigneeId` is null.
+ *
+ * This lives beside the other webhook-facing task writes rather than calling
+ * the task controller, because the plugin layer importing a controller closes
+ * a require cycle through the event registry. It therefore repeats the
+ * controller's workspace-membership check — which is the boundary that
+ * matters: a GitHub assignee who is not a member of the project's workspace
+ * must not end up on the task, whatever the payload says.
+ *
+ * Returns `applied: false` when there is nothing to do or the assignee was
+ * refused, so the caller knows not to publish an event.
+ */
+export async function updateTaskAssignee(
+  taskId: string,
+  assigneeId: string | null,
+): Promise<UpdateTaskAssigneeResult> {
+  const task = await db.query.taskTable.findFirst({
+    where: eq(taskTable.id, taskId),
+  });
+
+  if (!task || task.userId === assigneeId) {
+    return { applied: false };
+  }
+
+  let assigneeName: string | undefined;
+
+  if (assigneeId) {
+    const workspaceId = await getProjectWorkspaceId(task.projectId);
+    const assignable = await filterAssignableUsers([assigneeId], workspaceId);
+
+    if (!assignable.has(assigneeId)) {
+      console.warn(
+        `[GitHub] Skipping assignee update for task ${taskId}: user ${assigneeId} is not a member of workspace ${workspaceId}`,
+      );
+      return { applied: false };
+    }
+
+    const [assignee] = await db
+      .select({ name: userTable.name })
+      .from(userTable)
+      .where(eq(userTable.id, assigneeId))
+      .limit(1);
+    assigneeName = assignee?.name;
+  }
+
+  await db
+    .update(taskTable)
+    .set({ userId: assigneeId })
+    .where(eq(taskTable.id, taskId));
+
+  const after = await db.query.taskTable.findFirst({
+    where: eq(taskTable.id, taskId),
+  });
+
+  if (!after) {
+    return { applied: false };
+  }
+
+  return { applied: true, before: task, after, assigneeName };
 }

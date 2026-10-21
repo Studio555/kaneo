@@ -599,7 +599,24 @@
 				"error": "删除账户失败",
 				"sessionTooOld": "为安全起见，请先退出并重新登录，之后才能删除账户。"
 			},
-			"emailHint": "你使用此地址登录。"
+			"emailHint": "你使用此地址登录。",
+			"githubIdentity": {
+				"connect": "Connect GitHub",
+				"connectedAs": "Connected as {{login}}",
+				"connectedHint": "Assigning a task assigns you on the linked GitHub issue, and being assigned on GitHub assigns you the task.",
+				"connectFailed": "Couldn't connect your GitHub account",
+				"connecting": "Connecting...",
+				"disconnect": "Disconnect",
+				"disconnected": "GitHub account disconnected",
+				"disconnectFailed": "Couldn't disconnect your GitHub account",
+				"notConnected": "GitHub account not connected",
+				"notConnectedHint": "Connecting signs you in to GitHub once to confirm the account is yours. It does not change how you sign in to Kaneo.",
+				"onlyAccount": "GitHub is your only way to sign in, so it cannot be disconnected. Set a password first.",
+				"sectionSubtitle": "Connect your GitHub account so task assignments stay in step with the linked GitHub issues.",
+				"sectionTitle": "GitHub account",
+				"sessionTooOld": "For your security, sign in again before disconnecting your GitHub account.",
+				"unavailable": "This Kaneo instance has no GitHub sign-in configured, so accounts cannot be connected."
+			}
 		},
 		"notificationsPage": {
 			"pageTitle": "通知",
@@ -753,7 +770,8 @@
 			"priority": "优先级",
 			"projectBackgrounds": "项目背景",
 			"projectBackgroundsDescription": "显示项目为看板设置的背景图片。",
-			"advancedTitle": "高级"
+			"advancedTitle": "高级",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "API 密钥",
@@ -1481,7 +1499,8 @@
 				"pr_opened": "PR 已开启",
 				"pr_merged": "PR 已合并",
 				"issue_opened": "Issue 已开启",
-				"issue_closed": "Issue 已关闭"
+				"issue_closed": "Issue 已关闭",
+				"issue_reopened": "Issue 已重新开启"
 			},
 			"connectMore": "在<link>集成</link>中连接 {{providers}}，也可以为它们设置自动化。",
 			"dontMove": "不移动",
@@ -2315,6 +2334,31 @@
 		},
 		"shared": {
 			"autosave": "更改会自动保存"
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -2704,7 +2748,10 @@
 			"importedBy": "由 {{name}} 导入",
 			"commentedOnForge": "在 {{forge}} 上评论"
 		},
-		"movedFromOtherProject": "将任务从其它项目移动到「{{to}}」"
+		"movedFromOtherProject": "将任务从其它项目移动到「{{to}}」",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft"
 	},
 	"tasks": {
 		"title": "任务",
@@ -2730,7 +2777,8 @@
 			"list": "列表",
 			"backlog": "待办",
 			"gantt": "甘特图",
-			"heading": "视图"
+			"heading": "视图",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "选择任务",
@@ -2908,7 +2956,8 @@
 			"startDate": "开始日期",
 			"noDate": "无日期",
 			"dates": "日期",
-			"project": "项目"
+			"project": "项目",
+			"craft": "Craft"
 		},
 		"move": {
 			"title": "移动任务",
@@ -2924,7 +2973,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "未指派",
-				"updateError": "更新任务负责人失败"
+				"updateError": "更新任务负责人失败",
+				"searchPlaceholder": "搜索人员...",
+				"empty": "未找到人员"
 			},
 			"status": {
 				"updateError": "更新任务状态失败"
@@ -2960,6 +3011,12 @@
 					"crimson": "深红"
 				},
 				"editLabels": "编辑标签"
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft",
+				"searchPlaceholder": "Search crafts..."
 			}
 		},
 		"backlog": {
@@ -2980,6 +3037,26 @@
 				"dueThisWeek": "本周到期",
 				"dueNextWeek": "下周到期",
 				"noDueDate": "无截止日期"
+			},
+			"sectionActions": {
+				"add": "Section",
+				"addTooltip": "Add a backlog section",
+				"create": "Create section",
+				"created": "Section created",
+				"createError": "Failed to create section",
+				"createTitle": "New backlog section",
+				"delete": "Delete",
+				"deleted": "Section deleted",
+				"deleteDescription": "Only an empty section can be deleted. Move its tasks to another section first.",
+				"deleteError": "Failed to delete section",
+				"deleteTitle": "Delete the \"{{name}}\" section?",
+				"menu": "Section options",
+				"namePlaceholder": "Section name",
+				"rename": "Rename",
+				"renamed": "Section renamed",
+				"renameError": "Failed to rename section",
+				"renameTitle": "Rename section",
+				"save": "Save"
 			}
 		},
 		"sort": {
@@ -2992,7 +3069,8 @@
 				"priority": "优先级",
 				"dueDate": "截止日期",
 				"title": "标题",
-				"number": "任务编号"
+				"number": "任务编号",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -3002,7 +3080,8 @@
 				"priority": "优先级",
 				"assignee": "负责人",
 				"dueDate": "截止日期",
-				"labels": "标签"
+				"labels": "标签",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "为以下任一",
@@ -3015,7 +3094,8 @@
 			},
 			"allCustomFieldValues": "所有值",
 			"noCustomFieldValues": "没有自定义字段的值",
-			"noValuesUsedYet": "还没有使用过任何值"
+			"noValuesUsedYet": "还没有使用过任何值",
+			"allCrafts": "All crafts"
 		},
 		"calendar": {
 			"pageTitle": "{{name}} – 日历",
@@ -3071,7 +3151,10 @@
 		"listView": {
 			"addTask": "添加任务",
 			"archiveAllTooltip": "归档所有已完成任务",
-			"noTasks": "无任务"
+			"noTasks": "无任务",
+			"collapseSubtasks": "隐藏 {{title}} 的子任务",
+			"expandSubtasks": "显示 {{title}} 的子任务",
+			"subtaskLevel": "子任务，第 {{level}} 层"
 		},
 		"kanban": {
 			"addTask": "添加任务",
@@ -3237,6 +3320,16 @@
 			"startsOn": "开始于 {{date}}",
 			"beforeStart": "{{date}} 早于开始日期",
 			"afterDue": "{{date}} 晚于截止日期"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

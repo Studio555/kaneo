@@ -1,5 +1,7 @@
 import { withIntegrationLink } from "../services/with-integration-link";
 import { activityTable } from "../../../database/schema";
+import { handleAgentResultComment } from "../../slack-app/agent-result";
+import { createSlackClient } from "../../slack-app/client";
 import { findExternalLink } from "../services/link-manager";
 import { findAllIntegrationsByRepo } from "../services/task-service";
 
@@ -29,13 +31,33 @@ type IssueCommentCreatedPayload = {
 export async function handleIssueCommentCreated(
   payload: IssueCommentCreatedPayload,
 ) {
-  const { issue, comment } = payload;
+  const { issue, comment, repository } = payload;
 
   if (payload.action !== "created") {
     return;
   }
 
   const username = comment.user?.login ?? "";
+
+  // The agent-fix workflow reports through a bot comment, so this has to look
+  // before bot comments are dropped below.
+  const botToken = process.env.SLACK_BOT_TOKEN;
+  if (botToken) {
+    const handled = await handleAgentResultComment(
+      {
+        body: comment.body,
+        authorLogin: username,
+        repository: { owner: repository.owner.login, name: repository.name },
+        issueNumber: issue.number,
+      },
+      { client: createSlackClient(botToken) },
+    );
+
+    if (handled) {
+      return;
+    }
+  }
+
   if (username.endsWith("[bot]")) {
     return;
   }

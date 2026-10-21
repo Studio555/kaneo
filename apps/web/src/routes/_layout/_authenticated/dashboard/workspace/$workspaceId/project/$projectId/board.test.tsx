@@ -7,8 +7,7 @@ const m = vi.hoisted(() => ({
     id: "p",
     name: "Project",
     columns: [],
-    plannedTasks: [],
-    archivedTasks: [],
+    backlogSections: [],
   } as unknown,
   retry: vi.fn(),
 }));
@@ -22,6 +21,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: { type: "3rdParty", init: vi.fn() },
 }));
 vi.mock("@/hooks/queries/task/use-get-tasks", () => ({
   useGetTasks: () => ({

@@ -4,8 +4,10 @@ import { scopeTasks } from "./scope-tasks";
 
 const project = {
   columns: [{ tasks: [{ id: "board" }] }],
-  plannedTasks: [{ id: "planned" }],
-  archivedTasks: [{ id: "archived" }],
+  backlogSections: [
+    { slug: "planned", tasks: [{ id: "planned" }] },
+    { slug: "archived", tasks: [{ id: "archived" }] },
+  ],
 } as unknown as ProjectWithTasks;
 
 const ids = (scope: Parameters<typeof scopeTasks>[1]) =>

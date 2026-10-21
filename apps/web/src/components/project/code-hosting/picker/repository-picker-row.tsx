@@ -1,5 +1,5 @@
 import { CheckIcon, GlobeIcon, LockIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 type RepositoryPickerRowProps = {
@@ -20,10 +20,17 @@ export function RepositoryPickerRow({
   onConfirm,
 }: RepositoryPickerRowProps) {
   const Icon = isPrivate ? LockIcon : GlobeIcon;
+  const ref = useRef<HTMLButtonElement>(null);
+
+  // Keeps a keyboard-moved selection in view.
+  useEffect(() => {
+    if (selected) ref.current?.scrollIntoView?.({ block: "nearest" });
+  }, [selected]);
 
   return (
     <li>
       <button
+        ref={ref}
         type="button"
         aria-pressed={selected}
         onClick={onSelect}

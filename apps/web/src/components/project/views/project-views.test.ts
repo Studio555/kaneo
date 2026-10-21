@@ -17,3 +17,8 @@ it("returns to the last task layout, falling back to board or list", () => {
   expect(tasksViewFor("gantt", "board")).toBe("gantt");
   expect(tasksViewFor("board", "list")).toBe("list");
 });
+
+it("skips calendar and gantt when dates are disabled", () => {
+  expect(tasksViewFor("calendar", "list", false)).toBe("list");
+  expect(tasksViewFor("gantt", "board", false)).toBe("board");
+});

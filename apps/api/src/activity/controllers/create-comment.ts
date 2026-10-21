@@ -22,7 +22,8 @@ async function createComment(
     .values({
       taskId,
       type: "comment",
-      userId,
+      // Empty for a comment with no Kaneo author (see update-task-title).
+      userId: userId || null,
       content,
       ...(external
         ? {
@@ -58,7 +59,7 @@ async function createComment(
   if (task) {
     await publishEvent("comment.created", {
       ...activity,
-      comment: `**${user?.name}** commented:\n> ${content}`,
+      comment: `**${user?.name ?? external?.userName}** commented:\n> ${content}`,
       projectId: task.projectId,
     });
   }

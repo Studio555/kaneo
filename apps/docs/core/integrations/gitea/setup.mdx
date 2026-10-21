@@ -5,6 +5,8 @@ description: Verify repository access, configure webhooks, and import existing i
 
 Connect a Kaneo project to one Gitea repository to sync issues and respond to branch and pull-request activity. You need permission to manage the Kaneo project, a Gitea token that can read the account and repository and write issues, and repository admin access to create its webhook.
 
+Backlog tasks stay inside Kaneo: a planned task opens its Gitea issue only once it moves into a board column.
+
 ## Connect the repository
 
 1. Create a personal access token in Gitea under **Settings → Applications**. Give it the scopes needed to read your user and repository and write issues. The token’s account must also have write access to the target repository.

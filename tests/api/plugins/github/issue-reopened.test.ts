@@ -89,12 +89,28 @@ it.each(["null", "[]", "42", '"text"', "invalid JSON"])(
     expect(m.status).toHaveBeenCalledTimes(2);
   },
 );
-it("retains the Kaneo-origin skip rule for valid metadata", async () => {
+it("syncs a reopen on an issue Kaneo created", async () => {
   m.find.mockResolvedValue([{ id: "integration-1" }]);
   m.links.mockResolvedValue({
     id: "first",
     taskId: "task",
     metadata: '{"createdFrom":"kaneo"}',
+  });
+  await handleIssueReopened(payload);
+  expect(m.update).toHaveBeenCalledWith(
+    "first",
+    { metadata: expect.objectContaining({ state: "open" }) },
+    expect.anything(),
+  );
+  expect(m.status).toHaveBeenCalledTimes(1);
+});
+
+it("skips an issue already recorded as open", async () => {
+  m.find.mockResolvedValue([{ id: "integration-1" }]);
+  m.links.mockResolvedValue({
+    id: "first",
+    taskId: "task",
+    metadata: '{"createdFrom":"kaneo","state":"open"}',
   });
   await handleIssueReopened(payload);
   expect(m.update).not.toHaveBeenCalled();

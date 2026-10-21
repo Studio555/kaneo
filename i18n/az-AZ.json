@@ -604,7 +604,24 @@
 				"error": "Hesabı silmək alınmadı",
 				"sessionTooOld": "Təhlükəsizlik üçün hesabınızı silməzdən əvvəl çıxış edib yenidən daxil olun."
 			},
-			"emailHint": "Bu ünvanla daxil olursunuz."
+			"emailHint": "Bu ünvanla daxil olursunuz.",
+			"githubIdentity": {
+				"connect": "Connect GitHub",
+				"connectedAs": "Connected as {{login}}",
+				"connectedHint": "Assigning a task assigns you on the linked GitHub issue, and being assigned on GitHub assigns you the task.",
+				"connectFailed": "Couldn't connect your GitHub account",
+				"connecting": "Connecting...",
+				"disconnect": "Disconnect",
+				"disconnected": "GitHub account disconnected",
+				"disconnectFailed": "Couldn't disconnect your GitHub account",
+				"notConnected": "GitHub account not connected",
+				"notConnectedHint": "Connecting signs you in to GitHub once to confirm the account is yours. It does not change how you sign in to Kaneo.",
+				"onlyAccount": "GitHub is your only way to sign in, so it cannot be disconnected. Set a password first.",
+				"sectionSubtitle": "Connect your GitHub account so task assignments stay in step with the linked GitHub issues.",
+				"sectionTitle": "GitHub account",
+				"sessionTooOld": "For your security, sign in again before disconnecting your GitHub account.",
+				"unavailable": "This Kaneo instance has no GitHub sign-in configured, so accounts cannot be connected."
+			}
 		},
 		"notificationsPage": {
 			"pageTitle": "Bildirişlər",
@@ -761,7 +778,8 @@
 			"priority": "Prioritet",
 			"projectBackgrounds": "Project backgrounds",
 			"projectBackgroundsDescription": "Layihənin öz lövhəsi üçün təyin etdiyi arxa fon şəklini göstər.",
-			"advancedTitle": "Qabaqcıl"
+			"advancedTitle": "Qabaqcıl",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "API açarları",
@@ -1490,7 +1508,8 @@
 				"pr_opened": "Birləşdirmə sorğusu açıldı",
 				"pr_merged": "Birləşdirmə sorğusu birləşdirildi",
 				"issue_opened": "Məsələ açıldı",
-				"issue_closed": "Məsələ bağlandı"
+				"issue_closed": "Məsələ bağlandı",
+				"issue_reopened": "Issue Reopened"
 			},
 			"connectMore": "{{providers}} üçün də avtomatlaşdırma istəyirsinizsə, onları <link>İnteqrasiyalar</link> bölməsində qoşun.",
 			"dontMove": "Köçürülməsin",
@@ -2357,6 +2376,31 @@
 		},
 		"shared": {
 			"autosave": "Dəyişikliklər avtomatik yadda saxlanılır"
+		},
+		"workspaceCrafts": {
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"colorLabel": "Color",
+			"createCraft": "Create Craft",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"createError": "Failed to create craft",
+			"createSuccess": "Craft created",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteCraft": "Delete",
+			"deleteError": "Failed to delete craft",
+			"deleteSuccess": "Craft deleted",
+			"editCraft": "Edit Craft",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"nameRequired": "Craft name is required",
+			"pageTitle": "Craft Settings",
+			"saveCraft": "Save",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"title": "Crafts",
+			"updateError": "Failed to update craft",
+			"updateSuccess": "Craft updated"
 		}
 	},
 	"navigation": {
@@ -2751,7 +2795,10 @@
 			"importedBy": "Imported by {{name}}",
 			"commentedOnForge": "{{forge}}-da şərh yazdı"
 		},
-		"movedFromOtherProject": "moved task from another project to \"{{to}}\""
+		"movedFromOtherProject": "moved task from another project to \"{{to}}\"",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"clearedCraft": "cleared the craft",
+		"setCraft": "set craft to {{to}}"
 	},
 	"tasks": {
 		"title": "Tapşırıqlar",
@@ -2777,7 +2824,8 @@
 			"list": "Siyahı",
 			"backlog": "Gözləyən tapşırıqlar",
 			"gantt": "Qant",
-			"heading": "Görünüş"
+			"heading": "Görünüş",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Tapşırıq seç",
@@ -2955,7 +3003,8 @@
 			"startDate": "Başlama tarixi",
 			"noDate": "Tarix yoxdur",
 			"dates": "Tarixlər",
-			"project": "Layihə"
+			"project": "Layihə",
+			"craft": "Craft"
 		},
 		"move": {
 			"title": "Tapşırığı köçür",
@@ -2971,7 +3020,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Təyin olunmayıb",
-				"updateError": "Tapşırığın icraçısını yeniləmək alınmadı"
+				"updateError": "Tapşırığın icraçısını yeniləmək alınmadı",
+				"empty": "No people found",
+				"searchPlaceholder": "Search people..."
 			},
 			"status": {
 				"updateError": "Tapşırığın vəziyyətini yeniləmək alınmadı"
@@ -3007,6 +3058,12 @@
 					"crimson": "Tünd qırmızı"
 				},
 				"editLabels": "Etiketləri redaktə et"
+			},
+			"craft": {
+				"empty": "No crafts defined for this workspace yet.",
+				"none": "No craft",
+				"searchPlaceholder": "Search crafts...",
+				"updateError": "Failed to update task craft"
 			}
 		},
 		"backlog": {
@@ -3027,6 +3084,26 @@
 				"dueThisWeek": "Son tarixi bu həftə olan",
 				"dueNextWeek": "Son tarixi gələn həftə olan",
 				"noDueDate": "Son tarix yoxdur"
+			},
+			"sectionActions": {
+				"add": "Section",
+				"addTooltip": "Add a backlog section",
+				"create": "Create section",
+				"created": "Section created",
+				"createError": "Failed to create section",
+				"createTitle": "New backlog section",
+				"delete": "Delete",
+				"deleted": "Section deleted",
+				"deleteDescription": "Only an empty section can be deleted. Move its tasks to another section first.",
+				"deleteError": "Failed to delete section",
+				"deleteTitle": "Delete the \"{{name}}\" section?",
+				"menu": "Section options",
+				"namePlaceholder": "Section name",
+				"rename": "Rename",
+				"renamed": "Section renamed",
+				"renameError": "Failed to rename section",
+				"renameTitle": "Rename section",
+				"save": "Save"
 			}
 		},
 		"sort": {
@@ -3039,7 +3116,8 @@
 				"priority": "Prioritet",
 				"dueDate": "Son tarix",
 				"title": "Başlıq",
-				"number": "Tapşırıq nömrəsi"
+				"number": "Tapşırıq nömrəsi",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -3049,7 +3127,8 @@
 				"priority": "Prioritet",
 				"assignee": "İcraçı",
 				"dueDate": "Son tarix",
-				"labels": "Etiketlər"
+				"labels": "Etiketlər",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "Bunlardan biridir",
@@ -3062,7 +3141,8 @@
 			},
 			"allCustomFieldValues": "All values",
 			"noCustomFieldValues": "No custom field values",
-			"noValuesUsedYet": "No values used yet"
+			"noValuesUsedYet": "No values used yet",
+			"allCrafts": "All crafts"
 		},
 		"calendar": {
 			"pageTitle": "{{name}} – Təqvim",
@@ -3114,7 +3194,10 @@
 		"listView": {
 			"addTask": "Tapşırıq əlavə et",
 			"archiveAllTooltip": "Bütün tamamlanmış tapşırıqları arxivlə",
-			"noTasks": "Tapşırıq yoxdur"
+			"noTasks": "Tapşırıq yoxdur",
+			"collapseSubtasks": "Hide subtasks of {{title}}",
+			"expandSubtasks": "Show subtasks of {{title}}",
+			"subtaskLevel": "Subtask, level {{level}}"
 		},
 		"kanban": {
 			"addTask": "Tapşırıq əlavə et",
@@ -3294,6 +3377,16 @@
 			"startsOn": "Başlayır: {{date}}",
 			"beforeStart": "{{date}} başlama tarixindən əvvəldir",
 			"afterDue": "{{date}} son tarixdən sonradır"
+		},
+		"crafts": {
+			"empty": "No crafts available",
+			"label": "Crafts"
+		},
+		"table": {
+			"addLabel": "Add label",
+			"columns": {
+				"name": "Name"
+			}
 		}
 	},
 	"invitations": {

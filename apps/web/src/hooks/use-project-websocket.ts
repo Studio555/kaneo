@@ -20,6 +20,7 @@ import {
   hasSyncTaskSample,
   patchSyncTaskTitles,
 } from "@/lib/patch-sync-task-titles";
+import { isPerTaskRelationQuery } from "@/lib/relation-query-keys";
 
 export function getWsUrl(projectId: string) {
   const base = getApiUrl("ws");
@@ -95,6 +96,20 @@ export function useProjectWebSocket(projectId: string) {
         return;
       }
 
+      // The list view reads relations per project, which the per-task keys
+      // below miss. Only events that can change the project's edge set qualify;
+      // the id-less `task-relation.refresh` (status changes) leaves it alone.
+      if (
+        (message.type === "TASK_RELATION_UPDATED" &&
+          (message.sourceTaskId || message.targetTaskId)) ||
+        message.type === "TASK_DELETED" ||
+        message.type === "TASK_MOVED"
+      ) {
+        queryClient.invalidateQueries({
+          queryKey: ["task-relations", "project", projectId],
+        });
+      }
+
       if (message.type === "TASK_RELATION_UPDATED") {
         if (message.sourceTaskId) {
           queryClient.invalidateQueries({
@@ -113,8 +128,10 @@ export function useProjectWebSocket(projectId: string) {
           });
         }
         if (!message.sourceTaskId && !message.targetTaskId) {
+          // Per-task responses embed linked task status; the project query is
+          // edges only, so a prefix match would refetch it needlessly.
           queryClient.invalidateQueries({
-            queryKey: ["task-relations"],
+            predicate: isPerTaskRelationQuery,
           });
         }
       } else {
@@ -340,14 +357,15 @@ export function useProjectWebSocket(projectId: string) {
               ...board.columns.flatMap((column) =>
                 column.tasks.map((task) => task.id),
               ),
-              ...board.plannedTasks.map((task) => task.id),
-              ...board.archivedTasks.map((task) => task.id),
+              ...board.backlogSections.flatMap((section) =>
+                section.tasks.map((task) => task.id),
+              ),
             ]);
-            const statuses = new Set([
-              "planned",
-              "archived",
-              ...board.columns.map((column) => column.slug),
-            ]);
+            const statuses = new Set(
+              [...board.columns, ...board.backlogSections].map(
+                (bucket) => bucket.slug,
+              ),
+            );
             if (
               message.tasks.some(
                 (change: { id: string; status?: string }) =>

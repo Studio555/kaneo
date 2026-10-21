@@ -698,6 +698,7 @@ const taskUpdateEvents = [
   "task.deleted",
   "task.status_changed",
   "task.priority_changed",
+  "task.craft_changed",
   "task.unassigned",
   "task.assignee_changed",
   "task.due_date_changed",
@@ -741,6 +742,38 @@ subscribeToEvent<{
     initiatorId,
   );
   refreshParentBoards(await getSubtaskParentProjects([taskId]), toProjectId);
+});
+
+// A craft rename or delete changes what every board carrying it displays,
+// without changing any task row, so the boards of the affected projects have
+// to be invalidated for everyone watching them.
+function broadcastCraftChangeToProjects(
+  targets: Array<{ taskId: string; projectId: string }> | undefined,
+  initiatorId?: string,
+) {
+  if (!targets || targets.length === 0) return;
+
+  for (const projectId of new Set(targets.map((target) => target.projectId))) {
+    broadcastToProject(
+      projectId,
+      { type: "TASK_UPDATED", projectId, taskId: "" },
+      initiatorId,
+    );
+  }
+}
+
+subscribeToEvent<{
+  initiatorId?: string;
+  targets: Array<{ taskId: string; projectId: string }>;
+}>("craft.renamed", async (data) => {
+  broadcastCraftChangeToProjects(data.targets, data.initiatorId);
+});
+
+subscribeToEvent<{
+  initiatorId?: string;
+  targets: Array<{ taskId: string; projectId: string }>;
+}>("craft.deleted", async (data) => {
+  broadcastCraftChangeToProjects(data.targets, data.initiatorId);
 });
 
 subscribeToEvent<{

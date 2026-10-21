@@ -2,6 +2,7 @@ import { ArrowUpRightIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RepositoryPickerDialog } from "@/components/project/code-hosting/picker/repository-picker-dialog";
+import { repositoryPickerKeyDown } from "@/components/project/code-hosting/picker/repository-picker-keys";
 import { RepositoryPickerSearch } from "@/components/project/code-hosting/picker/repository-picker-search";
 import { GithubRepositoryResults } from "@/components/project/github-integration/github-repository-results";
 import { useGithubAppInfo } from "@/components/project/github-integration/use-github-app-info";
@@ -70,6 +71,14 @@ export function GithubRepositoryPicker({
           value={term}
           placeholder={t("settings:repositoryBrowser.searchPlaceholder")}
           onChange={setTerm}
+          onKeyDown={repositoryPickerKeyDown(
+            results.repositories,
+            results.repositories.findIndex(
+              (repository) => repository.full_name === chosen?.full_name,
+            ),
+            setSelected,
+            () => use(chosen),
+          )}
         />
       }
       footerStart={

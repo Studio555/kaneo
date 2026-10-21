@@ -37,6 +37,8 @@ type TaskLabelsPopoverProps = {
   task: Task;
   workspaceId: string;
   children: React.ReactNode;
+  /** Opens on mount, for callers that mount this lazily on first interaction. */
+  defaultOpen?: boolean;
 };
 
 function ColorDot({ color }: { color: string }) {
@@ -52,8 +54,9 @@ export default function TaskLabelsPopover({
   task,
   workspaceId,
   children,
+  defaultOpen = false,
 }: TaskLabelsPopoverProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const { canUpdateLabels } = useWorkspacePermission();
 
   if (!canUpdateLabels()) return <>{children}</>;

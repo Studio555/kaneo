@@ -4,6 +4,7 @@ import { replayDeferredIssueEdits } from "../plugins/github/services/deferred-is
 import { replayDeferredLabelFields } from "../plugins/sync/replay-deferred-label-fields";
 import * as Sentry from "@sentry/node";
 import { Cron } from "croner";
+import { areDatesEnabled } from "../utils/dates-enabled";
 import { checkDueDateReminders } from "./due-date-reminders";
 import { checkProjectWebhookReminders } from "./project-webhook-reminders";
 import { reconcileWorkspaceSeats } from "./seat-reconciliation";
@@ -48,57 +49,84 @@ function withCheckIn<T>(name: string, fn: () => Promise<T>) {
   };
 }
 
+type ScheduledJobDefinition = {
+  name: string;
+  pattern: string;
+  options?: { protect?: boolean };
+  run: () => Promise<unknown>;
+};
+
+// Exported so the scheduling policy can be asserted without constructing real
+// cron timers: which jobs run is a decision; `new Cron` is only how it is carried out.
+export function getScheduledJobDefinitions(): ScheduledJobDefinition[] {
+  const definitions: ScheduledJobDefinition[] = [
+    {
+      name: "deferred-issue-edits",
+      pattern: "* * * * *",
+      run: replayDeferredIssueEdits,
+    },
+    {
+      name: "deferred-label-fields",
+      pattern: "* * * * *",
+      options: { protect: true },
+      run: replayDeferredLabelFields,
+    },
+    {
+      name: "storage-cleanup",
+      pattern: "*/5 * * * *",
+      options: { protect: true },
+      run: retryStorageCleanup,
+    },
+    {
+      name: "draft-upload-cleanup",
+      pattern: "31 * * * *",
+      options: { protect: true },
+      run: cleanupDraftUploads,
+    },
+  ];
+  // Both reminder jobs exist only to deliver due-date reminders — the webhook
+  // one does no other work — so an instance with dates disabled registers
+  // neither. Leaving the webhook job running would keep posting due-date
+  // reminders to customers' endpoints (and writing dedupe rows) with no way
+  // to turn it off, because the UI toggle for it is hidden while disabled.
+  if (areDatesEnabled()) {
+    definitions.push(
+      {
+        name: "due-date-reminders",
+        pattern: "*/5 * * * *",
+        run: checkDueDateReminders,
+      },
+      {
+        name: "project-webhook-reminders",
+        pattern: "*/5 * * * *",
+        run: checkProjectWebhookReminders,
+      },
+    );
+  }
+  definitions.push(
+    {
+      name: "seat-reconciliation",
+      pattern: "17 * * * *",
+      run: reconcileWorkspaceSeats,
+    },
+    {
+      name: "trial-reminders",
+      pattern: "23 * * * *",
+      run: checkTrialReminders,
+    },
+  );
+  return definitions;
+}
+
 export function initializeScheduler(): void {
-  jobs.push(
-    new Cron(
-      "* * * * *",
-      withCheckIn("deferred-issue-edits", replayDeferredIssueEdits),
-    ),
-  );
-  jobs.push(
-    new Cron(
-      "* * * * *",
-      { protect: true },
-      withCheckIn("deferred-label-fields", replayDeferredLabelFields),
-    ),
-  );
-  jobs.push(
-    new Cron(
-      "*/5 * * * *",
-      { protect: true },
-      withCheckIn("storage-cleanup", retryStorageCleanup),
-    ),
-  );
-  jobs.push(
-    new Cron(
-      "31 * * * *",
-      { protect: true },
-      withCheckIn("draft-upload-cleanup", cleanupDraftUploads),
-    ),
-  );
-  jobs.push(
-    new Cron(
-      "*/5 * * * *",
-      withCheckIn("due-date-reminders", checkDueDateReminders),
-    ),
-  );
-  jobs.push(
-    new Cron(
-      "*/5 * * * *",
-      withCheckIn("project-webhook-reminders", checkProjectWebhookReminders),
-    ),
-  );
-  jobs.push(
-    new Cron(
-      "17 * * * *",
-      withCheckIn("seat-reconciliation", reconcileWorkspaceSeats),
-    ),
-  );
-  jobs.push(
-    new Cron("23 * * * *", withCheckIn("trial-reminders", checkTrialReminders)),
-  );
+  const definitions = getScheduledJobDefinitions();
+  for (const { name, pattern, options, run } of definitions) {
+    jobs.push(new Cron(pattern, options ?? {}, withCheckIn(name, run)));
+  }
+  // Names the jobs that were actually registered: which ones those are
+  // depends on instance configuration, so a fixed sentence would lie.
   console.log(
-    "⏰ Scheduler started (deferred integration edits every minute, reminders every 5 minutes, seat reconciliation and trial reminders hourly)",
+    `⏰ Scheduler started (${definitions.map((job) => job.name).join(", ")})`,
   );
 }
 

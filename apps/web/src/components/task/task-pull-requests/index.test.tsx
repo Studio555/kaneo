@@ -14,6 +14,11 @@ import type { ExternalLink } from "@/types/external-link";
 import type Task from "@/types/task";
 import { TaskPullRequests } from ".";
 
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => true,
+  useShowDueDates: () => true,
+}));
+
 const onParentClick = vi.fn();
 
 beforeAll(() => document.body.addEventListener("click", onParentClick));

@@ -1,3 +1,4 @@
+import { findBacklogSection, getBacklogTasks } from "@/lib/backlog-sections";
 import type { ProjectWithTasks } from "@/types/project";
 import type Task from "@/types/task";
 
@@ -8,8 +9,9 @@ export function scopeTasks(
   if (!project) return [];
   const boardTasks = project.columns.flatMap((column) => column.tasks);
   if (scope === "board") return boardTasks;
-  if (scope === "backlog") {
-    return [...(project.plannedTasks ?? []), ...(project.archivedTasks ?? [])];
-  }
-  return [...boardTasks, ...(project.plannedTasks ?? [])];
+  if (scope === "backlog") return getBacklogTasks(project);
+  return [
+    ...boardTasks,
+    ...(findBacklogSection(project, "planned")?.tasks ?? []),
+  ];
 }

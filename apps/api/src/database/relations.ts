@@ -6,6 +6,7 @@ import {
   assetTable,
   columnTable,
   commentTable,
+  craftTable,
   customFieldDefinitionTable,
   customFieldValueTable,
   externalLinkTable,
@@ -22,6 +23,7 @@ import {
   teamMemberTable,
   teamTable,
   timeEntryTable,
+  userGithubIdentityTable,
   userNotificationPreferenceTable,
   userNotificationWorkspaceProjectTable,
   userNotificationWorkspaceRuleTable,
@@ -48,6 +50,7 @@ export const userTableRelations = relations(userTable, ({ many, one }) => ({
   notificationWorkspaceRules: many(userNotificationWorkspaceRuleTable),
   sentInvitations: many(invitationTable),
   apikeys: many(apikeyTable),
+  githubIdentity: one(userGithubIdentityTable),
 }));
 
 export const sessionTableRelations = relations(sessionTable, ({ one }) => ({
@@ -64,6 +67,16 @@ export const accountTableRelations = relations(accountTable, ({ one }) => ({
   }),
 }));
 
+export const userGithubIdentityTableRelations = relations(
+  userGithubIdentityTable,
+  ({ one }) => ({
+    user: one(userTable, {
+      fields: [userGithubIdentityTable.userId],
+      references: [userTable.id],
+    }),
+  }),
+);
+
 export const verificationTableRelations = relations(
   verificationTable,
   () => ({}),
@@ -78,6 +91,7 @@ export const workspaceTableRelations = relations(
     assets: many(assetTable),
     invitations: many(invitationTable),
     notificationWorkspaceRules: many(userNotificationWorkspaceRuleTable),
+    crafts: many(craftTable),
   }),
 );
 
@@ -148,6 +162,10 @@ export const taskTableRelations = relations(taskTable, ({ one, many }) => ({
     fields: [taskTable.columnId],
     references: [columnTable.id],
   }),
+  craft: one(craftTable, {
+    fields: [taskTable.craftId],
+    references: [craftTable.id],
+  }),
   timeEntries: many(timeEntryTable),
   activities: many(activityTable),
   comments: many(commentTable),
@@ -203,6 +221,14 @@ export const assetTableRelations = relations(assetTable, ({ one }) => ({
     fields: [assetTable.createdBy],
     references: [userTable.id],
   }),
+}));
+
+export const craftTableRelations = relations(craftTable, ({ one, many }) => ({
+  workspace: one(workspaceTable, {
+    fields: [craftTable.workspaceId],
+    references: [workspaceTable.id],
+  }),
+  tasks: many(taskTable),
 }));
 
 export const labelTableRelations = relations(labelTable, ({ one }) => ({

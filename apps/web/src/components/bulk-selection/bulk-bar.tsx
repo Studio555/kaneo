@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PriorityGlyph } from "@/components/task-chips/priority-glyph";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { cn } from "@/lib/cn";
 import { Toolbar } from "../ui/toolbar";
 import { barButtonClass } from "./bar-button-class";
@@ -62,6 +63,7 @@ export function BulkBar({
   const { t } = useTranslation();
   const actions = useBulkActions(selectedTaskIds, clearSelection);
   const options = useBulkOptions(actions);
+  const datesEnabled = useDatesEnabled();
   const { mounted, hidden, displayCount } = useToolbarPresence(actions.count);
   const [commandOpen, setCommandOpen] = useState(false);
   useBulkSelectionKeys({
@@ -242,7 +244,7 @@ export function BulkBar({
               returnFocus={focusedTaskElement}
             />
           )}
-          {can.edit && (
+          {can.edit && datesEnabled && (
             <BulkDueDatePopover
               onSelect={(date) => void actions.setDueDate(date ?? undefined)}
               onDismiss={dismissTemporary}

@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import db, { schema } from "../../../apps/api/src/database";
-import { DEFAULT_PROJECT_COLUMNS } from "../../../apps/api/src/project/controllers/insert-project";
+import {
+  DEFAULT_PROJECT_COLUMNS,
+  SYSTEM_BACKLOG_SECTIONS,
+} from "../../../apps/api/src/project/controllers/insert-project";
 
 export type SeededMemberContext = {
   user: typeof schema.userTable.$inferSelect;
@@ -86,6 +89,23 @@ export async function createProjectFixture({
     }
   }
 
+  for (const section of SYSTEM_BACKLOG_SECTIONS) {
+    const [inserted] = await db
+      .insert(schema.columnTable)
+      .values({
+        projectId: project.id,
+        name: section.name,
+        slug: section.slug,
+        position: section.position,
+        kind: "backlog",
+        systemKey: section.systemKey,
+      })
+      .returning();
+    if (inserted) {
+      insertedColumns.push(inserted);
+    }
+  }
+
   const columnsBySlug = new Map(
     insertedColumns.map((column) => [column.slug, column]),
   );
@@ -94,8 +114,10 @@ export async function createProjectFixture({
   const inProgress = columnsBySlug.get("in-progress");
   const inReview = columnsBySlug.get("in-review");
   const done = columnsBySlug.get("done");
+  const planned = columnsBySlug.get("planned");
+  const archived = columnsBySlug.get("archived");
 
-  if (!todo || !inProgress || !inReview || !done) {
+  if (!todo || !inProgress || !inReview || !done || !planned || !archived) {
     throw new Error("Failed to seed default project columns");
   }
 
@@ -107,5 +129,6 @@ export async function createProjectFixture({
       inReview,
       done,
     },
+    backlogSections: { planned, archived },
   };
 }

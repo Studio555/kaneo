@@ -43,6 +43,9 @@ vi.mock("@/hooks/mutations/task/use-bulk-operations", () => ({
     bulkDueDate: mocks.bulkDueDate,
   }),
 }));
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => true,
+}));
 vi.mock("@/hooks/use-workspace-permission", () => ({
   useWorkspacePermission: () => ({
     canUpdateTasks: mocks.canUpdateTasks,
@@ -86,8 +89,7 @@ beforeEach(() => {
     slug: "KAN",
     workspaceId: "workspace-1",
     columns: [{ id: "todo", tasks: [task("a", 1), task("b", 2)] }],
-    plannedTasks: [task("c", 3)],
-    archivedTasks: [],
+    backlogSections: [{ slug: "planned", tasks: [task("c", 3)] }],
   } as unknown as ProjectWithTasks);
   render(
     <ShortcutTestWrapper>

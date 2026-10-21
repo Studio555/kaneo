@@ -5,6 +5,8 @@ import {
 import { canSyncTask } from "../../sync/eligibility";
 import { withTaskSyncCreation } from "../../sync/create-task-issue";
 import { syncTaskFieldLabels } from "../../sync/sync-task-field-labels";
+import { isBacklogStatus } from "../../backlog-status";
+import { toCraftLabelName } from "../../system-labels";
 import { eq } from "drizzle-orm";
 import db from "../../../database";
 import { projectTable } from "../../../database/schema";
@@ -16,12 +18,15 @@ import {
   findExternalLinkByTaskAndType,
 } from "../services/link-manager";
 import { formatIssueBody, formatIssueTitle } from "../utils/format";
+import { reconcileIssueHierarchySafely } from "../services/issue-hierarchy";
 import { taskLinkCommentExists } from "../services/task-link-comment-exists";
+import { findTaskWithCraft } from "../services/task-service";
 import {
   getGithubApp,
   getVerifiedInstallationOctokit,
 } from "../utils/github-app";
 import { addLabelsToIssue, removeLabel } from "../utils/labels";
+import { syncIssueAssignee } from "../utils/sync-issue-assignee";
 
 async function createTaskIssue(
   event: TaskCreatedEvent,
@@ -43,6 +48,9 @@ async function createTaskIssue(
   );
 
   if (existingLink && !isIssueInitializationPending(existingLink)) return;
+  // Backlog tasks are not committed work; leaving the backlog opens the issue.
+  if (!existingLink && (await isBacklogStatus(event.projectId, event.status)))
+    return;
 
   try {
     const octokit = await getVerifiedInstallationOctokit(config, true);
@@ -189,6 +197,27 @@ async function createTaskIssue(
           }
         : {}),
     });
+
+    const task = await findTaskWithCraft(event.taskId);
+    if (task?.craft) {
+      const craftLabel = toCraftLabelName(task.craft.name);
+      await addLabelsToIssue(
+        octokit,
+        repositoryOwner,
+        repositoryName,
+        issueNumber,
+        [craftLabel],
+        false,
+        undefined,
+        { [craftLabel]: task.craft.color },
+      );
+    }
+    // Assignees and subtask relations set while the task sat in the backlog
+    // emitted nothing the issue could act on, so the new issue picks them up.
+    if (task?.userId) {
+      await syncIssueAssignee(task.id, task.userId, context, "issue_created");
+    }
+    await reconcileIssueHierarchySafely(event.taskId);
   } catch (error) {
     console.error("Failed to create GitHub issue:", error);
   }

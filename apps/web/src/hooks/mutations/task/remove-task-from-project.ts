@@ -1,3 +1,4 @@
+import { mapBacklogSections } from "@/lib/backlog-sections";
 import type { ProjectWithTasks } from "@/types/project";
 
 export function removeTaskFromProject(
@@ -10,7 +11,8 @@ export function removeTaskFromProject(
       ...column,
       tasks: column.tasks.filter((task) => task.id !== taskId),
     })),
-    plannedTasks: project.plannedTasks.filter((task) => task.id !== taskId),
-    archivedTasks: project.archivedTasks.filter((task) => task.id !== taskId),
+    backlogSections: mapBacklogSections(project, (tasks) =>
+      tasks.filter((task) => task.id !== taskId),
+    ),
   };
 }

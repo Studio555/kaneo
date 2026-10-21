@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { useUserPreferencesStore } from "@/store/user-preferences";
 import { ProjectScopeLink } from "./project-scope-link";
 import { type ProjectView, tasksViewFor } from "./project-views";
@@ -19,9 +20,10 @@ export function ProjectScopeToggle({
   const { t } = useTranslation();
   const taskLayout = useUserPreferencesStore((state) => state.taskLayout);
   const viewMode = useUserPreferencesStore((state) => state.viewMode);
+  const datesEnabled = useDatesEnabled();
   const onBacklog = currentView === "backlog";
   const tasksView = onBacklog
-    ? tasksViewFor(taskLayout, viewMode)
+    ? tasksViewFor(taskLayout, viewMode, datesEnabled)
     : currentView;
 
   return (

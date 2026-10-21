@@ -5,10 +5,20 @@ import {
   Rows3,
   SquareKanban,
   SquircleDashed,
+  Table2,
 } from "lucide-react";
 import type { TaskLayout } from "@/store/user-preferences";
 
-export type ProjectView = "board" | "list" | "backlog" | "calendar" | "gantt";
+export type ProjectView =
+  | "board"
+  | "list"
+  | "table"
+  | "backlog"
+  | "calendar"
+  | "gantt";
+
+// Layouts served in place by the board route, stored as `viewMode`.
+export type BoardViewMode = "board" | "list" | "table";
 
 export type ProjectRoute = "board" | "backlog" | "calendar" | "gantt";
 
@@ -35,6 +45,11 @@ export const PROJECT_VIEWS: ReadonlyArray<{
     icon: Rows3,
   },
   {
+    id: "table",
+    labelKey: "tasks:view.table",
+    icon: Table2,
+  },
+  {
     id: "backlog",
     labelKey: "tasks:view.backlog",
     icon: SquircleDashed,
@@ -51,13 +66,17 @@ export const PROJECT_VIEWS: ReadonlyArray<{
   },
 ];
 
+export function isBoardViewMode(view: ProjectView): view is BoardViewMode {
+  return view === "board" || view === "list" || view === "table";
+}
+
 export function routeForView(view: ProjectView): ProjectRoute {
-  return view === "list" ? "board" : view;
+  return isBoardViewMode(view) ? "board" : view;
 }
 
 export function resolveProjectView(
   route: ProjectRoute,
-  viewMode: "board" | "list",
+  viewMode: BoardViewMode,
 ): ProjectView {
   return route === "board" ? viewMode : route;
 }
@@ -66,11 +85,16 @@ export const TASK_LAYOUTS = PROJECT_VIEWS.filter(
   (view) => view.id !== "backlog",
 );
 
+export function isDateView(view: ProjectView): boolean {
+  return view === "calendar" || view === "gantt";
+}
+
 export function tasksViewFor(
   taskLayout: TaskLayout,
-  viewMode: "board" | "list",
+  viewMode: BoardViewMode,
+  datesEnabled = true,
 ): ProjectView {
-  return taskLayout === "calendar" || taskLayout === "gantt"
+  return datesEnabled && (taskLayout === "calendar" || taskLayout === "gantt")
     ? taskLayout
     : viewMode;
 }

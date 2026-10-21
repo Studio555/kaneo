@@ -1,9 +1,6 @@
 import type { ProjectWithTasks } from "@/types/project";
 
-type TaskSource = Pick<
-  ProjectWithTasks,
-  "columns" | "plannedTasks" | "archivedTasks"
->;
+type TaskSource = Pick<ProjectWithTasks, "columns" | "backlogSections">;
 
 export function countColumnTasks(project: TaskSource | null | undefined) {
   return (
@@ -13,6 +10,9 @@ export function countColumnTasks(project: TaskSource | null | undefined) {
 
 export function countBacklogTasks(project: TaskSource | null | undefined) {
   return (
-    (project?.plannedTasks?.length ?? 0) + (project?.archivedTasks?.length ?? 0)
+    project?.backlogSections?.reduce(
+      (sum, section) => sum + section.tasks.length,
+      0,
+    ) ?? 0
   );
 }

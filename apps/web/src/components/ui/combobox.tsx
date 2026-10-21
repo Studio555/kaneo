@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/cn";
 import { i18n } from "@/lib/i18n";
+import { handleSuggestionNavigationShortcut } from "@/lib/suggestion-navigation";
 
 const ComboboxContext = React.createContext<{
   chipsRef: React.RefObject<Element | null> | null;
@@ -22,7 +23,7 @@ function Combobox<Value, Multiple extends boolean | undefined = false>(
   const chipsRef = React.useRef<Element | null>(null);
   return (
     <ComboboxContext.Provider value={{ chipsRef, multiple: !!props.multiple }}>
-      <ComboboxPrimitive.Root {...props} />
+      <ComboboxPrimitive.Root autoHighlight {...props} />
     </ComboboxContext.Provider>
   );
 }
@@ -30,6 +31,7 @@ function Combobox<Value, Multiple extends boolean | undefined = false>(
 function ComboboxChipsInput({
   className,
   size,
+  onKeyDown,
   ...props
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
   size?: "sm" | "default" | "lg" | number;
@@ -48,6 +50,10 @@ function ComboboxChipsInput({
       data-slot="combobox-chips-input"
       size={typeof sizeValue === "number" ? sizeValue : undefined}
       {...props}
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        handleSuggestionNavigationShortcut(event);
+      }}
     />
   );
 }
@@ -58,6 +64,7 @@ function ComboboxInput({
   showClear = false,
   startAddon,
   size,
+  onKeyDown,
   ...props
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
   showTrigger?: boolean;
@@ -97,6 +104,10 @@ function ComboboxInput({
           />
         }
         {...props}
+        onKeyDown={(event) => {
+          onKeyDown?.(event);
+          handleSuggestionNavigationShortcut(event);
+        }}
       />
       {showTrigger && (
         <ComboboxTrigger

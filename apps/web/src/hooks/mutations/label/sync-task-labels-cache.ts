@@ -3,6 +3,7 @@ import {
   markBoardCacheChanged,
 } from "@/lib/board-cache-version";
 import type { QueryClient } from "@tanstack/react-query";
+import { mapBacklogSections } from "@/lib/backlog-sections";
 import type { ProjectWithTasks } from "@/types/project";
 import type Task from "@/types/task";
 
@@ -37,11 +38,8 @@ export function updateTaskLabelsInProject(
         updateTaskLabels(task, taskId, updater),
       ),
     })),
-    plannedTasks: project.plannedTasks.map((task) =>
-      updateTaskLabels(task, taskId, updater),
-    ),
-    archivedTasks: project.archivedTasks.map((task) =>
-      updateTaskLabels(task, taskId, updater),
+    backlogSections: mapBacklogSections(project, (tasks) =>
+      tasks.map((task) => updateTaskLabels(task, taskId, updater)),
     ),
   };
 }

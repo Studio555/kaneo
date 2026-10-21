@@ -13,6 +13,7 @@ import { TaskCount } from "@/components/project/toolbar/task-count";
 import { useProjectTaskView } from "@/components/project/toolbar/use-project-task-view";
 import { LayoutSwitch } from "@/components/project/views/layout-switch";
 import CreateTaskModal from "@/components/shared/modals/create-task-modal";
+import TableView from "@/components/table-view";
 import TaskDetailsSheet from "@/components/task/task-details-sheet";
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
 import { useBoardSort } from "@/hooks/use-board-sort";
@@ -171,7 +172,7 @@ function RouteComponent() {
       }
     >
       <PageTitle
-        title={`${project?.name} · ${viewMode === "board" ? t("tasks:view.board") : t("tasks:view.list")}`}
+        title={`${project?.name} · ${t(`tasks:view.${viewMode}`)}`}
         hideAppName
       />
       <div className="relative flex flex-col h-full min-h-0 overflow-hidden">
@@ -224,6 +225,15 @@ function RouteComponent() {
                 }
                 sortedByNumber={sort.field === "number"}
                 sortedByPriority={sort.field === "priority"}
+              />
+            ) : viewMode === "table" ? (
+              <TableView
+                project={sortedProject}
+                sort={sort}
+                onSortChange={setSort}
+                disableDragDrop={
+                  boardFetching || boardError || sort.field !== "position"
+                }
               />
             ) : (
               <ListView

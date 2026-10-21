@@ -51,8 +51,10 @@ function run(fn: () => Promise<unknown>): Promise<CallToolResult> {
 export function registerTools(
   server: ToolRegistrar,
   ctx: { client: ToolClient },
+  options: { datesEnabled: boolean } = { datesEnabled: true },
 ): void {
   const { client } = ctx;
+  const { datesEnabled } = options;
   const registerTool = <S extends z.ZodObject>(
     name: string,
     config: { description: string; inputSchema: S },
@@ -63,6 +65,33 @@ export function registerTools(
       if (!parsed.success) return errorResult(z.prettifyError(parsed.error));
       return callback(parsed.data);
     });
+
+  // Cast to the "enabled" shape so handler bodies can read `args.startDate` /
+  // `args.dueDate` unconditionally: when disabled the key is genuinely absent
+  // from the schema (so the field is never advertised or accepted), which
+  // makes the parsed value `undefined` anyway, consistent with this type.
+  const dateInputFields = (
+    datesEnabled
+      ? {
+          startDate: optionalIsoDateTimeSchema,
+          dueDate: optionalIsoDateTimeSchema,
+        }
+      : {}
+  ) as {
+    startDate: typeof optionalIsoDateTimeSchema;
+    dueDate: typeof optionalIsoDateTimeSchema;
+  };
+  const nullableDateInputFields = (
+    datesEnabled
+      ? {
+          startDate: nullableOptionalIsoDateTimeSchema,
+          dueDate: nullableOptionalIsoDateTimeSchema,
+        }
+      : {}
+  ) as {
+    startDate: typeof nullableOptionalIsoDateTimeSchema;
+    dueDate: typeof nullableOptionalIsoDateTimeSchema;
+  };
 
   registerTool(
     "whoami",
@@ -294,8 +323,7 @@ export function registerTools(
         description: z.string(),
         priority: prioritySchema,
         status: nonEmptyString,
-        startDate: optionalIsoDateTimeSchema,
-        dueDate: optionalIsoDateTimeSchema,
+        ...dateInputFields,
         userId: optionalNonEmptyString,
       }),
     },
@@ -356,8 +384,7 @@ export function registerTools(
     priority: prioritySchema.optional(),
     projectId: optionalNonEmptyString,
     position: z.number().optional(),
-    startDate: nullableOptionalIsoDateTimeSchema,
-    dueDate: nullableOptionalIsoDateTimeSchema,
+    ...nullableDateInputFields,
     userId: nullableOptionalNonEmptyString,
   });
 
@@ -565,6 +592,100 @@ export function registerTools(
   );
 
   registerTool(
+    "list_workspace_crafts",
+    {
+      description:
+        "List the crafts (disciplines) defined in a workspace. Craft is a curated, single-select dimension kept separate from labels.",
+      inputSchema: z.object({ workspaceId: nonEmptyString }),
+    },
+    async (args) =>
+      run(() =>
+        client.json(
+          `/api/craft/workspace/${encodeURIComponent(args.workspaceId)}`,
+          { method: "GET" },
+        ),
+      ),
+  );
+
+  registerTool(
+    "create_craft",
+    {
+      description:
+        "Create a craft in a workspace. Names are unique per workspace; an existing name returns the existing craft.",
+      inputSchema: z.object({
+        name: nonEmptyString,
+        color: hexColorSchema,
+        workspaceId: nonEmptyString,
+      }),
+    },
+    async (args) =>
+      run(() =>
+        client.json("/api/craft", {
+          method: "POST",
+          body: JSON.stringify({
+            name: args.name,
+            color: args.color,
+            workspaceId: args.workspaceId,
+          }),
+        }),
+      ),
+  );
+
+  registerTool(
+    "update_craft",
+    {
+      description:
+        "Rename or recolor a craft. A rename re-labels linked GitHub and Gitea issues in the background.",
+      inputSchema: z.object({
+        id: nonEmptyString,
+        name: nonEmptyString,
+        color: hexColorSchema,
+      }),
+    },
+    async (args) =>
+      run(() =>
+        client.json(`/api/craft/${encodeURIComponent(args.id)}`, {
+          method: "PUT",
+          body: JSON.stringify({ name: args.name, color: args.color }),
+        }),
+      ),
+  );
+
+  registerTool(
+    "delete_craft",
+    {
+      description:
+        "Delete a craft. Tasks carrying it are left with no craft rather than deleted.",
+      inputSchema: z.object({ id: nonEmptyString }),
+    },
+    async (args) =>
+      run(() =>
+        client.json(`/api/craft/${encodeURIComponent(args.id)}`, {
+          method: "DELETE",
+        }),
+      ),
+  );
+
+  registerTool(
+    "set_task_craft",
+    {
+      description:
+        "Set the craft (discipline) of a task, or pass craftId null to clear it. The craft must belong to the task's workspace.",
+      inputSchema: z.object({
+        taskId: nonEmptyString,
+        craftId: z.string().nullable(),
+      }),
+    },
+    async (args) =>
+      run(() =>
+        client.json(`/api/task/craft/${encodeURIComponent(args.taskId)}`, {
+          method: "PUT",
+          body: JSON.stringify({ craftId: args.craftId }),
+        }),
+      ),
+  );
+
+  registerTool(
     "create_task_relation",
     {
       description:
@@ -710,12 +831,22 @@ export function registerTools(
     "list_project_columns",
     {
       description:
-        "List a project's columns. Their slugs are the values update_task_status and create_task accept as a status.",
-      inputSchema: z.object({ projectId: nonEmptyString }),
+        "List a project's board columns, or with kind=backlog its backlog sections (always including planned and archived). Both kinds of slug are values update_task_status and create_task accept as a status.",
+      inputSchema: z.object({
+        projectId: nonEmptyString,
+        kind: z
+          .enum(["board", "backlog"])
+          .optional()
+          .describe("Which columns to list. Defaults to board."),
+      }),
     },
     async (args) =>
       run(() =>
-        client.json(`/api/column/${encodeURIComponent(args.projectId)}`),
+        client.json(
+          `/api/column/${encodeURIComponent(args.projectId)}${
+            args.kind ? `?kind=${args.kind}` : ""
+          }`,
+        ),
       ),
   );
 
@@ -811,98 +942,104 @@ export function registerTools(
       ),
   );
 
-  registerTool(
-    "update_task_due_date",
-    {
-      description: "Set a task's due date. Omit dueDate to clear it.",
-      inputSchema: z.object({
-        taskId: nonEmptyString,
-        dueDate: optionalIsoDateTimeSchema,
-      }),
-    },
-    async (args) =>
-      run(() =>
-        client.json(`/api/task/due-date/${encodeURIComponent(args.taskId)}`, {
-          method: "PUT",
-          body: JSON.stringify(
-            args.dueDate === undefined ? {} : { dueDate: args.dueDate },
+  if (datesEnabled) {
+    registerTool(
+      "update_task_due_date",
+      {
+        description: "Set a task's due date. Omit dueDate to clear it.",
+        inputSchema: z.object({
+          taskId: nonEmptyString,
+          dueDate: optionalIsoDateTimeSchema,
+        }),
+      },
+      async (args) =>
+        run(() =>
+          client.json(`/api/task/due-date/${encodeURIComponent(args.taskId)}`, {
+            method: "PUT",
+            body: JSON.stringify(
+              args.dueDate === undefined ? {} : { dueDate: args.dueDate },
+            ),
+          }),
+        ),
+    );
+
+    registerTool(
+      "list_task_time_entries",
+      {
+        description: "List the time entries logged against a task.",
+        inputSchema: z.object({ taskId: nonEmptyString }),
+      },
+      async (args) =>
+        run(() =>
+          client.json(
+            `/api/time-entry/task/${encodeURIComponent(args.taskId)}`,
           ),
+        ),
+    );
+
+    registerTool(
+      "get_time_entry",
+      {
+        description: "Get a single time entry by ID.",
+        inputSchema: z.object({ id: nonEmptyString }),
+      },
+      async (args) =>
+        run(() =>
+          client.json(`/api/time-entry/${encodeURIComponent(args.id)}`),
+        ),
+    );
+
+    registerTool(
+      "create_time_entry",
+      {
+        description:
+          "Log time against a task. Omit endTime to leave the entry running.",
+        inputSchema: z.object({
+          taskId: nonEmptyString,
+          startTime: isoDateTimeSchema,
+          endTime: optionalIsoDateTimeSchema,
+          description: optionalNonEmptyString,
         }),
-      ),
-  );
-
-  registerTool(
-    "list_task_time_entries",
-    {
-      description: "List the time entries logged against a task.",
-      inputSchema: z.object({ taskId: nonEmptyString }),
-    },
-    async (args) =>
-      run(() =>
-        client.json(`/api/time-entry/task/${encodeURIComponent(args.taskId)}`),
-      ),
-  );
-
-  registerTool(
-    "get_time_entry",
-    {
-      description: "Get a single time entry by ID.",
-      inputSchema: z.object({ id: nonEmptyString }),
-    },
-    async (args) =>
-      run(() => client.json(`/api/time-entry/${encodeURIComponent(args.id)}`)),
-  );
-
-  registerTool(
-    "create_time_entry",
-    {
-      description:
-        "Log time against a task. Omit endTime to leave the entry running.",
-      inputSchema: z.object({
-        taskId: nonEmptyString,
-        startTime: isoDateTimeSchema,
-        endTime: optionalIsoDateTimeSchema,
-        description: optionalNonEmptyString,
-      }),
-    },
-    async (args) =>
-      run(() =>
-        client.json("/api/time-entry", {
-          method: "POST",
-          body: JSON.stringify({
-            taskId: args.taskId,
-            startTime: args.startTime,
-            ...(args.endTime ? { endTime: args.endTime } : {}),
-            ...(args.description ? { description: args.description } : {}),
+      },
+      async (args) =>
+        run(() =>
+          client.json("/api/time-entry", {
+            method: "POST",
+            body: JSON.stringify({
+              taskId: args.taskId,
+              startTime: args.startTime,
+              ...(args.endTime ? { endTime: args.endTime } : {}),
+              ...(args.description ? { description: args.description } : {}),
+            }),
           }),
-        }),
-      ),
-  );
+        ),
+    );
 
-  registerTool(
-    "update_time_entry",
-    {
-      description:
-        "Update a time entry. startTime is required; omitting endTime keeps the stored one. startTime cannot be later than the end time.",
-      inputSchema: z.object({
-        id: nonEmptyString,
-        startTime: isoDateTimeSchema,
-        endTime: optionalIsoDateTimeSchema,
-        description: optionalNonEmptyString,
-      }),
-    },
-    async (args) =>
-      run(() =>
-        client.json(`/api/time-entry/${encodeURIComponent(args.id)}`, {
-          method: "PUT",
-          body: JSON.stringify({
-            startTime: args.startTime,
-            ...(args.endTime ? { endTime: args.endTime } : {}),
-            ...(args.description ? { description: args.description } : {}),
-          }),
+    registerTool(
+      "update_time_entry",
+      {
+        description:
+          "Update a time entry. startTime is required; omitting endTime keeps the stored one. startTime cannot be later than the end time.",
+        inputSchema: z.object({
+          id: nonEmptyString,
+          startTime: isoDateTimeSchema,
+          endTime: optionalIsoDateTimeSchema,
+          description: optionalNonEmptyString,
         }),
-      ),
-  );
+      },
+      async (args) =>
+        run(() =>
+          client.json(`/api/time-entry/${encodeURIComponent(args.id)}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              startTime: args.startTime,
+              ...(args.endTime ? { endTime: args.endTime } : {}),
+              ...(args.description ? { description: args.description } : {}),
+            }),
+          }),
+        ),
+    );
+  }
 
   registerTool(
     "list_task_activity",

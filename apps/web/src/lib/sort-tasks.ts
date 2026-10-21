@@ -6,7 +6,9 @@ export type SortField =
   | "priority"
   | "dueDate"
   | "title"
-  | "number";
+  | "number"
+  | "assignee"
+  | "craft";
 
 export type SortDirection = "asc" | "desc";
 
@@ -61,6 +63,29 @@ export function sortTasks(tasks: Task[], config: SortConfig): Task[] {
       }
       case "number": {
         comparison = (a.number ?? 0) - (b.number ?? 0);
+        break;
+      }
+      case "craft": {
+        const aName = a.craft?.name?.trim();
+        const bName = b.craft?.name?.trim();
+        if (!aName && !bName) return 0;
+        // Same as assignee: an absent craft is not a value at either end of the
+        // range, so it stays last whichever way the sort points.
+        if (!aName) return 1;
+        if (!bName) return -1;
+        comparison = aName.localeCompare(bName);
+        break;
+      }
+      case "assignee": {
+        const aName = a.assigneeName?.trim();
+        const bName = b.assigneeName?.trim();
+        if (!aName && !bName) return 0;
+        // Unassigned rows return before the direction flip below, so they stay
+        // last either way: no assignee is an absent value, not a value that
+        // belongs at one end of the range.
+        if (!aName) return 1;
+        if (!bName) return -1;
+        comparison = aName.localeCompare(bName);
         break;
       }
     }

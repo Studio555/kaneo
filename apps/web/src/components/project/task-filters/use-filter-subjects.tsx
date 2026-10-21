@@ -1,5 +1,6 @@
-import { CalendarDays, CircleDot, Tag, UserRound } from "lucide-react";
+import { CalendarDays, CircleDot, Hammer, Tag, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useDatesEnabled } from "@/hooks/use-dates-enabled";
 import { getColumnIcon } from "@/lib/column";
 import { getPriorityLabel } from "@/lib/i18n/domain";
 import { getPriorityIcon } from "@/lib/priority";
@@ -11,6 +12,7 @@ import {
   isLabelGroupSelected,
   toggleLabelGroup,
 } from "@/lib/task-filters/label-groups";
+import { toggleFilterValue } from "@/lib/task-filters/toggle-filter-value";
 import type { ProjectWithTasks } from "@/types/project";
 import type Task from "@/types/task";
 import { customFieldIcon } from "@/components/custom-fields/custom-field-icon";
@@ -40,6 +42,7 @@ export function useFilterSubjects({
   showStatus,
 }: UseFilterSubjectsInput): FilterSubject[] {
   const { t } = useTranslation();
+  const datesEnabled = useDatesEnabled();
   const { filters, toggleFilter, updateFilter, setNegated } = controls;
   const empty = t("tasks:boardFilters.noValuesUsedYet");
   const negated = new Set(filters.negated ?? []);
@@ -80,6 +83,7 @@ export function useFilterSubjects({
     status: countValues(tasks, (task) => [task.status]),
     assignee: countValues(tasks, (task) => [task.userId]),
     priority: countValues(tasks, (task) => [task.priority]),
+    craft: countValues(tasks, (task) => [task.craft?.id ?? task.craftId]),
     labels: countValues(tasks, (task) =>
       (task.labels ?? []).map((label) =>
         groupIdByLabel.get(`${label.name}|${label.color}`),
@@ -156,14 +160,43 @@ export function useFilterSubjects({
       },
       "include",
     ),
-    listSubject("dueDate", {
-      label: t("tasks:boardFilters.subjects.dueDate"),
-      icon: <CalendarDays />,
-      options: DUE_DATE_OPTIONS.map((option) => ({
-        value: option.value,
-        label: t(option.labelKey),
-      })),
+    // The empty value stands for "no craft", so a task with none is filterable.
+    subject("craft", {
+      label: t("tasks:boardFilters.subjects.craft"),
+      icon: <Hammer />,
+      options:
+        options.crafts.length > 0
+          ? [
+              {
+                value: "",
+                label: t("tasks:popover.craft.none"),
+              },
+              ...options.crafts.map((craft) => ({
+                value: craft.id,
+                label: craft.name,
+                icon: <LabelFilterDot color={craft.color} />,
+                count: counts.craft[craft.id],
+              })),
+            ]
+          : [],
+      selected: filters.craft ?? [],
+      onToggle: (value) =>
+        updateFilter("craft", toggleFilterValue(filters.craft, value)),
+      onClear: () => updateFilter("craft", null),
+      emptyLabel: t("tasks:crafts.empty"),
     }),
+    ...(datesEnabled
+      ? [
+          listSubject("dueDate", {
+            label: t("tasks:boardFilters.subjects.dueDate"),
+            icon: <CalendarDays />,
+            options: DUE_DATE_OPTIONS.map((option) => ({
+              value: option.value,
+              label: t(option.labelKey),
+            })),
+          }),
+        ]
+      : []),
   ];
 
   const customFields = options.customFields.map((field) => {

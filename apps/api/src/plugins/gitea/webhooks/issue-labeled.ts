@@ -11,7 +11,8 @@ import {
   linkedTaskScope,
 } from "../../github/services/integration-task-scope";
 import { eq, inArray } from "drizzle-orm";
-import { labelTable } from "../../../database/schema";
+import database from "../../../database";
+import { labelTable, taskTable } from "../../../database/schema";
 import { publishEvent } from "../../../events";
 import {
   findExternalLink,
@@ -21,7 +22,8 @@ import {
   findAllIntegrationsByGiteaRepo,
   repoOwnerLogin,
 } from "../services/integration-lookup";
-import { isSystemLabelName } from "../utils/system-labels";
+import { reconcileCraftFromIssueLabels } from "../../reconcile-craft-from-labels";
+import { isSystemLabelName, parseCraftLabelName } from "../../system-labels";
 import { baseUrlFromRepositoryHtmlUrl } from "../utils/webhook-repo";
 
 type IssueLabeledPayload = {
@@ -175,7 +177,9 @@ export async function handleGiteaIssueLabeled(
         continue;
       }
 
-      const fieldEvent = !addedLabel || isSystemLabelName(addedLabel.name);
+      const craftEvent = !!addedLabel && !!parseCraftLabelName(addedLabel.name);
+      const fieldEvent =
+        !addedLabel || (isSystemLabelName(addedLabel.name) && !craftEvent);
       // label_updated has no single label, so it always reads the issue.
       // Status and priority never come from this payload's label snapshot.
       if (fieldEvent)
@@ -185,6 +189,34 @@ export async function handleGiteaIssueLabeled(
           undefined,
           deadline,
         );
+
+      // The task's craft follows whatever `craft:` label the issue carries
+      // now; label_updated reports only the whole set, so it has no delta.
+      if (
+        issue.labels !== undefined &&
+        (craftEvent || payload.action === "label_updated")
+      ) {
+        const craftTask = await database.query.taskTable.findFirst({
+          where: eq(taskTable.id, existingLink.taskId),
+          with: { project: true },
+        });
+        if (craftTask?.project?.workspaceId) {
+          await reconcileCraftFromIssueLabels({
+            taskId: existingLink.taskId,
+            workspaceId: craftTask.project.workspaceId,
+            labels: issue.labels,
+            delta:
+              craftEvent && addedLabel
+                ? {
+                    label: addedLabel.name,
+                    op: payload.action === "unlabeled" ? "removed" : "added",
+                  }
+                : undefined,
+            link: { id: existingLink.id, metadata: existingLink.metadata },
+            source: "gitea",
+          });
+        }
+      }
 
       await withIntegrationLink(
         existingLink,
@@ -233,7 +265,7 @@ export async function handleGiteaIssueLabeled(
             return;
           }
 
-          if (!addedLabel || fieldEvent) return;
+          if (!addedLabel || isSystemLabelName(addedLabel.name)) return;
 
           if (payload.action === "labeled") {
             const task = await db.query.taskTable.findFirst({

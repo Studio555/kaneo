@@ -33,7 +33,7 @@ function isEnabled(config: SlackConfig, key: SlackEventKey): boolean {
   return config.events?.[key] ?? false;
 }
 
-function escapeSlack(text: string): string {
+export function escapeSlack(text: string): string {
   return text
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")

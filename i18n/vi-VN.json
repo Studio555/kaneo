@@ -599,7 +599,24 @@
 				"title": "Delete account",
 				"sessionTooOld": "For security, sign out and sign back in before deleting your account."
 			},
-			"emailHint": "Bạn đăng nhập bằng địa chỉ này."
+			"emailHint": "Bạn đăng nhập bằng địa chỉ này.",
+			"githubIdentity": {
+				"connect": "Connect GitHub",
+				"connectedAs": "Connected as {{login}}",
+				"connectedHint": "Assigning a task assigns you on the linked GitHub issue, and being assigned on GitHub assigns you the task.",
+				"connectFailed": "Couldn't connect your GitHub account",
+				"connecting": "Connecting...",
+				"disconnect": "Disconnect",
+				"disconnected": "GitHub account disconnected",
+				"disconnectFailed": "Couldn't disconnect your GitHub account",
+				"notConnected": "GitHub account not connected",
+				"notConnectedHint": "Connecting signs you in to GitHub once to confirm the account is yours. It does not change how you sign in to Kaneo.",
+				"onlyAccount": "GitHub is your only way to sign in, so it cannot be disconnected. Set a password first.",
+				"sectionSubtitle": "Connect your GitHub account so task assignments stay in step with the linked GitHub issues.",
+				"sectionTitle": "GitHub account",
+				"sessionTooOld": "For your security, sign in again before disconnecting your GitHub account.",
+				"unavailable": "This Kaneo instance has no GitHub sign-in configured, so accounts cannot be connected."
+			}
 		},
 		"notificationsPage": {
 			"pageTitle": "Thông báo",
@@ -753,7 +770,8 @@
 			"priority": "Mức ưu tiên",
 			"projectBackgrounds": "Project backgrounds",
 			"projectBackgroundsDescription": "Hiển thị hình ảnh mà dự án đặt làm nền bảng.",
-			"advancedTitle": "Nâng cao"
+			"advancedTitle": "Nâng cao",
+			"table": "Table"
 		},
 		"developerPage": {
 			"pageTitle": "Khóa API",
@@ -1463,7 +1481,8 @@
 				"pr_opened": "Đã mở pull request",
 				"pr_merged": "Đã gộp pull request",
 				"issue_opened": "Đã mở issue",
-				"issue_closed": "Đã đóng issue"
+				"issue_closed": "Đã đóng issue",
+				"issue_reopened": "Mở lại issue"
 			},
 			"connectMore": "Kết nối {{providers}} trong <link>Tích hợp</link> để tự động hóa cả chúng.",
 			"dontMove": "Không di chuyển",
@@ -2315,6 +2334,31 @@
 		},
 		"shared": {
 			"autosave": "Thay đổi được lưu tự động"
+		},
+		"workspaceCrafts": {
+			"pageTitle": "Craft Settings",
+			"title": "Crafts",
+			"subtitle": "Create, edit, and delete the disciplines tasks can be filed under.",
+			"cardDescription": "A craft is the discipline a task belongs to. Unlike labels, a task has at most one, and integrations can only use crafts you define here.",
+			"createCraft": "Create Craft",
+			"editCraft": "Edit Craft",
+			"deleteCraft": "Delete",
+			"saveCraft": "Save",
+			"nameLabel": "Craft name",
+			"namePlaceholder": "Enter craft name",
+			"colorLabel": "Color",
+			"createDescription": "Create a discipline that tasks in this workspace can be filed under.",
+			"editDescription": "Update the name or color of this craft. Renaming it also relabels linked GitHub and Gitea issues.",
+			"deleteConfirmTitle": "Delete this craft?",
+			"deleteConfirmDescription": "Tasks filed under this craft will be left with no craft. They are not deleted. This action cannot be undone.",
+			"empty": "No crafts yet. Create your first craft to get started.",
+			"createSuccess": "Craft created",
+			"updateSuccess": "Craft updated",
+			"deleteSuccess": "Craft deleted",
+			"createError": "Failed to create craft",
+			"updateError": "Failed to update craft",
+			"deleteError": "Failed to delete craft",
+			"nameRequired": "Craft name is required"
 		}
 	},
 	"navigation": {
@@ -2704,7 +2748,10 @@
 			"importedBy": "Imported by {{name}}",
 			"commentedOnForge": "đã bình luận trên {{forge}}"
 		},
-		"movedFromOtherProject": "moved task from another project to \"{{to}}\""
+		"movedFromOtherProject": "moved task from another project to \"{{to}}\"",
+		"changedCraft": "changed craft from {{from}} to {{to}}",
+		"setCraft": "set craft to {{to}}",
+		"clearedCraft": "cleared the craft"
 	},
 	"tasks": {
 		"title": "Nhiệm vụ",
@@ -2730,7 +2777,8 @@
 			"list": "Danh sách",
 			"backlog": "Backlog",
 			"gantt": "Gantt",
-			"heading": "Chế độ xem"
+			"heading": "Chế độ xem",
+			"table": "Table"
 		},
 		"common": {
 			"selectTask": "Chọn công việc",
@@ -2908,7 +2956,8 @@
 			"startDate": "Ngày bắt đầu",
 			"noDate": "Không có ngày",
 			"dates": "Ngày",
-			"project": "Dự án"
+			"project": "Dự án",
+			"craft": "Craft"
 		},
 		"move": {
 			"title": "Di chuyển công việc",
@@ -2924,7 +2973,9 @@
 		"popover": {
 			"assignee": {
 				"unassigned": "Chưa giao",
-				"updateError": "Không thể cập nhật người được giao công việc"
+				"updateError": "Không thể cập nhật người được giao công việc",
+				"searchPlaceholder": "Tìm kiếm người...",
+				"empty": "Không tìm thấy ai"
 			},
 			"status": {
 				"updateError": "Không thể cập nhật trạng thái công việc"
@@ -2960,6 +3011,12 @@
 					"crimson": "Đỏ thẫm"
 				},
 				"editLabels": "Chỉnh sửa nhãn"
+			},
+			"craft": {
+				"none": "No craft",
+				"empty": "No crafts defined for this workspace yet.",
+				"updateError": "Failed to update task craft",
+				"searchPlaceholder": "Search crafts..."
 			}
 		},
 		"backlog": {
@@ -2980,6 +3037,26 @@
 				"dueThisWeek": "Đến hạn tuần này",
 				"dueNextWeek": "Đến hạn tuần sau",
 				"noDueDate": "Không có ngày đến hạn"
+			},
+			"sectionActions": {
+				"add": "Section",
+				"addTooltip": "Add a backlog section",
+				"create": "Create section",
+				"created": "Section created",
+				"createError": "Failed to create section",
+				"createTitle": "New backlog section",
+				"delete": "Delete",
+				"deleted": "Section deleted",
+				"deleteDescription": "Only an empty section can be deleted. Move its tasks to another section first.",
+				"deleteError": "Failed to delete section",
+				"deleteTitle": "Delete the \"{{name}}\" section?",
+				"menu": "Section options",
+				"namePlaceholder": "Section name",
+				"rename": "Rename",
+				"renamed": "Section renamed",
+				"renameError": "Failed to rename section",
+				"renameTitle": "Rename section",
+				"save": "Save"
 			}
 		},
 		"sort": {
@@ -2992,7 +3069,8 @@
 				"priority": "Mức ưu tiên",
 				"dueDate": "Ngày đến hạn",
 				"title": "Tiêu đề",
-				"number": "Số công việc"
+				"number": "Số công việc",
+				"assignee": "Assignee"
 			}
 		},
 		"boardFilters": {
@@ -3002,7 +3080,8 @@
 				"priority": "Mức ưu tiên",
 				"assignee": "Người được giao",
 				"dueDate": "Ngày đến hạn",
-				"labels": "Nhãn"
+				"labels": "Nhãn",
+				"craft": "Craft"
 			},
 			"operators": {
 				"isAnyOf": "là một trong",
@@ -3015,7 +3094,8 @@
 			},
 			"allCustomFieldValues": "All values",
 			"noCustomFieldValues": "No custom field values",
-			"noValuesUsedYet": "No values used yet"
+			"noValuesUsedYet": "No values used yet",
+			"allCrafts": "All crafts"
 		},
 		"gantt": {
 			"searchPlaceholder": "Tìm phiếu đã lên lịch...",
@@ -3057,7 +3137,10 @@
 		"listView": {
 			"addTask": "Thêm công việc",
 			"archiveAllTooltip": "Lưu trữ tất cả công việc đã hoàn thành",
-			"noTasks": "Không có công việc"
+			"noTasks": "Không có công việc",
+			"collapseSubtasks": "Ẩn công việc con của {{title}}",
+			"expandSubtasks": "Hiện công việc con của {{title}}",
+			"subtaskLevel": "Công việc con, cấp {{level}}"
 		},
 		"kanban": {
 			"addTask": "Thêm công việc",
@@ -3237,6 +3320,16 @@
 			"startsOn": "Bắt đầu {{date}}",
 			"beforeStart": "{{date}} trước ngày bắt đầu",
 			"afterDue": "{{date}} sau hạn chót"
+		},
+		"crafts": {
+			"label": "Crafts",
+			"empty": "No crafts available"
+		},
+		"table": {
+			"columns": {
+				"name": "Name"
+			},
+			"addLabel": "Add label"
 		}
 	},
 	"invitations": {

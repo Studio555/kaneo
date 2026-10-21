@@ -1,6 +1,13 @@
 import type { ProjectWithTasks } from "@/types/project";
+import type Task from "@/types/task";
 
-export type BoardPage<T extends ProjectWithTasks> = {
+// The API still sends plannedTasks and archivedTasks; the public board reads them.
+type BoardData = ProjectWithTasks & {
+  plannedTasks?: Task[];
+  archivedTasks?: Task[];
+};
+
+export type BoardPage<T extends BoardData> = {
   data: T;
   pagination: {
     page: number;
@@ -12,7 +19,7 @@ export type BoardPage<T extends ProjectWithTasks> = {
 };
 
 /** Publish immutable snapshots as bounded pages arrive. */
-export async function loadBoardPages<T extends ProjectWithTasks>(
+export async function loadBoardPages<T extends BoardData>(
   load: (page: number, relatedPage?: number) => Promise<BoardPage<T>>,
   signal?: AbortSignal,
   onProgress?: (board: T) => void,
@@ -20,18 +27,29 @@ export async function loadBoardPages<T extends ProjectWithTasks>(
   signal?.throwIfAborted();
   const first = await load(1);
   const result = first.data;
+  result.backlogSections ??= [];
   const columns = new Map(result.columns.map((column) => [column.id, column]));
+  const sections = new Map(
+    result.backlogSections.map((section) => [section.id, section]),
+  );
   const seen = new Map(
     [
       ...result.columns.flatMap((column) => column.tasks),
-      ...result.archivedTasks,
-      ...result.plannedTasks,
+      ...result.backlogSections.flatMap((section) => section.tasks),
     ].map((task) => [task.id, task]),
+  );
+  // The legacy lists duplicate backlog section tasks, so they dedupe apart.
+  const seenLegacy = new Map(
+    [...(result.archivedTasks ?? []), ...(result.plannedTasks ?? [])].map(
+      (task) => [task.id, task],
+    ),
   );
   let progressWeight =
     result.columns.length +
+    result.backlogSections.length +
     seen.size +
-    [...seen.values()].reduce(
+    seenLegacy.size +
+    [...seen.values(), ...seenLegacy.values()].reduce(
       (count, task) =>
         count + (task.labels?.length ?? 0) + (task.externalLinks?.length ?? 0),
       0,
@@ -68,17 +86,19 @@ export async function loadBoardPages<T extends ProjectWithTasks>(
     return left;
   };
   const append = (
-    target: ProjectWithTasks["plannedTasks"],
-    tasks: ProjectWithTasks["plannedTasks"],
+    target: Task[] | undefined,
+    tasks: Task[] = [],
+    known = seen,
   ) => {
+    if (!target) return;
     for (const task of tasks) {
-      if (!seen.has(task.id)) {
-        seen.set(task.id, task);
+      if (!known.has(task.id)) {
+        known.set(task.id, task);
         target.push(task);
         progressWeight +=
           1 + (task.labels?.length ?? 0) + (task.externalLinks?.length ?? 0);
       } else {
-        const existing = seen.get(task.id);
+        const existing = known.get(task.id);
         if (existing) {
           existing.labels = mergeById(existing.labels, task.labels);
           existing.externalLinks = mergeById(
@@ -100,8 +120,18 @@ export async function loadBoardPages<T extends ProjectWithTasks>(
       }
       append(target.tasks, column.tasks);
     }
-    append(result.archivedTasks, next.data.archivedTasks);
-    append(result.plannedTasks, next.data.plannedTasks);
+    for (const section of next.data.backlogSections ?? []) {
+      let target = sections.get(section.id);
+      if (!target) {
+        target = { ...section, tasks: [] };
+        sections.set(section.id, target);
+        result.backlogSections.push(target);
+        progressWeight++;
+      }
+      append(target.tasks, section.tasks);
+    }
+    append(result.archivedTasks, next.data.archivedTasks, seenLegacy);
+    append(result.plannedTasks, next.data.plannedTasks, seenLegacy);
   };
   const loadRelated = async (page: number, initial: BoardPage<T>) => {
     // Each collection uses its initial count; live additions cannot indefinitely

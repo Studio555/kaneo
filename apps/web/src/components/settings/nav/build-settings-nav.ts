@@ -3,6 +3,7 @@ import {
   Building2,
   Code,
   CreditCard,
+  Hammer,
   Import,
   KeyRound,
   Server,
@@ -124,6 +125,12 @@ export function buildSettingsNav({
           label: t("settings:workspaceLabels.title"),
           to: "/dashboard/settings/workspace/labels",
           icon: Tag,
+        },
+        {
+          id: "workspace-crafts",
+          label: t("settings:workspaceCrafts.title"),
+          to: "/dashboard/settings/workspace/crafts",
+          icon: Hammer,
         },
         ...(canImport
           ? [

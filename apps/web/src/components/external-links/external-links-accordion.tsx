@@ -32,6 +32,7 @@ import useCreateExternalLink from "@/hooks/mutations/external-link/use-create-ex
 import useDeleteExternalLink from "@/hooks/mutations/external-link/use-delete-external-link";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
 import { cn } from "@/lib/cn";
+import { getLinkRepositoryName } from "@/lib/external-link-repository";
 import type { ExternalLink } from "@/types/external-link";
 import { linkHost } from "./link-host";
 
@@ -255,7 +256,11 @@ export function ExternalLinksAccordion({
                           {isUrl
                             ? linkHost(link.url)
                             : link.resourceType !== "branch" &&
-                              `#${link.externalId}`}
+                              `${
+                                link.resourceType === "pull_request"
+                                  ? (getLinkRepositoryName(link) ?? "")
+                                  : ""
+                              }#${link.externalId}`}
                         </span>
                         {getStatusBadge(link)}
                       </a>

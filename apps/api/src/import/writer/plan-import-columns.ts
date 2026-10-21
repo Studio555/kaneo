@@ -1,6 +1,6 @@
 import type { ImportedColumn } from "@kaneo/importers";
 import { toSlug } from "../../column/to-slug";
-import { VIRTUAL_STATUSES } from "../../task/validate-task-fields";
+import { SYSTEM_BACKLOG_STATUSES } from "../../task/validate-task-fields";
 
 export type PlannedImportColumn = {
   key: string;
@@ -18,7 +18,7 @@ export type ImportColumnPlan = {
 const UNTITLED_COLUMN = "Untitled";
 
 function isReserved(slug: string) {
-  return (VIRTUAL_STATUSES as readonly string[]).includes(slug);
+  return (SYSTEM_BACKLOG_STATUSES as readonly string[]).includes(slug);
 }
 
 function baseName(original: string) {

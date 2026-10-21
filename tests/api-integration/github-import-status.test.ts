@@ -62,7 +62,7 @@ beforeEach(async () => {
 });
 async function setup() {
   const { user, workspace } = await createWorkspaceMember();
-  const { project, columns } = await createProjectFixture({
+  const { project, columns, backlogSections } = await createProjectFixture({
     workspaceId: workspace.id,
   });
   const [integration] = await db
@@ -81,7 +81,7 @@ async function setup() {
       }),
     })
     .returning();
-  return { project, columns, integration, workspace };
+  return { project, columns, backlogSections, integration, workspace };
 }
 async function storedTask() {
   return db.query.taskTable.findFirst();
@@ -130,14 +130,17 @@ describe("GitHub import project workflow validation", () => {
     });
   });
 
-  it.each(["planned", "archived"])(
-    "allows virtual status %s and clears the old column",
+  it.each(["planned", "archived"] as const)(
+    "allows backlog status %s and moves the task to its section",
     async (status) => {
-      const { project } = await setup();
+      const { project, backlogSections } = await setup();
       await importIssues(project.id);
       m.labels = [`status:${status}`];
       await importIssues(project.id);
-      expect(await storedTask()).toMatchObject({ status, columnId: null });
+      expect(await storedTask()).toMatchObject({
+        status,
+        columnId: backlogSections[status].id,
+      });
     },
   );
 

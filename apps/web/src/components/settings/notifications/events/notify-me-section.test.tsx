@@ -19,6 +19,11 @@ import { LEAD_TIME_SAVE_DELAY_MS } from "./use-event-preferences-autosave";
 
 const updatePreferences = vi.fn();
 const hookOptions = vi.fn();
+const datesEnabled = vi.hoisted(() => ({ value: true }));
+
+vi.mock("@/hooks/use-dates-enabled", () => ({
+  useDatesEnabled: () => datesEnabled.value,
+}));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -58,6 +63,7 @@ describe("NotifyMeSection", () => {
     updatePreferences.mockReset();
     updatePreferences.mockResolvedValue(undefined);
     hookOptions.mockReset();
+    datesEnabled.value = true;
   });
 
   it("saves a switch immediately and quietly, without a save button", () => {
@@ -161,5 +167,14 @@ describe("NotifyMeSection", () => {
     expect(updatePreferences).toHaveBeenCalledWith({
       dueDateReminderLeadTimeMinutes: 4320,
     });
+  });
+
+  it("omits the due date reminder controls when dates are disabled", () => {
+    datesEnabled.value = false;
+    render(<NotifyMeSection preferences={preferences} />);
+
+    expect(
+      screen.queryByText("settings:notificationsPage.eventDueDateReminders"),
+    ).toBeNull();
   });
 });

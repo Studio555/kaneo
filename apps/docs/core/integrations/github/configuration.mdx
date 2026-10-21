@@ -135,6 +135,21 @@ GitHub webhooks also skip conflicting candidates or an existing PR association a
 
 These rules apply to new associations from webhooks and imports. Existing PR associations within the applicable scope are preserved; historical incorrect links require separate correction.
 
+### Linking Pull Requests From Other Repositories
+
+A task's work often lands in a different repository than the one that holds its issue. A pull request in any repository the GitHub App is installed on links to the task when its branch name, title, or description references the task's issue in the project's connected repository:
+
+- `owner/repo#123`, for example `Closes Studio555/s555-atlas#123`
+- the issue URL, for example `https://github.com/Studio555/s555-atlas/issues/123`
+
+A bare `#123` is not enough, because on GitHub it means an issue in the pull request's own repository. References are picked up when the pull request is opened, reopened, or edited, so the line can be added after the fact. One pull request may reference several issues and links to each of their tasks.
+
+Linked pull requests drive the same status transitions as pull requests in the connected repository: the task moves to the "PR opened" status when the first one opens, and to the "PR merged" status once every linked pull request, in every repository, has merged. Each pull request shows its repository name on the task.
+
+<Info>
+The GitHub App needs the **Pull requests** webhook event on the other repositories too; installing it on the whole organization covers them. Only pull requests from the same installation as the connected repository are linked.
+</Info>
+
 ### Status Transition Configuration
 
 Customize when tasks automatically change status:
@@ -144,8 +159,17 @@ Customize when tasks automatically change status:
 | Branch Push | `in-progress` | ✅ |
 | PR Opened | `in-review` | ✅ |
 | PR Merged | `done` | ✅ |
+| Issue Closed | `done` | ✅ |
+| Issue Reopened | `to-do` | ✅ |
 
 Configure these under **Workflow → Automations** to match your workflow.
+
+<Note>
+Closing or reopening an issue on GitHub syncs to the linked task regardless of
+where the issue came from, including issues Kaneo opened itself from a task.
+When Kaneo is the one closing the issue, the webhook GitHub sends back is
+recognised as Kaneo's own update and is not applied twice.
+</Note>
 
 <Warning>
 A completed task moves again only when new work starts on it: the first push to a branch that is not yet linked to the task, or a pull request that is not yet linked to it. More pushes to a linked branch, or reopening a pull request, leave a completed task where it is.
@@ -162,6 +186,90 @@ Kaneo automatically creates and syncs these label types:
 **Custom Labels:**
 - Any labels added to GitHub issues (not starting with `priority:` or `status:`) are synced to Kaneo
 - Labels added in Kaneo can be synced to GitHub (if configured)
+
+### Assignee Synchronization
+
+Assigning a task also assigns the linked GitHub issue to the same person, and
+assigning the issue on GitHub assigns the Kaneo task. This needs to know which
+GitHub account belongs to which Kaneo user.
+
+**Connecting a GitHub account**
+
+Each person connects their own account under **Settings → Account → Information**
+by pressing **Connect GitHub**. That runs GitHub's OAuth flow once for the
+account they are already signed in as, which is what proves the GitHub account
+is theirs. It is not a way to sign in, and it does not change how they sign in
+to Kaneo.
+
+Because it uses the same OAuth client as "Sign in with GitHub", the instance
+needs `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET` set. Without
+them the settings card says so and no accounts can be connected, which means no
+assignee synchronisation in either direction. These are separate from the
+GitHub App credentials that drive the rest of the integration.
+
+The connection is keyed on GitHub's numeric account id rather than the
+username, so renaming a GitHub account does not break it. Each GitHub account
+connects to at most one Kaneo user, and disconnecting stops inbound assignment
+immediately.
+
+<Note>
+People commonly sign in to Kaneo with a work address while their GitHub account
+carries a personal one, so connecting does not require the two to match.
+</Note>
+
+**What syncs**
+
+| Change | Result |
+|--------|--------|
+| Task assigned in Kaneo | The linked issue's assignee is replaced with that person |
+| Task unassigned in Kaneo | The linked issue's assignees are cleared |
+| Issue assigned on GitHub | The linked task is assigned to the mapped Kaneo user |
+| Issue unassigned on GitHub | The linked task is unassigned, but only when the departing user is the task's current assignee |
+
+<Note>
+Kaneo tasks have one assignee and GitHub issues can have several, so an
+assignment from Kaneo replaces the issue's assignee list rather than adding to
+it. Co-assignees added on GitHub are removed the next time the task's assignee
+changes in Kaneo.
+</Note>
+
+**When nothing happens**
+
+An assignment is skipped, and the reason written to the API logs, when:
+
+- The Kaneo assignee has not connected a GitHub account.
+- The linked GitHub user cannot be assigned on that repository. GitHub only
+  accepts assignees with repository access, and silently drops the rest, so
+  Kaneo checks first rather than reporting a success that did not happen.
+- An inbound GitHub assignee is not a member of the project's workspace. The
+  workspace boundary holds regardless of what the webhook says.
+- An inbound GitHub assignee has not connected their account to Kaneo.
+
+### Subtask Synchronization
+
+A Kaneo subtask and a GitHub sub-issue are kept as the same thing. Making a task
+a subtask of another in Kaneo makes the child's issue a sub-issue of the
+parent's issue, and adding or removing a sub-issue on GitHub adds or removes the
+subtask in Kaneo. It needs the **Sub issues** webhook event (see setup).
+
+| Change | Result |
+|--------|--------|
+| Subtask added in Kaneo | The child's issue becomes a sub-issue of the parent's issue |
+| Subtask removed in Kaneo | The sub-issue is removed from the parent issue |
+| Sub-issue added on GitHub | The child's task becomes a subtask of the parent's task |
+| Sub-issue removed on GitHub | The subtask relation is removed |
+
+<Note>
+A GitHub issue has at most one parent while a Kaneo task can have several. A
+parent chosen in Kaneo moves the issue to that parent on GitHub, which in turn
+removes the previous parent in Kaneo, so both sides settle on one parent.
+</Note>
+
+A task that sits in the backlog has no issue yet, so its subtasks reach GitHub
+when the issue is opened. Issues opened on GitHub pick up their existing parent
+and sub-issues the same way. **Import Issues** does both for every open issue,
+which is how an existing project is brought into agreement once. Subtasks are
+only related within one workspace.
 
 ### Multiple Organizations
 If you need to connect repositories from multiple GitHub organizations:

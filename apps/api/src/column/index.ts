@@ -15,6 +15,7 @@ import { columnListSchema, columnSchema } from "./response";
 import {
   columnParam,
   createColumnBody,
+  getColumnsQuery,
   projectIdParam,
   reorderColumnsBody,
   updateColumnBody,
@@ -26,9 +27,10 @@ const getColumnsRoute = createRoute({
   path: "/{projectId}",
   tags: ["Columns"],
   summary: "Get columns",
-  description: "Get a project's board columns, ordered by position.",
+  description:
+    "Get a project's board columns, or with `kind=backlog` its backlog sections, ordered by position.",
   middleware: [workspaceAccess.fromProject("projectId")] as const,
-  request: { params: projectIdParam },
+  request: { params: projectIdParam, query: getColumnsQuery },
   responses: {
     200: jsonResponse("List of columns ordered by position", columnListSchema),
     403: errorResponse("No access to the project"),
@@ -43,7 +45,7 @@ const createColumnRoute = createRoute({
   tags: ["Columns"],
   summary: "Create column",
   description:
-    "Add a column to the end of a project's board. The slug is derived from the name, with a numeric suffix such as `-2` when another column in the project already uses it.",
+    "Add a column to the end of a project's board, or with `kind: backlog` a section to its backlog. The slug is derived from the name and must be unique across both, with a numeric suffix such as `-2` when another column in the project already uses it.",
   middleware: [
     workspaceAccess.fromProject("projectId"),
     requireWorkspacePermission({ project: ["update"] }),
@@ -57,7 +59,7 @@ const createColumnRoute = createRoute({
   },
   responses: {
     200: jsonResponse("The created column", columnSchema),
-    400: errorResponse("Invalid body"),
+    400: errorResponse("Invalid body, or a final backlog section"),
     403: errorResponse(
       "No access to the project, or missing project:update permission",
     ),
@@ -73,7 +75,7 @@ const reorderColumnsRoute = createRoute({
   tags: ["Columns"],
   summary: "Reorder columns",
   description:
-    "Set new positions for a project's columns and return the whole board in its new order.",
+    "Set new positions for a project's columns and return all of its columns, board and backlog, in their new order.",
   middleware: [
     workspaceAccess.fromProject("projectId"),
     requireWorkspacePermission({ project: ["update"] }),
@@ -116,7 +118,9 @@ const updateColumnRoute = createRoute({
   },
   responses: {
     200: jsonResponse("The updated column", columnSchema),
-    400: errorResponse("Invalid body"),
+    400: errorResponse(
+      "Invalid body, a renamed built-in section, or a final backlog section",
+    ),
     403: errorResponse(
       "No access to the project, or missing project:update permission",
     ),
@@ -131,7 +135,7 @@ const deleteColumnRoute = createRoute({
   tags: ["Columns"],
   summary: "Delete column",
   description:
-    "Delete an empty column. A column holding tasks is refused until they are moved or deleted.",
+    "Delete an empty column or backlog section. A column holding tasks is refused until they are moved or deleted, and the built-in Planned and Archived sections cannot be deleted.",
   middleware: [
     workspaceAccess.fromColumn("id"),
     requireWorkspacePermission({ project: ["update"] }),
@@ -142,20 +146,28 @@ const deleteColumnRoute = createRoute({
     403: errorResponse(
       "No access to the project, or missing project:update permission",
     ),
-    409: errorResponse("The column still contains tasks"),
+    409: errorResponse(
+      "The column still contains tasks, or is a built-in backlog section",
+    ),
     404: errorResponse("Column not found"),
   },
 });
 
 const column = apiRouter()
   .openapi(getColumnsRoute, async (c) =>
-    c.json(await getColumns(c.req.valid("param").projectId), 200),
+    c.json(
+      await getColumns(
+        c.req.valid("param").projectId,
+        c.req.valid("query").kind,
+      ),
+      200,
+    ),
   )
   .openapi(createColumnRoute, async (c) => {
     const { projectId } = c.req.valid("param");
-    const { name, icon, color, isFinal } = c.req.valid("json");
+    const { name, icon, color, isFinal, kind } = c.req.valid("json");
     return c.json(
-      await createColumn({ projectId, name, icon, color, isFinal }),
+      await createColumn({ projectId, name, icon, color, isFinal, kind }),
       200,
     );
   })

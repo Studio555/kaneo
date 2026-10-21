@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { addMonths, startOfMonth, subMonths } from "date-fns";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import CalendarToolbar from "@/components/calendar/calendar-toolbar";
 import MonthAgenda from "@/components/calendar/month-agenda";
@@ -17,6 +17,10 @@ import { useProjectTaskView } from "@/components/project/toolbar/use-project-tas
 import { LayoutSwitch } from "@/components/project/views/layout-switch";
 import TaskDetailsSheet from "@/components/task/task-details-sheet";
 import { useGetTasks } from "@/hooks/queries/task/use-get-tasks";
+import {
+  useDatesEnabled,
+  useDatesKnownDisabled,
+} from "@/hooks/use-dates-enabled";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toScheduledTasks } from "@/lib/task-schedule";
 import { useUserPreferencesStore } from "@/store/user-preferences";
@@ -44,6 +48,12 @@ function RouteComponent() {
   const { projectId, workspaceId } = Route.useParams();
   const { taskId } = Route.useSearch();
   const navigate = useNavigate();
+  const datesEnabled = useDatesEnabled();
+  // Redirecting must wait for a definite answer: `datesEnabled` is also false
+  // while the config query is in flight, and bouncing a cold page load off
+  // this route is not something the user can undo (the redirect replaces the
+  // history entry).
+  const datesKnownDisabled = useDatesKnownDisabled();
   const { data: project, isLoading, isError } = useGetTasks(projectId);
   const weekStartsOn = useUserPreferencesStore((state) => state.weekStartsOn);
   const isMobile = useIsMobile();
@@ -90,6 +100,19 @@ function RouteComponent() {
   const handleCloseTaskSheet = useCallback(() => {
     navigate({ to: ".", search: {}, replace: true });
   }, [navigate]);
+
+  // The Calendar view renders nothing useful without dates; when the
+  // instance disables them, bounce back to the board rather than showing a
+  // dead page.
+  useEffect(() => {
+    if (datesKnownDisabled) {
+      navigate({
+        to: "/dashboard/workspace/$workspaceId/project/$projectId/board",
+        params: { workspaceId, projectId },
+        replace: true,
+      });
+    }
+  }, [datesKnownDisabled, navigate, workspaceId, projectId]);
 
   return (
     <ProjectLayout
@@ -141,7 +164,12 @@ function RouteComponent() {
           onToday={handleToday}
         />
 
-        {isLoading ? (
+        {/* `!datesEnabled` holds the grid back until the instance confirms
+            dates are on. While the config query is pending — or after it
+            failed — painting the month would put stored task dates on screen
+            on an instance that has them turned off, which the redirect cannot
+            prevent because it waits for a definite answer. */}
+        {isLoading || !datesEnabled ? (
           <div className="border-b border-border/80 px-4 py-3 text-center">
             <p className="text-sm text-muted-foreground">
               {t("common:empty.loading")}
@@ -171,6 +199,7 @@ function RouteComponent() {
         ) : null}
 
         {isMobile ? (
+          datesEnabled &&
           scheduledTasks.length > 0 && (
             <MonthAgenda
               tasks={scheduledTasks}
@@ -182,7 +211,7 @@ function RouteComponent() {
         ) : (
           <MonthGrid
             weeks={weeks}
-            tasks={scheduledTasks}
+            tasks={datesEnabled ? scheduledTasks : []}
             visibleMonth={visibleMonth}
             maxLanes={MAX_LANES_DESKTOP}
             projectSlug={project?.slug}
